@@ -31,6 +31,19 @@ LOCAL_FOLDERS = ("pdf_text", "pdf_scanned")
 
 def _folder_intent_warnings(folder: str, hybrid, filename: str) -> list[str]:
     """Quality gate D3: folder is intent; mismatch warns but never blocks."""
+    total = hybrid.pages_text + hybrid.pages_ocr + hybrid.pages_failed
+    if total == 0:
+        return []
+    ocr_needed = hybrid.pages_ocr + hybrid.pages_failed
+    if folder == "pdf_text" and ocr_needed * 2 > total:
+        return [
+            f"{filename} có vẻ là scan (>50% trang phải OCR), "
+            "nên chuyển sang pdf_scanned/"
+        ]
+    if folder == "pdf_scanned" and hybrid.pages_text == total:
+        logger.info(
+            "%s: toàn bộ trang có text layer — không tốn call OCR nào", filename,
+        )
     return []
 
 

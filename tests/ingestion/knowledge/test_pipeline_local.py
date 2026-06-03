@@ -195,3 +195,55 @@ def test_override_on_unchanged_file_reingests_from_stored_raw_text(tmp_path, mon
     assert all(c.school == "NEU" and c.year == 2025 for c in chunk_repo.upserts)
     assert "Văn bản đã lưu" in chunk_repo.upserts[0].chunk_text
     assert doc_repo.marked == [(1, h)]                     # re-mark, hash không đổi
+
+
+# --- folder-intent cross-check ----------------------------------------------------
+
+def test_pdf_text_file_mostly_ocr_warns_move_to_scanned(tmp_path, monkeypatch):
+    root = _make_tree(tmp_path, {"pdf_text/scan.pdf": b"%PDF-s"})
+    pages = [
+        HybridPage(1, "ocr một", "ocr"),
+        HybridPage(2, "ocr hai", "ocr"),
+        HybridPage(3, "Trang có text layer dài đàng hoàng.", "text_layer"),
+    ]
+    _patch_hybrid(monkeypatch, _hybrid(pages, text=1, ocr=2))
+    pipe = _pipeline()
+
+    result = pipe.run_for_local_file(
+        root / "pdf_text" / "scan.pdf", root, {},
+        ocr=lambda png: "x", classify=_classify(),
+    )
+
+    assert any("pdf_scanned/" in w for w in result.warnings)
+
+
+def test_pdf_text_file_minority_ocr_does_not_warn(tmp_path, monkeypatch):
+    root = _make_tree(tmp_path, {"pdf_text/ok.pdf": b"%PDF-t"})
+    pages = [
+        HybridPage(1, "Trang text một.", "text_layer"),
+        HybridPage(2, "Trang text hai.", "text_layer"),
+        HybridPage(3, "ocr", "ocr"),
+    ]
+    _patch_hybrid(monkeypatch, _hybrid(pages, text=2, ocr=1))
+    pipe = _pipeline()
+
+    result = pipe.run_for_local_file(
+        root / "pdf_text" / "ok.pdf", root, {},
+        ocr=lambda png: "x", classify=_classify(),
+    )
+
+    assert result.warnings == []
+
+
+def test_pdf_scanned_all_text_layer_is_info_not_warning(tmp_path, monkeypatch):
+    # File bỏ "nhầm" vào pdf_scanned nhưng có text layer: chỉ INFO, không warning.
+    root = _make_tree(tmp_path, {"pdf_scanned/text.pdf": b"%PDF-t"})
+    _patch_hybrid(monkeypatch, _hybrid([PAGE], text=1))
+    pipe = _pipeline()
+
+    result = pipe.run_for_local_file(
+        root / "pdf_scanned" / "text.pdf", root, {},
+        ocr=lambda png: "x", classify=_classify(),
+    )
+
+    assert result.warnings == []      # không tốn OCR, không cần cảnh báo
