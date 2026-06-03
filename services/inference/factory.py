@@ -41,6 +41,13 @@ def build_default_gateway() -> LLMGateway:
                 "allow_fallback": True,
                 "fallback_model": "gemini-2.5-flash-lite",
             },
+            "knowledge_ocr": {
+                "output_mode": "free_text",
+                "max_retries": 1,
+                "allow_fallback": True,
+                "fallback_model": "gemini-2.5-flash",
+            },
+            "knowledge_classify": {"output_mode": "json", "max_retries": 1},
         },
     )
     return LLMGateway(registry=registry, telemetry=InferenceTelemetry())
