@@ -107,3 +107,58 @@ def test_document_where_ocr_returns_empty_everywhere_raises(monkeypatch):
 
     with pytest.raises(HybridExtractionError):
         extract_pages_hybrid(b"%PDF", ocr, render=_fake_render)
+
+
+# --- render thật (PyMuPDF) ------------------------------------------------------
+
+def _one_page_pdf(text: str) -> bytes:
+    # PDF 1 trang sinh inline — cùng convention với tests/.../test_pdf_pages.py.
+    pytest.importorskip("reportlab")
+    from io import BytesIO
+    from reportlab.pdfgen import canvas
+
+    buf = BytesIO()
+    c = canvas.Canvas(buf)
+    c.drawString(100, 700, text)
+    c.showPage()
+    c.save()
+    return buf.getvalue()
+
+
+def test_render_page_png_produces_png_bytes():
+    pytest.importorskip("pymupdf")
+    png = pdf_ocr.render_page_png(_one_page_pdf("Hello"), 1)
+    assert png[:8] == b"\x89PNG\r\n\x1a\n"    # PNG magic bytes
+
+
+def test_extract_text_layers_reads_real_pdf():
+    pages = pdf_ocr._extract_text_layers(_one_page_pdf("Hello Trang"))
+    assert len(pages) == 1
+    assert "Hello" in pages[0]
+
+
+# --- OCR callable mặc định qua gateway -------------------------------------------
+
+class FakeGateway:
+    def __init__(self, content="OCR TEXT"):
+        self.requests = []
+        self._content = content
+
+    def run(self, request):
+        self.requests.append(request)
+        return SimpleNamespace(content=self._content)
+
+
+def test_build_gateway_ocr_sends_png_through_media():
+    gw = FakeGateway()
+    ocr = build_gateway_ocr(gateway=gw)
+
+    text = ocr(b"\x89PNG-bytes")
+
+    assert text == "OCR TEXT"
+    req = gw.requests[0]
+    assert req.agent_name == "knowledge_ocr"
+    assert req.task_type == "page_ocr"
+    assert req.output_mode == "free_text"
+    assert req.temperature == 0.0
+    assert req.media == [("image/png", b"\x89PNG-bytes")]
