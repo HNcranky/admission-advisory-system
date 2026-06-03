@@ -41,23 +41,12 @@ class KnowledgePipeline:
             return pages_to_marked_text(extract_pages(fetch_result.raw_content))
         return parse_html(fetch_result.raw_content, url).text
 
-    def run_for_source(self, source) -> KnowledgeIngestResult:
-        fr = self.fetch(source.source_url)
-        content_hash = fr.content_hash
+    def _chunk_embed_upsert(self, doc_id, text, *, school, topic, program,
+                            year, document_type, source_url):
+        """Chunk -> reuse/embed -> replace chunks for one document.
 
-        existing = self.doc_repo.get_document_by_url(source.source_url)
-        if existing is not None and existing.content_hash == content_hash:
-            logger.info("Unchanged, skipping %s", source.source_url)
-            return KnowledgeIngestResult(source_url=source.source_url, skipped=True)
-
-        text = self._extract_text(fr, source.source_url)
-        doc_id = self.doc_repo.get_or_create_document(KnowledgeDocument(
-            school=source.school,
-            document_type=source.document_type,
-            source_url=source.source_url,
-            raw_text=text,
-        ))
-
+        Returns (chunks_total, chunks_embedded, chunks_reused).
+        """
         chunks = split_into_chunks(text)
         hashes = [chunk_content_hash(c.chunk_text) for c in chunks]
         # Corpus-wide reuse: identical chunk text in ANY document reuses its
@@ -86,29 +75,54 @@ class KnowledgePipeline:
         for i, c in enumerate(chunks):
             self.chunk_repo.upsert_chunk(KnowledgeChunk(
                 knowledge_document_id=doc_id,
-                school=source.school,
-                topic=source.topic,
-                program=source.program,
-                year=source.year,
-                document_type=source.document_type,
+                school=school,
+                topic=topic,
+                program=program,
+                year=year,
+                document_type=document_type,
                 chunk_text=c.chunk_text,
                 content_hash=hashes[i],
                 embedding=embeddings[i],
-                source_url=source.source_url,
+                source_url=source_url,
                 span_start=c.span_start,
                 span_end=c.span_end,
             ))
+        return len(chunks), len(to_embed_text), reused
+
+    def run_for_source(self, source) -> KnowledgeIngestResult:
+        fr = self.fetch(source.source_url)
+        content_hash = fr.content_hash
+
+        existing = self.doc_repo.get_document_by_url(source.source_url)
+        if existing is not None and existing.content_hash == content_hash:
+            logger.info("Unchanged, skipping %s", source.source_url)
+            return KnowledgeIngestResult(source_url=source.source_url, skipped=True)
+
+        text = self._extract_text(fr, source.source_url)
+        doc_id = self.doc_repo.get_or_create_document(KnowledgeDocument(
+            school=source.school,
+            document_type=source.document_type,
+            source_url=source.source_url,
+            raw_text=text,
+        ))
+
+        total, embedded, reused = self._chunk_embed_upsert(
+            doc_id, text,
+            school=source.school, topic=source.topic, program=source.program,
+            year=source.year, document_type=source.document_type,
+            source_url=source.source_url,
+        )
 
         self.doc_repo.mark_ingested(doc_id, content_hash)
         logger.info(
             "Ingested %s: %d chunks (%d embedded, %d reused)",
-            source.source_url, len(chunks), len(to_embed_text), reused,
+            source.source_url, total, embedded, reused,
         )
         return KnowledgeIngestResult(
             source_url=source.source_url,
             skipped=False,
-            chunks_total=len(chunks),
-            chunks_embedded=len(to_embed_text),
+            chunks_total=total,
+            chunks_embedded=embedded,
             chunks_reused=reused,
         )
 
