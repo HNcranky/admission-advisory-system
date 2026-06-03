@@ -79,7 +79,8 @@ def test_advisory_flow_returns_policy_checked_answer(monkeypatch):
     result = graph.invoke(state)
 
     assert result["final_answer"]
-    assert "Hồ sơ hiện tại" in result["final_answer"]
+    assert "Dựa trên hồ sơ hiện tại của em" in result["final_answer"]
+    assert "### 1." in result["final_answer"]
     assert result["uncertainty_reasons"] == []
 
     policy = result.get("policy_decision")
@@ -214,4 +215,4 @@ def test_graph_mock_retrieval_conflict_reaches_final_answer(monkeypatch):
     )
 
     assert "final_answer" in result
-    assert "Xác minh dữ liệu" in result["final_answer"]
+    assert "**Lưu ý dữ liệu:**" in result["final_answer"]

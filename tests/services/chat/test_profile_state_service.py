@@ -44,7 +44,6 @@ def test_merge_profile_state_returns_first_missing_slot_prompt():
         "admission_year",
         "total_score",
         "subject_combination",
-        "location_preference",
     ]
     assert next_follow_up_question(merged) == "Bạn đang xét tuyển cho năm nào?"
 
@@ -54,7 +53,8 @@ def test_missing_critical_slots_empty_profile_returns_all():
     assert "admission_year" in missing
     assert "total_score" in missing
     assert "preferred_majors" in missing
-    assert "location_preference" in missing
+    # location_preference giờ là optional (spec mục 8) → không nằm trong critical.
+    assert "location_preference" not in missing
 
 
 def test_missing_critical_slots_complete_profile_returns_empty():

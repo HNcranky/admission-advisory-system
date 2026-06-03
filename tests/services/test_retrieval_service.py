@@ -41,6 +41,7 @@ def test_fetch_candidates_maps_rows(monkeypatch):
             2026,
             "computer_science",
             "Khoa hoc May tinh",
+            "Khoa học Máy tính",
             "thpt_score",
             ["A00", "A01"],
             {"total": 300},
@@ -72,6 +73,8 @@ def test_fetch_candidates_maps_rows(monkeypatch):
     assert len(candidates) == 1
     assert candidates[0].school_id == "hust"
     assert candidates[0].program_id == "computer_science"
+    assert candidates[0].program_name == "Khoa hoc May tinh"
+    assert candidates[0].program_name_raw == "Khoa học Máy tính"
     assert candidates[0].subject_combinations == ["A00", "A01"]
     assert candidates[0].evidence[0].source_url == "https://example.com/admission"
 
@@ -88,6 +91,7 @@ def test_fetch_candidates_returns_both_rows_when_two_sources_exist(monkeypatch):
             2026,
             "computer_science",
             "Khoa hoc May tinh",
+            "Khoa học Máy tính",
             "thpt_score",
             ["A00"],
             {"total": 300},
@@ -103,6 +107,7 @@ def test_fetch_candidates_returns_both_rows_when_two_sources_exist(monkeypatch):
             2026,
             "computer_science",
             "Khoa hoc May tinh",
+            "Khoa học Máy tính",
             "thpt_score",
             ["A00"],
             {"total": 280},
@@ -163,6 +168,7 @@ def test_fetch_candidates_subject_combinations_filterable_from_jsonb_dicts(monke
             2026,
             "data_science",
             "Khoa hoc du lieu",
+            "Khoa học dữ liệu",
             "thpt_score",
             [
                 {"code": "A00", "subjects": ["Toán", "Vật lý", "Hóa học"], "description": "Toán, Lý, Hoá"},

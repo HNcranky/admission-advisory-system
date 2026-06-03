@@ -9,6 +9,8 @@ def explanation_agent(state: AgentState):
         candidates=state.retrieved_programs,
         policy=state.policy_decision,
         resolution_outcomes=state.resolution_outcomes,
+        admission_year=state.admission_year,
+        correction_note=state.correction_note,
     )
     state.advisory = state.final_answer
     state.citations = [ev for program in state.retrieved_programs for ev in program.evidence]

@@ -54,11 +54,15 @@ def test_explanation_agent_builds_final_answer_with_sources():
     output = explanation_agent(state)
 
     assert output.final_answer is not None
-    assert "Gợi ý chương trình phù hợp" in output.final_answer
-    assert "Nguồn tham chiếu" in output.final_answer
+    assert "### 1. HUST — Khoa hoc May tinh" in output.final_answer
+    assert "**Mức phù hợp: Cao / An toàn**" in output.final_answer
+    assert "Ngành ưu tiên khớp với chương trình." in output.final_answer
+    assert "**Nguồn tham chiếu**" in output.final_answer
     assert "https://example.com/hust" in output.final_answer
-    assert "Cảnh báo" in output.final_answer
-    assert "Lý do:" in output.final_answer
+    assert "**Cảnh báo**" in output.final_answer
+    # Điểm nội bộ (band score) KHÔNG được lộ ra cho người dùng.
+    assert "0.91" not in output.final_answer
+    assert "Điểm phù hợp" not in output.final_answer
 
 
 def test_explanation_agent_adds_follow_up_prompt():
@@ -71,13 +75,15 @@ def test_explanation_agent_adds_follow_up_prompt():
     assert "Thông tin cần bổ sung:" in output.final_answer
 
 
-def test_explanation_includes_data_verification_section_for_resolved_outcome():
+def test_explanation_includes_per_program_data_note_for_resolved_outcome():
     option = EvidenceOption(
         evidence_id="mock://vnu/proposal-pdf|quota",
         source_url="mock://vnu/proposal-pdf",
         trust_level=3,
         value=150,
     )
+    # Per-program data note (AC6) chỉ render khi chương trình đó được đề xuất:
+    # cần một candidate + recommendation khớp conflict_key.
     state = AgentState(
         user_query="Tu van",
         resolution_outcomes=[
@@ -95,10 +101,37 @@ def test_explanation_includes_data_verification_section_for_resolved_outcome():
             )
         ],
     )
+    state.retrieved_programs = [
+        CandidateProgram(
+            candidate_id="vnu_uet:2026:cntt:thpt_score",
+            school_id="vnu_uet",
+            school_name="Dai hoc Cong nghe - DHQGHN",
+            admission_year=2026,
+            program_id="cntt",
+            program_name="Cong nghe thong tin",
+            admission_method="thpt_score",
+            evidence=[
+                Evidence(
+                    source_url="mock://vnu/proposal-pdf",
+                    school_name="Dai hoc Cong nghe - DHQGHN",
+                    admission_year=2026,
+                    field_name="quota",
+                )
+            ],
+        )
+    ]
+    state.ranked_recommendations = [
+        RankedRecommendation(
+            candidate_id="vnu_uet:2026:cntt:thpt_score",
+            band="match",
+            score=0.6,
+            summary="fit",
+        )
+    ]
 
     output = explanation_agent(state)
 
-    assert "Xác minh dữ liệu" in output.final_answer
+    assert "**Lưu ý dữ liệu:**" in output.final_answer
     assert "Cong nghe thong tin" in output.final_answer
     assert "150" in output.final_answer
     assert "Nguồn mock: VNU proposal PDF" in output.final_answer
@@ -168,7 +201,7 @@ def test_explanation_deduplicates_same_program_recommendations_and_keeps_all_sou
 
     output = explanation_agent(state)
 
-    assert output.final_answer.count("Cong nghe thong tin - Dai hoc Cong nghe - DHQGHN") == 1
+    assert output.final_answer.count("### 1. Dai hoc Cong nghe - DHQGHN — Cong nghe thong tin") == 1
     assert "mock://uet/program-page" in output.final_answer
     assert "mock://vnu/proposal-pdf" in output.final_answer
 
@@ -217,11 +250,39 @@ def test_explanation_uses_vietnamese_accents_and_readable_sections():
 
     output = explanation_agent(state)
 
-    assert "Hồ sơ hiện tại" in output.final_answer
-    assert "- Điểm: 26.5" in output.final_answer
-    assert "Gợi ý chương trình phù hợp" in output.final_answer
-    assert "Mức phù hợp: an toàn" in output.final_answer
-    assert "Lý do:" in output.final_answer
+    assert "dự kiến 26.5 điểm" in output.final_answer
+    assert "### 1. Đại học Công nghệ - ĐHQGHN — Công nghệ thông tin" in output.final_answer
+    assert "**Mức phù hợp: Cao / An toàn**" in output.final_answer
     assert "- Tổ hợp xét tuyển phù hợp." in output.final_answer
-    assert "Lưu ý:" in output.final_answer
-    assert "Nguồn tham chiếu" in output.final_answer
+    assert "**Nguồn tham chiếu**" in output.final_answer
+    # Câu hỏi chốt mời ưu tiên tiêu chí (happy-path Turn 6).
+    assert "Em có muốn ưu tiên theo tiêu chí nào hơn" in output.final_answer
+
+
+def test_explanation_prepends_correction_sentence_when_correction_note_present():
+    state = AgentState(user_query="Tu van", admission_year=2026)
+    state.correction_note = {"slot": "total_score", "previous_value": 27.0, "new_value": 25.75}
+    state.student_profile = StudentProfile(
+        total_score=25.75, subject_combination="A01", preferred_majors=["computer_science"]
+    )
+    state.retrieved_programs = [
+        CandidateProgram(
+            candidate_id="hust:1",
+            school_id="hust",
+            school_name="HUST",
+            admission_year=2026,
+            program_id="computer_science",
+            program_name="Khoa hoc May tinh",
+            admission_method="thpt_score",
+        )
+    ]
+    state.ranked_recommendations = [
+        RankedRecommendation(candidate_id="hust:1", band="match", score=0.6, summary="fit")
+    ]
+
+    output = explanation_agent(state)
+
+    assert output.final_answer.startswith("Mình đã cập nhật điểm dự kiến")
+    assert "27" in output.final_answer
+    assert "25.75" in output.final_answer
+    assert "thứ tự ưu tiên thay đổi" in output.final_answer

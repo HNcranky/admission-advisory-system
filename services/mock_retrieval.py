@@ -6,6 +6,7 @@ from agents.models import CandidateProgram, Evidence
 MOCK_SCHOOL_ID = "vnu_uet"
 MOCK_PROGRAM_ID = "cntt"
 MOCK_PROGRAM_NAME = "Cong nghe thong tin"
+MOCK_PROGRAM_NAME_RAW = "Công nghệ thông tin (Chất lượng cao)"
 MOCK_SCHOOL_NAME = "Dai hoc Cong nghe - DHQGHN"
 MOCK_METHOD = "thpt_score"
 MOCK_DATASET = "advisory_conflict_v1"
@@ -52,6 +53,7 @@ def _candidate(
         admission_year=year,
         program_id=MOCK_PROGRAM_ID,
         program_name=MOCK_PROGRAM_NAME,
+        program_name_raw=MOCK_PROGRAM_NAME_RAW,
         admission_method=MOCK_METHOD,
         subject_combinations=["A00", "A01"],
         quota=quota,

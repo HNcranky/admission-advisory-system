@@ -109,7 +109,7 @@ def test_student_can_complete_follow_up_and_receive_final_result(monkeypatch):
             )
 
     class FakeDispatcher:
-        def submit(self, session_token, run_id, latest_user_message, profile_state):
+        def submit(self, session_token, run_id, latest_user_message, profile_state, correction_note=None):
             session["status"] = "completed"
             messages.append(
                 ChatMessageRecord(

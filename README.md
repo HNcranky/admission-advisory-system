@@ -1,4 +1,4 @@
-# advisory-agent
+# admission-advisory-system
 
 Conflict-aware admission advisory assistant for Vietnamese universities. Crawls official sources (school admission pages, proposal PDFs), normalizes per-program quota/method data into a canonical store, and serves a chat UI that walks students through profile collection and program recommendations.
 

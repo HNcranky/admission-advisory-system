@@ -6,10 +6,13 @@ from services.chat.models import ConversationTurnResult
 from services.chat.knowledge_fanout import format_knowledge_blocks, run_knowledge_fanout
 from services.chat.repository import ChatSessionRepository
 from services.knowledge.qa_service import KnowledgeQAService
-from services.profile.slots import missing_critical_slots, next_follow_up_question, parse_slot
+from services.profile.slots import SLOTS, missing_critical_slots, next_follow_up_question, parse_slot
 from services.profile.extractor import apply_profile_delta, extract_profile_update
 
 logger = logging.getLogger(__name__)
+
+# Slot critical theo thứ tự — dùng để phát hiện correction (AC7).
+_ORDERED_CRITICAL = [s.name for s in sorted(SLOTS, key=lambda s: s.order) if s.critical]
 
 CLARIFICATION_PROMPTS = {
     "school": "Bạn đang muốn tìm hiểu thông tin của trường nào?",
@@ -64,6 +67,13 @@ class ConversationService:
         continued = self._maybe_continue_advisory(session_token, content, profile_state, flow_state, delta)
         if continued is not None:
             return continued
+
+        # A value-changing correction after a run already produced recommendations
+        # must deterministically re-rank (the stateless router would mis-handle a
+        # phrasing like "à em tính lại 25.75, không phải 27"). See AC7.
+        corrected = self._maybe_correction_rerun(session_token, profile_state, flow_state, delta, session)
+        if corrected is not None:
+            return corrected
 
         intent = self.intent_router.classify(content, profile_state)
         session_status = session.status if session else "collecting_profile"
@@ -123,6 +133,56 @@ class ConversationService:
         if not answered:
             return None
         return self._advance_advisory(session_token, merged, flow_state)
+
+    def _maybe_correction_rerun(self, session_token, profile_state, flow_state, delta, session):
+        """Treat a value-changing edit to an already-set critical slot as a correction.
+
+        Only fires when a prior run exists (profile was complete / ran before), so an
+        ordinary first-fill during collection still flows through normal routing.
+        Returns a ``ConversationTurnResult`` (re-run) or ``None`` to fall through.
+        """
+        if session is None:
+            return None
+        prior_run = (getattr(session, "status", None) in ("completed", "ready")) or bool(
+            getattr(session, "latest_run_id", None)
+        )
+        if not prior_run:
+            return None
+
+        correction = None
+        for slot_name in _ORDERED_CRITICAL:
+            if slot_name not in delta:
+                continue
+            new_value = delta[slot_name]
+            if isinstance(new_value, dict) and "__add__" in new_value:
+                continue  # accumulation op (majors), not a scalar correction
+            previous = getattr(profile_state, slot_name, None)
+            if previous in (None, [], ""):
+                continue  # first-fill, not a correction
+            if new_value != previous:
+                correction = {"slot": slot_name, "previous_value": previous, "new_value": new_value}
+                break
+        if correction is None:
+            return None
+
+        merged = apply_profile_delta(profile_state, delta)
+        self.repository.update_profile_state(session_token, merged, "ready")
+        self.repository.update_flow_state(
+            session_token,
+            flow_state.model_copy(update={
+                "active_flow": "ADVISORY_FLOW",
+                "pending_question": None,
+            }),
+        )
+        ack = "Mình sẽ tính lại với thông tin em vừa cập nhật."
+        self.repository.append_message(session_token, "assistant", ack, "assistant_ready")
+        return ConversationTurnResult(
+            session_status="ready",
+            assistant_message=ack,
+            should_start_run=True,
+            profile_state=merged,
+            correction_note=correction,
+        )
 
     def _handle_advisory(self, session_token, profile_state, flow_state, delta):
         merged = apply_profile_delta(profile_state, delta)

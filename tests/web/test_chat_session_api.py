@@ -66,7 +66,7 @@ def test_post_message_returns_ready_payload(monkeypatch):
             )
 
     class FakeDispatcher:
-        def submit(self, session_token, run_id, latest_user_message, profile_state):
+        def submit(self, session_token, run_id, latest_user_message, profile_state, correction_note=None):
             return None
 
     monkeypatch.setattr("web.routes.chat_api.get_conversation_service", lambda: FakeService())
@@ -147,7 +147,7 @@ def test_post_message_uses_fallback_extractor_when_gateway_is_unavailable(monkey
     # unavailable the DST extractor only yields the deterministic delta
     # (active-slot parse + tiered major resolver), so no school is captured.
     assert body["profile_state"]["preferred_schools"] == []
-    assert body["profile_state"]["missing_slots"] == ["total_score", "subject_combination", "location_preference"]
+    assert body["profile_state"]["missing_slots"] == ["total_score", "subject_combination"]
     
     
 def test_create_session_endpoint_returns_snapshot(monkeypatch):

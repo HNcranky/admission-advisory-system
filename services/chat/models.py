@@ -23,10 +23,20 @@ class ChatSessionSnapshot(BaseModel):
     session: Any
     messages: List[ChatMessageRecord] = Field(default_factory=list)
     
+def union_majors(explicit: List[str], inferred: List[str]) -> List[str]:
+    """View dẫn xuất preferred_majors = explicit ∪ inferred (explicit trước, dedupe)."""
+    return list(dict.fromkeys([*(explicit or []), *(inferred or [])]))
+
+
 class ChatProfileState(BaseModel):
     admission_year: Optional[int] = None
     total_score: Optional[float] = None
     subject_combination: Optional[str] = None
+    # inferred_interest_tags: sở thích suy luận ("thích lập trình/AI") — tích luỹ, bền.
+    # explicit_preferred_majors: ngành user chốt rõ ("ưu tiên KHMT"). Tách theo AC4.
+    inferred_interest_tags: List[str] = Field(default_factory=list)
+    explicit_preferred_majors: List[str] = Field(default_factory=list)
+    # preferred_majors: view dẫn xuất = explicit ∪ inferred (giữ cho retrieval/reasoning).
     preferred_majors: List[str] = Field(default_factory=list)
     preferred_schools: List[str] = Field(default_factory=list)
     location_preference: Optional[str] = None
@@ -46,6 +56,7 @@ class ConversationTurnResult(BaseModel):
     citations: List[Citation] = Field(default_factory=list)
     run_kind: str = "advisory"                      # "advisory" | "hybrid"
     hybrid_intent: Optional[Dict[str, Any]] = None  # serialized IntentResult, replayed by HybridDispatcher
+    correction_note: Optional[Dict[str, Any]] = None  # {slot, previous_value, new_value} khi re-rank (AC7)
 
 class AdvisoryRunRecord(BaseModel):
     id: int

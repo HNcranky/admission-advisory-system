@@ -67,6 +67,7 @@ def post_message(session_token: str, payload: ChatMessageCreate):
                 run_id=run_id,
                 latest_user_message=payload.content,
                 profile_state=result.profile_state,
+                correction_note=result.correction_note,
             )
     return result.model_dump()
 

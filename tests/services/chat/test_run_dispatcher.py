@@ -30,7 +30,7 @@ def test_dispatcher_completes_run_and_posts_result_message():
     repo = FakeRepository()
     dispatcher = RunDispatcher(
         repository=repo,
-        runner=lambda profile_state, latest_user_message, trace_run_id=None: {"final_answer": "De xuat phu hop"},
+        runner=lambda profile_state, latest_user_message, trace_run_id=None, correction_note=None: {"final_answer": "De xuat phu hop"},
         executor=InlineExecutor(),
     )
 
@@ -56,7 +56,7 @@ def test_dispatcher_posts_mock_conflict_verification_result_message(monkeypatch)
     repo = FakeRepository()
     dispatcher = RunDispatcher(
         repository=repo,
-        runner=lambda profile_state, latest_user_message, trace_run_id=None: {
+        runner=lambda profile_state, latest_user_message, trace_run_id=None, correction_note=None: {
             "final_answer": "Gợi ý CNTT\n\nXác minh dữ liệu\n- Hạn ngạch có mâu thuẫn."
         },
         executor=InlineExecutor(),
@@ -87,8 +87,9 @@ def test_dispatcher_passes_run_id_as_trace_run_id_to_runner():
     repo = FakeRepository()
     captured = {}
 
-    def runner(profile_state, latest_user_message, trace_run_id=None):
+    def runner(profile_state, latest_user_message, trace_run_id=None, correction_note=None):
         captured["trace_run_id"] = trace_run_id
+        captured["correction_note"] = correction_note
         return {"final_answer": "ok"}
 
     dispatcher = RunDispatcher(

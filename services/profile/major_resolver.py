@@ -11,17 +11,43 @@ def _dedupe(items: List[str]) -> List[str]:
     return list(dict.fromkeys(items))
 
 
-def resolve_majors(text: str, *, known_state=None, top_k: int = 8,
+# Cue phân loại ngành đã chọn (explicit) vs sở thích suy luận (inferred) — AC4.
+_EXPLICIT_CUES = (
+    "uu tien", "chon ", "quyet dinh", "muon hoc nganh", "dang ky nganh",
+    "chac chan", "xet tuyen nganh",
+)
+_VAGUE_CUES = ("thich", "dam me", "quan tam", "huong toi", "voi ai", "lien quan", "so thich")
+
+
+def is_explicit_choice(message: str, active_slot: Optional[str] = None) -> bool:
+    """True nếu message là LỰA CHỌN ngành rõ ràng (explicit), False nếu chỉ là sở
+    thích suy luận (inferred). Trả lời đúng câu hỏi ngành (active_slot) cũng tính
+    là explicit; cue mơ hồ ('thích', 'với AI'...) ép về inferred."""
+    if active_slot == "preferred_majors":
+        return True
+    normalized = normalize_text(message or "")
+    if any(cue in normalized for cue in _VAGUE_CUES):
+        return False
+    return any(cue in normalized for cue in _EXPLICIT_CUES)
+
+
+def resolve_majors(text: str, *, known_state=None, cheap_only: bool = False, top_k: int = 8,
                    score_threshold: float = 0.55, high_threshold: float = 0.70,
                    margin: float = 0.08, gateway=None, embedder=None,
                    repository=None) -> List[str]:
-    """Free-text -> list[program_id]. Tiered, deterministic-first."""
+    """Free-text -> list[program_id]. Tiered, deterministic-first.
+
+    cheap_only=True: chỉ chạy Tier-1 (alias) rẻ, KHÔNG gọi embedding/LLM — dùng khi
+    message rõ ràng đang trả lời một slot khác (chống nhiễu inferred tags)."""
     text = text or ""
 
     # Tier 1 — alias/exact match (rẻ, không LLM/embedding).
     hits = extract_preferred_majors(normalize_text(text))
     if hits:
         return _dedupe(hits)
+
+    if cheap_only:
+        return []
 
     # Tier 2 — embedding retrieval top-K từ DB (scale theo catalog, prompt cố định).
     from services.profile.major_catalog_repository import ProgramCatalogRepository

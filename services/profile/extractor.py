@@ -1,9 +1,9 @@
 import logging
 from typing import Optional
 
-from services.chat.models import ChatProfileState
+from services.chat.models import ChatProfileState, union_majors
 from services.inference.models import InferenceError, InferenceRequest
-from services.profile.major_resolver import resolve_majors
+from services.profile.major_resolver import is_explicit_choice, resolve_majors
 from services.profile.slots import SLOTS, missing_critical_slots, parse_slot
 
 logger = logging.getLogger(__name__)
@@ -63,7 +63,14 @@ def _coerce_llm_delta(parsed) -> dict:
 
 def extract_profile_update(message: str, *, known_state, active_slot: Optional[str] = None,
                            gateway=None, resolver=resolve_majors) -> dict:
-    """Trả DELTA: chỉ slot thay đổi lượt này (DST update)."""
+    """Trả DELTA: chỉ slot thay đổi lượt này (DST update).
+
+    Ngành tách theo AC4: sở thích suy luận -> inferred_interest_tags, ngành đã chọn
+    rõ -> explicit_preferred_majors, phát op tích luỹ {"__add__": [...]} để
+    apply_profile_delta UNION thay vì ghi đè (chống churn). Tier-2/3 (embedding/LLM)
+    bị chặn khi message chỉ đang trả lời một slot non-major (cheap_only) để tránh nhiễu.
+
+    NOTE: phủ định kiểu "không thích AI nữa" chưa xử lý — tags chỉ tích luỹ."""
     message = message or ""
     delta: dict = {}
 
@@ -73,17 +80,27 @@ def extract_profile_update(message: str, *, known_state, active_slot: Optional[s
         if val is not None:
             delta[active_slot] = val
 
-    # preferred_majors: ủy thác resolver tiered (Slice 2). Không bao giờ raise lên.
+    # Cổng chặn inference: nếu message vừa điền 1 slot non-major thì chỉ chạy Tier-1
+    # rẻ — không để embedding suy ra ngành tiếp tuyến làm nhiễu inferred tags.
+    cheap_only = bool(active_slot and active_slot != "preferred_majors" and active_slot in delta)
+
+    # Ngành: resolver tiered trả list phẳng; phân loại explicit/inferred theo ngữ cảnh.
     try:
-        majors = resolver(message, known_state=known_state, gateway=gateway)
+        majors = resolver(message, known_state=known_state, gateway=gateway, cheap_only=cheap_only)
     except Exception as exc:
         logger.warning("resolve_majors failed in extractor: %r", exc)
         majors = []
     if majors:
-        delta["preferred_majors"] = majors
+        majors = list(majors)
+        if is_explicit_choice(message, active_slot):
+            delta["explicit_preferred_majors"] = {"__add__": majors}
+        else:
+            delta["inferred_interest_tags"] = {"__add__": majors}
 
-    # Bare answer đã điền slot đang chờ → khỏi gọi LLM (minimize_num_calls).
-    if active_slot and active_slot in delta and _is_bare_answer(message):
+    has_major_delta = "explicit_preferred_majors" in delta or "inferred_interest_tags" in delta
+
+    # Bare answer đã điền slot đang chờ và không thêm ngành → khỏi gọi LLM.
+    if active_slot and active_slot in delta and _is_bare_answer(message) and not has_major_delta:
         return delta
 
     if gateway is None:
@@ -110,7 +127,33 @@ def extract_profile_update(message: str, *, known_state, active_slot: Optional[s
 
 
 def apply_profile_delta(current: ChatProfileState, delta: dict) -> ChatProfileState:
-    """Áp delta (override slot có trong delta), recompute missing_slots."""
-    merged = current.model_copy(update=delta)
+    """Áp delta, recompute missing_slots.
+
+    Hỗ trợ op tích luỹ {"__add__": [...]} (union, dedupe, giữ thứ tự) cho list slot;
+    slot vô hướng/list thường vẫn replace như cũ. Sau cùng tính lại view dẫn xuất
+    preferred_majors = explicit ∪ inferred."""
+    delta = dict(delta or {})
+    add_ops: dict = {}
+    scalar: dict = {}
+    for key, value in delta.items():
+        if isinstance(value, dict) and "__add__" in value:
+            add_ops[key] = value["__add__"]
+        else:
+            scalar[key] = value
+
+    merged = current.model_copy(update=scalar)
+
+    # Seed legacy: row cũ chỉ có preferred_majors → coi là explicit (tránh union ghi rỗng đè mất).
+    if (not merged.explicit_preferred_majors and not merged.inferred_interest_tags
+            and merged.preferred_majors):
+        merged.explicit_preferred_majors = list(merged.preferred_majors)
+
+    for field, items in add_ops.items():
+        existing = list(getattr(merged, field, []) or [])
+        setattr(merged, field, list(dict.fromkeys([*existing, *items])))
+
+    merged.preferred_majors = union_majors(
+        merged.explicit_preferred_majors, merged.inferred_interest_tags
+    )
     merged.missing_slots = missing_critical_slots(merged)
     return merged

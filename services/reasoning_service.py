@@ -1,6 +1,7 @@
 from typing import Dict, List, Tuple
 
 from agents.models import CandidateProgram, EligibilityCheck, RankedRecommendation, StudentProfile
+from services.explanation_service import _program_label
 
 
 def _major_matches(profile: StudentProfile, candidate: CandidateProgram) -> bool:
@@ -84,7 +85,7 @@ def reason_candidates(
             if band == "safe":
                 band = "match"
             cautions.append("Dữ liệu hạn ngạch chưa được xác minh giữa các nguồn.")
-        summary = f"{candidate.program_name} tại {candidate.school_name}: mức phù hợp {band}."
+        summary = f"{_program_label(candidate)} tại {candidate.school_name}: mức phù hợp {band}."
 
         checks.append(
             EligibilityCheck(

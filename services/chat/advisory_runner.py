@@ -3,7 +3,8 @@ from graph import graph
 from state import AgentState
 
 
-def run_advisory_for_session(profile_state, latest_user_message: str, trace_run_id: int | None = None):
+def run_advisory_for_session(profile_state, latest_user_message: str, trace_run_id: int | None = None,
+                             correction_note: dict | None = None):
     student_profile = StudentProfile(
         total_score=profile_state.total_score,
         subject_combination=profile_state.subject_combination,
@@ -21,6 +22,7 @@ def run_advisory_for_session(profile_state, latest_user_message: str, trace_run_
         student_profile=student_profile,
         profile_seeded=True,
         trace_run_id=trace_run_id,
+        correction_note=correction_note,
     )
 
     return graph.invoke(state)

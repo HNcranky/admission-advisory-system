@@ -32,6 +32,7 @@ class CandidateProgram(BaseModel):
     admission_year: int
     program_id: Optional[str] = None
     program_name: str
+    program_name_raw: Optional[str] = None
     admission_method: Optional[str] = None
     subject_combinations: List[str] = Field(default_factory=list)
     quota: Optional[Dict[str, Any]] = None

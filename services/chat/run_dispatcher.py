@@ -13,19 +13,23 @@ class RunDispatcher:
         self.runner = runner or run_advisory_for_session
         self.executor = executor or ThreadPoolExecutor(max_workers=2)
 
-    def submit(self, session_token: str, run_id: int, latest_user_message: str, profile_state):
+    def submit(self, session_token: str, run_id: int, latest_user_message: str, profile_state,
+               correction_note: dict | None = None):
         self.executor.submit(
             self._execute,
             session_token,
             run_id,
             latest_user_message,
-            profile_state
+            profile_state,
+            correction_note,
         )
 
-    def _execute(self, session_token: str, run_id: int, latest_user_message: str, profile_state):
+    def _execute(self, session_token: str, run_id: int, latest_user_message: str, profile_state,
+                 correction_note: dict | None = None):
         try:
             self.repository.mark_run_running(run_id)
-            result = self.runner(profile_state, latest_user_message, trace_run_id=run_id)
+            result = self.runner(profile_state, latest_user_message, trace_run_id=run_id,
+                                 correction_note=correction_note)
             final_answer = result.get("final_answer") or result.get("advisory") or ""
             self.repository.complete_run(run_id, result, final_answer)
             self.repository.append_message(session_token, "assistant", final_answer, "assistant_result")

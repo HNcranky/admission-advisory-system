@@ -46,6 +46,8 @@ class AgentState(BaseModel):
     inference_warnings: List[str] = Field(default_factory=list)
     uncertainty_reasons: List[str] = Field(default_factory=list)
 
+    correction_note: Optional[Dict[str, Any]] = None
+
 
                                                  
 ProgramInfo = CandidateProgram

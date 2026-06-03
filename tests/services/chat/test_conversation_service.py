@@ -686,3 +686,83 @@ def test_extract_called_exactly_once_per_advisory_turn():
     )
     service.handle_user_message("tok", "một câu không điền slot nào")
     assert counter.calls == 1  # KHÔNG double-extract (continue + handle)
+
+
+# ─── AC4: sở thích suy luận bền qua các lượt (chống churn vấn đề #1) ──────────
+
+def test_inferred_interest_persists_across_turns():
+    repo = FakeRepository()
+    # Turn 1 nêu sở thích -> inferred add-op; Turn 2 trả lời năm (extractor trả {},
+    # năm đến từ deterministic safety-net). Sở thích KHÔNG được churn/ghi đè.
+    seq = iter([
+        {"inferred_interest_tags": {"__add__": ["data_science"]}},
+        {},
+    ])
+    service = ConversationService(
+        repository=repo,
+        extract_profile=lambda text, known_state=None, active_slot=None: next(seq),
+        intent_router=FakeIntentRouter(IntentResult(route="ADVISORY_FLOW")),
+    )
+
+    service.handle_user_message("tok", "em thích lập trình với AI")
+    assert repo.profile_state.inferred_interest_tags == ["data_science"]
+    assert repo.profile_state.preferred_majors == ["data_science"]
+
+    service.handle_user_message("tok", "2026")
+    assert repo.profile_state.admission_year == 2026
+    # sở thích vẫn còn nguyên sau lượt trả lời slot khác
+    assert repo.profile_state.inferred_interest_tags == ["data_science"]
+    assert repo.profile_state.preferred_majors == ["data_science"]
+
+
+# ─── AC7: sửa giá trị sau khi đã chạy -> re-rank deterministic ────────────────
+
+def _completed_profile():
+    return ChatProfileState(
+        admission_year=2026, total_score=27.0, subject_combination="A01",
+        explicit_preferred_majors=["computer_science"], preferred_majors=["computer_science"],
+    )
+
+
+def test_correction_after_completed_run_triggers_rerun():
+    service, repo = _make_service(
+        intent_result=IntentResult(route="CONVERSATIONAL", subtype="EMOTIONAL_SUPPORT"),
+        profile=_completed_profile(),
+        flow=FlowState(active_flow="ADVISORY_FLOW", pending_question=None),
+        status="completed",
+        extract=lambda text, known_state=None, active_slot=None: {"total_score": 25.75},
+    )
+    result = service.handle_user_message("tok", "à em tính lại chắc 25.75 thôi, không phải 27")
+
+    assert result.should_start_run is True
+    assert result.session_status == "ready"
+    assert result.profile_state.total_score == 25.75
+    assert result.correction_note == {
+        "slot": "total_score", "previous_value": 27.0, "new_value": 25.75,
+    }
+
+
+def test_unchanged_value_after_completed_run_is_not_a_correction():
+    service, repo = _make_service(
+        intent_result=IntentResult(route="OUT_OF_SCOPE"),
+        profile=_completed_profile(),
+        flow=FlowState(active_flow="ADVISORY_FLOW", pending_question=None),
+        status="completed",
+        extract=lambda text, known_state=None, active_slot=None: {"total_score": 27.0},
+    )
+    result = service.handle_user_message("tok", "vẫn 27 điểm nhé")
+
+    assert result.should_start_run is False
+    assert result.correction_note is None
+
+
+def test_first_fill_during_collection_is_not_a_correction():
+    # Chưa có run nào (đang thu thập) -> đổi/điền slot KHÔNG bị coi là correction.
+    service, repo = _make_service(
+        intent_result=IntentResult(route="ADVISORY_FLOW"),
+        profile=ChatProfileState(admission_year=2026),
+        status="collecting_profile",
+        extract=lambda text, known_state=None, active_slot=None: {"total_score": 25.0},
+    )
+    result = service.handle_user_message("tok", "em được 25 điểm")
+    assert result.correction_note is None
