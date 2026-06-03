@@ -1,0 +1,36 @@
+# Core
+requests==2.33.1
+beautifulsoup4==4.14.3
+pydantic==2.13.4
+certifi==2026.4.22
+
+# Database
+psycopg2-binary==2.9.12
+
+# PDF
+pdfminer.six==20251230
+pdfplumber==0.11.9
+
+# LLM & Agents
+langgraph==1.1.10
+langchain==1.2.17
+google-genai==1.75.0
+
+# Normalization
+thefuzz[speedup]==0.22.1
+python-dateutil==2.9.0.post0
+
+# Browser rendering (Phase 5)
+# playwright
+
+# Retry logic
+tenacity==9.1.4
+
+# Testing
+pytest==9.0.3
+
+# Web
+fastapi==0.136.1
+uvicorn==0.46.0
+jinja2==3.1.6
+httpx==0.28.1

@@ -1,0 +1,58 @@
+[
+  {
+    "source_id": "vnu_uet_admission_homepage_2026",
+    "school_id": "vnu_uet",
+    "school_name": "Truong Dai hoc Cong nghe - DHQGHN",
+    "source_type": "admission_homepage",
+    "root_url": "https://uet.vnu.edu.vn/truong-dai-hoc-cong-nghe-dhqghn-ma-truong-qhi-tuyen-sinh-nam-2026-bac-dai-hoc-2/",
+    "trust_level": 4,
+    "priority": 2,
+    "fetch_strategy": "http",
+    "parser_profile": "vnu_uet_admission_page",
+    "update_frequency_hint": "yearly",
+    "is_official": true,
+    "active": true
+  },
+  {
+    "source_id": "vnuhn_proposal_pdf_2026",
+    "school_id": "vnu_uet",
+    "school_name": "Truong Dai hoc Cong nghe - DHQGHN",
+    "source_type": "proposal_pdf",
+    "root_url": "https://tuyensinh.uet.vnu.edu.vn/wp-content/images/Thong-tin-tuyen-sinh-DHCQ-nam-2026-cap-nhat.pdf",
+    "trust_level": 5,
+    "priority": 1,
+    "fetch_strategy": "http",
+    "parser_profile": "vnu_uet_proposal_pdf",
+    "update_frequency_hint": "yearly",
+    "is_official": true,
+    "active": true
+  },
+  {
+    "source_id": "hust_program_listing_2026",
+    "school_id": "hust",
+    "school_name": "Đại học Bách khoa Hà Nội",
+    "source_type": "program_listing",
+    "root_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc",
+    "trust_level": 5,
+    "priority": 2,
+    "fetch_strategy": "http",
+    "parser_profile": "hust_programs",
+    "update_frequency_hint": "yearly",
+    "is_official": true,
+    "active": true
+  },
+  {
+    "source_id": "hust_announcement_html_2026",
+    "school_id": "hust",
+    "school_name": "Đại học Bách khoa Hà Nội",
+    "source_type": "news_listing",
+    "root_url": "https://ts.hust.edu.vn/tin-tuc/thong-tin-tuyen-sinh-dai-hoc-chinh-quy-nam-2026",
+    "trust_level": 5,
+    "priority": 1,
+    "fetch_strategy": "http",
+    "parser_profile": "hust_announcement_html",
+    "update_frequency_hint": "yearly",
+    "is_official": true,
+    "active": true
+  }
+]

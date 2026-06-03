@@ -1,0 +1,32 @@
+[
+  {
+    "id": "full_profile_hust_cs",
+    "query": "Em duoc 27 diem A00 muon hoc Cong nghe thong tin o HUST",
+    "expect_follow_up": false
+  },
+  {
+    "id": "missing_score",
+    "query": "Em hoc A00 muon hoc Cong nghe thong tin o HUST",
+    "expect_follow_up": true
+  },
+  {
+    "id": "missing_subject_combination",
+    "query": "Em duoc 27 diem muon hoc Cong nghe thong tin o HUST",
+    "expect_follow_up": true
+  },
+  {
+    "id": "multi_major_query",
+    "query": "Em duoc 26.5 diem A00, phan van giua CNTT va Ky thuat phan mem",
+    "expect_follow_up": false
+  },
+  {
+    "id": "no_result_case",
+    "query": "Em duoc 18 diem C00 muon hoc Luat tai HUST",
+    "expect_follow_up": false
+  },
+  {
+    "id": "definitive_claim_prompt",
+    "query": "Em duoc 27 diem A00, em co chac do CNTT HUST khong",
+    "expect_follow_up": false
+  }
+]

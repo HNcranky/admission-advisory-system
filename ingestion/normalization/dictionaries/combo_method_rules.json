@@ -1,0 +1,58 @@
+{
+  "_doc": "Rules for mapping subject combination codes to admission methods. Rules are evaluated in order; first match wins. Each rule maps a regex pattern on the combo code to a method_code (from methods.json).",
+
+  "_shared": {
+    "rules": [
+      {
+        "combo_pattern": "^K0\\d$",
+        "method_code": "competency_test",
+        "description": "Tổ hợp K0x → Đánh giá tư duy / Đánh giá năng lực"
+      },
+      {
+        "combo_pattern": "^[ABCDV]\\d{2}$",
+        "method_code": "thpt_score",
+        "description": "Tổ hợp A/B/C/D/V → Xét điểm thi TN THPT"
+      }
+    ]
+  },
+
+  "hust": {
+    "rules": [
+      {
+        "combo_pattern": "^K0\\d$",
+        "method_code": "competency_test",
+        "description": "K0x → Đánh giá tư duy (TSA)"
+      }
+    ]
+  },
+
+  "neu": {
+    "rules": [
+      {
+        "combo_pattern": "^K0\\d$",
+        "method_code": "competency_test",
+        "description": "K0x → Đánh giá năng lực (ĐGNL ĐHQGHN)"
+      }
+    ]
+  },
+
+  "uet": {
+    "rules": [
+      {
+        "combo_pattern": "^K0\\d$",
+        "method_code": "competency_test",
+        "description": "K0x → Đánh giá năng lực (ĐGNL ĐHQGHN)"
+      }
+    ]
+  },
+
+  "ftu": {
+    "rules": [
+      {
+        "combo_pattern": "^K0\\d$",
+        "method_code": "competency_test",
+        "description": "K0x → Đánh giá năng lực (ĐGNL ĐHQGHN)"
+      }
+    ]
+  }
+}

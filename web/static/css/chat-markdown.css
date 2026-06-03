@@ -1,0 +1,117 @@
+/* chat-markdown.css
+ * Prose styles scoped to .message__bubble.message__bubble--markdown.
+ * Loaded AFTER chat.css so design tokens are already defined.
+ */
+
+.message__bubble--markdown {
+  line-height: var(--leading-base, 1.55);
+  font-size: var(--text-base, 14px);
+  color: var(--text-1);
+}
+
+.message__bubble--markdown > *:first-child { margin-top: 0; }
+.message__bubble--markdown > *:last-child  { margin-bottom: 0; }
+
+.message__bubble--markdown h1,
+.message__bubble--markdown h2,
+.message__bubble--markdown h3,
+.message__bubble--markdown h4 {
+  color: var(--text-1);
+  font-weight: 600;
+  line-height: var(--leading-tight, 1.3);
+  margin: var(--space-4, 16px) 0 var(--space-2, 8px);
+}
+
+.message__bubble--markdown h1 { font-size: var(--text-xl, 20px); }
+.message__bubble--markdown h2 { font-size: var(--text-lg, 17px); }
+.message__bubble--markdown h3 { font-size: var(--text-md, 15px); }
+.message__bubble--markdown h4 { font-size: var(--text-base, 14px); text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-2); }
+
+.message__bubble--markdown p {
+  margin: 0 0 var(--space-3, 12px);
+}
+
+.message__bubble--markdown ul,
+.message__bubble--markdown ol {
+  margin: 0 0 var(--space-3, 12px);
+  padding-left: var(--space-5, 24px);
+}
+
+.message__bubble--markdown li {
+  margin-bottom: var(--space-1, 4px);
+}
+
+.message__bubble--markdown strong { font-weight: 600; color: var(--text-1); }
+.message__bubble--markdown em     { font-style: italic; }
+
+.message__bubble--markdown code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  background: var(--surface-3);
+  padding: 1px 4px;
+  border-radius: var(--radius-sm, 4px);
+}
+
+.message__bubble--markdown pre {
+  margin: 0 0 var(--space-3, 12px);
+  padding: var(--space-3, 12px);
+  background: var(--surface-3);
+  border-radius: var(--radius-md, 6px);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm, 13px);
+  line-height: var(--leading-base, 1.55);
+}
+
+.message__bubble--markdown pre code {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+}
+
+.message__bubble--markdown a {
+  color: var(--accent-1);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.message__bubble--markdown a:hover {
+  color: var(--accent-1-hover);
+}
+
+.message__bubble--markdown blockquote {
+  margin: 0 0 var(--space-3, 12px);
+  padding: var(--space-1, 4px) var(--space-3, 12px);
+  border-left: 3px solid var(--surface-4);
+  color: var(--text-2);
+}
+
+.message__bubble--markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 var(--space-3, 12px);
+  font-size: var(--text-sm, 13px);
+}
+
+.message__bubble--markdown th,
+.message__bubble--markdown td {
+  padding: var(--space-2, 8px) var(--space-3, 12px);
+  border-bottom: 1px solid var(--surface-4);
+  text-align: left;
+}
+
+.message__bubble--markdown th {
+  font-weight: 600;
+  background: var(--surface-3);
+}
+
+.message__bubble--markdown tbody tr:nth-child(even) td {
+  background: var(--surface-2);
+}
+
+.message__bubble--markdown hr {
+  border: 0;
+  border-top: 1px solid var(--surface-4);
+  margin: var(--space-4, 16px) 0;
+}

@@ -1,0 +1,121 @@
+{
+  "_shared": {
+    "thpt_score": {
+      "canonical_name": "Xét điểm thi TN THPT",
+      "aliases": [
+        "kết quả thi tốt nghiệp THPT",
+        "sử dụng kết quả kỳ thi THPT",
+        "xét điểm thi THPT",
+        "phương thức điểm thi tốt nghiệp",
+        "Xét tuyển bằng điểm thi TN THPT",
+        "xét tuyển theo điểm thi THPT",
+        "điểm thi THPT",
+        "TN THPT",
+        "xét điểm tốt nghiệp"
+      ]
+    },
+    "school_record": {
+      "canonical_name": "Xét học bạ",
+      "aliases": [
+        "xét kết quả học tập THPT",
+        "xét học bạ 3 năm",
+        "xét học bạ",
+        "kết quả học tập",
+        "học bạ THPT",
+        "xét tuyển theo học bạ"
+      ]
+    },
+    "talent_admission": {
+      "canonical_name": "Xét tuyển tài năng",
+      "aliases": [
+        "tuyển thẳng",
+        "tuyển thẳng theo quy chế",
+        "miễn thi",
+        "ưu tiên xét tuyển",
+        "xét tuyển tài năng",
+        "tuyển sinh tài năng",
+        "xét tuyển sớm",
+        "phương thức xét tuyển tài năng",
+        "Xét tuyển bằng Giải thưởng HSG QG-QT/Chứng chỉ Quốc tế/HSNL",
+        "Giải thưởng HSG QG-QT",
+        "Giải thưởng HSG",
+        "Chứng chỉ Quốc tế",
+        "HSNL"
+      ]
+    },
+    "combined": {
+      "canonical_name": "Xét tuyển kết hợp",
+      "aliases": [
+        "xét tuyển kết hợp",
+        "phương thức kết hợp",
+        "kết hợp"
+      ]
+    }
+  },
+
+  "hust": {
+    "competency_test": {
+      "canonical_name": "Đánh giá tư duy (TSA)",
+      "aliases": [
+        "kỳ thi ĐGTD",
+        "bài thi đánh giá tư duy",
+        "Đánh giá tư duy",
+        "TSA",
+        "bài thi tư duy",
+        "kỳ thi đánh giá tư duy",
+        "bài kiểm tra tư duy",
+        "Xét tuyển dựa trên kết quả bài kiểm tra tư duy"
+      ]
+    }
+  },
+
+  "neu": {
+    "competency_test": {
+      "canonical_name": "Đánh giá năng lực (ĐGNL ĐHQGHN)",
+      "aliases": [
+        "đánh giá năng lực",
+        "ĐGNL",
+        "bài thi đánh giá năng lực",
+        "ĐGNL ĐHQGHN",
+        "kỳ thi ĐGNL"
+      ]
+    }
+  },
+
+  "vnu_uet": {
+    "competency_test": {
+      "canonical_name": "Đánh giá năng lực (ĐGNL ĐHQGHN)",
+      "aliases": [
+        "đánh giá năng lực",
+        "ĐGNL",
+        "bài thi ĐGNL",
+        "ĐGNL ĐHQGHN",
+        "kỳ thi ĐGNL"
+      ]
+    },
+    "talent_admission": {
+      "canonical_name": "Xét tuyển tài năng",
+      "aliases": [
+        "tuyển thẳng",
+        "tuyển thẳng theo quy chế",
+        "miễn thi",
+        "ưu tiên xét tuyển",
+        "xét tuyển tài năng",
+        "tuyển sinh tài năng",
+        "xét tuyển sớm",
+        "phương thức xét tuyển tài năng"
+      ]
+    }
+  },
+
+  "ftu": {
+    "competency_test": {
+      "canonical_name": "Đánh giá năng lực (ĐGNL ĐHQGHN)",
+      "aliases": [
+        "đánh giá năng lực",
+        "ĐGNL",
+        "ĐGNL ĐHQGHN"
+      ]
+    }
+  }
+}

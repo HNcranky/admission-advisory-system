@@ -1,0 +1,38 @@
+[
+  {
+    "school": "HUST",
+    "source_url": "https://www.hust.edu.vn/uploads/sys/tuyen-sinh/2026_03/qui-dinh-ve-xttn-nam-2026-ky.pdf",
+    "document_type": "handbook",
+    "topic": "admission_policy"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://www.hust.edu.vn/uploads/sys/tuyen-sinh/2026_05/4740_qd-dhbk-qcts.pdf",
+    "document_type": "handbook",
+    "topic": "admission_policy"
+  },
+  {
+    "school": "NEU",
+    "source_url": "https://tuyensinh.neu.edu.vn/hoc-phi",
+    "document_type": "tuition_page",
+    "topic": "tuition"
+  },
+  {
+    "school": "NEU",
+    "source_url": "https://tuyensinh.neu.edu.vn/chuong-trinh-dao-tao",
+    "document_type": "program_overview_page",
+    "topic": "program_overview"
+  },
+  {
+    "school": "VNU-UET",
+    "source_url": "https://uet.vnu.edu.vn/hoc-phi/",
+    "document_type": "tuition_page",
+    "topic": "tuition"
+  },
+  {
+    "school": "VNU-UET",
+    "source_url": "https://uet.vnu.edu.vn/hoc-bong/",
+    "document_type": "scholarship_policy",
+    "topic": "scholarship"
+  }
+]

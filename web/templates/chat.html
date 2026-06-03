@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block body %}
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <!-- Stage icons (lucide v0.469.0, MIT) -->
+    <symbol id="icon-user-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 20a6 6 0 0 0-12 0"/>
+      <circle cx="12" cy="10" r="4"/>
+      <circle cx="12" cy="12" r="10"/>
+    </symbol>
+    <symbol id="icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/>
+      <path d="m21 21-4.3-4.3"/>
+    </symbol>
+    <symbol id="icon-git-compare" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="5" cy="6" r="3"/>
+      <path d="M12 6h5a2 2 0 0 1 2 2v7"/>
+      <path d="M5 9v12"/>
+      <circle cx="19" cy="18" r="3"/>
+      <path d="M12 18H7a2 2 0 0 1-2-2V9"/>
+      <path d="M19 15V3"/>
+    </symbol>
+    <symbol id="icon-lightbulb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/>
+      <path d="M9 18h6"/>
+      <path d="M10 22h4"/>
+    </symbol>
+    <symbol id="icon-shield-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>
+      <path d="m9 12 2 2 4-4"/>
+    </symbol>
+    <symbol id="icon-message-square" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </symbol>
+
+    <!-- Status icons -->
+    <symbol id="icon-status-pending" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+    </symbol>
+    <symbol id="icon-status-running" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+      <path d="M3 3v5h5"/>
+      <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+      <path d="M16 16h5v5"/>
+    </symbol>
+    <symbol id="icon-status-completed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="m9 12 2 2 4-4"/>
+    </symbol>
+    <symbol id="icon-status-failed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="m15 9-6 6"/>
+      <path d="m9 9 6 6"/>
+    </symbol>
+  </defs>
+</svg>
+<div class="app-shell chat-shell" data-debug-ui="{{ 'true' if debug_ui_enabled else 'false' }}">
+  <header class="app-header">
+    <div class="app-header__brand">
+      <span class="app-header__logo" aria-hidden="true">A</span>
+      <h1 class="app-header__title">Tư vấn tuyển sinh AI</h1>
+    </div>
+    <div class="app-header__actions">
+      <button
+        id="open-left-drawer"
+        type="button"
+        class="icon-button app-header__drawer-trigger"
+        aria-label="Mở hồ sơ"
+        aria-controls="profile-panel"
+      >
+        <span aria-hidden="true">☰</span>
+      </button>
+      <button
+        id="open-right-drawer"
+        type="button"
+        class="icon-button app-header__drawer-trigger"
+        aria-label="Mở phân tích AI"
+        aria-controls="trace-panel"
+      >
+        <span aria-hidden="true">⋮</span>
+      </button>
+      <button
+        id="theme-toggle"
+        type="button"
+        class="icon-button"
+        aria-label="Đổi giao diện sáng/tối"
+      >
+        <span aria-hidden="true">🌙</span>
+      </button>
+      <button type="button" id="help-button" class="icon-button"
+              aria-label="Trợ giúp" aria-haspopup="dialog"
+              aria-controls="help-popover">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" width="18" height="18"
+             aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </button>
+      <dialog id="help-popover" class="popover">
+        <h3 class="popover__title">Tư vấn tuyển sinh AI</h3>
+        <p class="popover__meta">Phiên bản {{ app_version }}</p>
+        <p class="popover__desc">Trợ lý gợi ý ngành/trường dựa trên hồ sơ của em.</p>
+        <hr class="popover__divider">
+        <button type="button" id="reset-session" class="popover__link">
+          Bắt đầu lại
+        </button>
+      </dialog>
+    </div>
+  </header>
+
+  <main class="grid-3col">
+    <aside class="panel panel--side panel--left" id="profile-panel" aria-label="Hồ sơ học sinh">
+      <div class="panel__header">
+        <h2 class="panel__title">Hồ sơ</h2>
+        <button
+          id="collapse-left"
+          type="button"
+          class="icon-button panel__collapse"
+          aria-label="Thu gọn cột hồ sơ"
+          aria-controls="profile-panel"
+        >
+          <span aria-hidden="true">◀</span>
+        </button>
+        <button type="button" class="panel__drawer-close" aria-label="Đóng">×</button>
+      </div>
+      <div class="panel__body">
+        <section class="card" id="profile-summary-card">
+          <h3 class="card__title">Hồ sơ tạm thời</h3>
+          <div class="card__body" id="profile-summary"></div>
+        </section>
+        <section class="card" id="recommendation-card">
+          <h3 class="card__title">Khuyến nghị mới nhất</h3>
+          <div class="card__body" id="recommendation-panel"></div>
+        </section>
+      </div>
+    </aside>
+
+    <section class="panel panel--center" id="chat-panel" aria-label="Hội thoại">
+      <div id="chat-transcript" class="chat-transcript" aria-live="polite"></div>
+      <form id="chat-form" class="composer">
+        <label for="chat-input" class="sr-only">Nội dung tin nhắn</label>
+        <textarea
+          id="chat-input"
+          class="composer__input"
+          name="content"
+          rows="3"
+          placeholder="Ví dụ: Em muốn học CNTT ở Hà Nội năm 2026, dự kiến được 27 điểm."
+        ></textarea>
+        <div class="chat-actions">
+          <span class="composer-hint">Ctrl+Enter để gửi</span>
+          <span id="composer-status" class="composer-status" aria-live="polite"></span>
+          <button id="send-button" type="submit" disabled>Gửi</button>
+        </div>
+      </form>
+    </section>
+
+    <aside class="panel panel--side panel--right" id="trace-panel" aria-label="Phân tích của AI">
+      <div class="panel__header">
+        <button
+          id="collapse-right"
+          type="button"
+          class="icon-button panel__collapse"
+          aria-label="Thu gọn cột phân tích"
+          aria-controls="trace-panel"
+        >
+          <span aria-hidden="true">▶</span>
+        </button>
+        <h2 class="panel__title">Phân tích của AI</h2>
+        <button type="button" class="panel__drawer-close" aria-label="Đóng">×</button>
+      </div>
+      <div class="panel__body">
+        <ol class="trace-cards" id="trace-cards">
+          {% for stage in stage_labels %}
+            <li class="trace-card trace-card--pending"
+                data-stage="{{ stage.id }}"
+                data-sequence="{{ loop.index0 }}">
+              <div class="trace-card__row">
+                <span class="trace-card__icon" aria-hidden="true">
+                  <svg class="icon icon--stage"><use href="#icon-{{ stage.icon }}"/></svg>
+                </span>
+                <span class="trace-card__name">{{ stage.label }}</span>
+                <span class="trace-card__status" aria-hidden="true">
+                  <svg class="icon icon--status"><use href="#icon-status-pending"/></svg>
+                </span>
+                <span class="trace-card__meta">pending</span>
+              </div>
+              <pre class="trace-card__body" hidden></pre>
+            </li>
+          {% endfor %}
+        </ol>
+      </div>
+    </aside>
+  </main>
+
+  <div id="drawer-backdrop" class="drawer-backdrop" hidden></div>
+</div>
+<ol id="toast-stack" aria-live="polite" aria-atomic="false"></ol>
+<script>
+  window.__stageLabels = {{ stage_labels | tojson }};
+  window.__debugUi = {{ 'true' if debug_ui_enabled else 'false' }};
+</script>
+{% endblock %}

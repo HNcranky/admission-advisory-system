@@ -1,0 +1,948 @@
+/* ============================================================
+   chat.css — slice 02 core (shell + header + grid + panel base)
+   All values consume tokens from tokens.css.
+   ============================================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-base);
+  color: var(--text-1);
+  background: var(--surface-1);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+/* ----- App shell ----- */
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  /* Pin the shell to exactly the viewport so the page itself never scrolls;
+     scrolling is delegated to the inner panel bodies / transcript instead.
+     dvh keeps the bottom composer visible under mobile browser chrome. */
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--surface-1);
+}
+
+/* ----- Header ----- */
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  height: var(--header-h);
+  padding: 0 var(--space-4);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--surface-4);
+}
+
+.app-header__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.app-header__logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  background: var(--accent-1);
+  color: var(--accent-1-contrast);
+  font-weight: 700;
+  font-size: var(--text-sm);
+}
+
+.app-header__title {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.app-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ----- Generic buttons ----- */
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-2);
+  cursor: pointer;
+  font-size: var(--text-md);
+  line-height: 1;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.icon-button:hover {
+  background: var(--surface-3);
+  color: var(--text-1);
+}
+
+.icon-button:focus-visible {
+  outline: 2px solid var(--accent-1);
+  outline-offset: 2px;
+}
+
+.primary-button {
+  padding: var(--space-2) var(--space-4);
+  background: var(--accent-1);
+  color: var(--accent-1-contrast);
+  border: 0;
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.primary-button:hover {
+  background: var(--accent-1-hover);
+}
+
+.primary-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.secondary-button {
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-2);
+  color: var(--text-1);
+  border: 1px solid var(--surface-4);
+  border-radius: var(--radius-md);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.secondary-button:hover {
+  background: var(--surface-3);
+}
+
+/* ----- Main grid ----- */
+
+.grid-3col {
+  display: grid;
+  grid-template-columns: var(--col-left) minmax(0, 1fr) var(--col-right);
+  /* A single row pinned to the available height (minmax floor of 0 lets the
+     row shrink below content so each panel's own overflow-y:auto engages). */
+  grid-template-rows: minmax(0, 1fr);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* ----- Panel base ----- */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--surface-1);
+  overflow: hidden;
+}
+
+.panel--side {
+  background: var(--surface-2);
+}
+
+.panel--left {
+  border-right: 1px solid var(--surface-4);
+}
+
+.panel--right {
+  border-left: 1px solid var(--surface-4);
+}
+
+.panel--center {
+  background: var(--surface-1);
+}
+
+.panel__header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: inherit;
+  border-bottom: 1px solid var(--surface-4);
+}
+
+.panel__title {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-2);
+  text-transform: uppercase;
+}
+
+.panel__body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ----- Profile cards ----- */
+
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--surface-4);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+}
+
+.card__title {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-1);
+  border-bottom: 1px solid var(--surface-4);
+}
+
+.card__body {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-2);
+  line-height: var(--leading-base);
+  white-space: pre-wrap;
+}
+
+.card__body p {
+  margin: 0 0 var(--space-2);
+}
+
+.card__body p:last-child {
+  margin-bottom: 0;
+}
+
+/* ----- Chat panel ----- */
+
+.chat-transcript {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  min-height: 0;
+}
+
+/* ----- Composer ----- */
+
+.composer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  background: var(--surface-1);
+  border-top: 1px solid var(--surface-4);
+}
+
+.composer__input {
+  width: 100%;
+  min-height: 64px;
+  padding: var(--space-3);
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  line-height: var(--leading-base);
+  color: var(--text-1);
+  background: var(--surface-2);
+  border: 1px solid var(--surface-4);
+  border-radius: var(--radius-md);
+  resize: vertical;
+}
+
+.composer__input:focus-visible {
+  outline: 2px solid var(--accent-1);
+  outline-offset: 0;
+  border-color: transparent;
+}
+
+.composer__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.composer__hint {
+  font-size: var(--text-xs);
+  color: var(--text-3);
+}
+
+/* ===== Trace panel ===== */
+
+.trace-cards {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.trace-card {
+  position: relative;
+  border: 1px solid var(--surface-4);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  overflow: hidden;
+  cursor: default;
+}
+
+/* Vertical connector line between cards (timeline feel).
+   Sits centered under the icon column; only on non-last cards. */
+.trace-card:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: calc(var(--space-3) + 9px); /* (row padding-left) + half of 18px icon */
+  bottom: calc(-1 * var(--space-3));
+  width: 1px;
+  height: var(--space-3);
+  background: var(--surface-4);
+  pointer-events: none;
+}
+
+.trace-card__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  text-align: left;
+  width: 100%;
+  color: inherit;
+}
+
+/* Debug-mode promoted button row gets pointer + hover affordance */
+.trace-card[data-debug-wired="true"] {
+  cursor: pointer;
+}
+.trace-card[data-debug-wired="true"]:hover {
+  background: var(--surface-3);
+}
+
+.trace-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: var(--text-2);
+  flex: 0 0 auto;
+}
+
+.trace-card__name {
+  flex: 1;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.trace-card__status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.trace-card__meta {
+  font-size: var(--text-xs);
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+  min-width: 32px;
+  text-align: right;
+}
+
+.trace-card__body {
+  margin: 0;
+  padding: var(--space-3);
+  background: var(--surface-2);
+  border-top: 1px solid var(--surface-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  max-height: 320px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text-1);
+}
+
+/* SVG icon defaults — color follows currentColor on the surrounding span */
+.icon {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.icon--stage  { width: 18px; height: 18px; }
+.icon--status { width: 16px; height: 16px; }
+
+/* Status variants drive icon + meta color via currentColor */
+.trace-card--pending   .trace-card__status { color: var(--text-3); }
+.trace-card--pending   .trace-card__meta   { color: var(--text-3); }
+
+.trace-card--running   .trace-card__status {
+  color: var(--warning);
+  animation: trace-spin 1s linear infinite;
+}
+.trace-card--running   .trace-card__meta   { color: var(--warning); }
+
+.trace-card--completed .trace-card__status { color: var(--positive); }
+.trace-card--completed .trace-card__meta   { color: var(--positive); }
+
+.trace-card--failed    .trace-card__status { color: var(--negative); }
+.trace-card--failed    .trace-card__meta   { color: var(--negative); }
+
+@keyframes trace-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ----- Collapse modifiers ----- */
+
+.app-shell.left-collapsed  { --col-left: 32px;  }
+.app-shell.right-collapsed { --col-right: 32px; }
+
+.app-shell.left-collapsed  #profile-panel .panel__body,
+.app-shell.left-collapsed  #profile-panel .panel__title,
+.app-shell.right-collapsed #trace-panel  .panel__body,
+.app-shell.right-collapsed #trace-panel  .panel__title {
+  display: none;
+}
+
+.app-shell.left-collapsed  #profile-panel .panel__header,
+.app-shell.right-collapsed #trace-panel  .panel__header {
+  padding: var(--space-2) 0;
+  justify-content: center;
+  border-bottom: 0;
+}
+
+.panel__collapse {
+  flex: 0 0 auto;
+}
+
+/* Rotate the chevron when collapsed so the same glyph points outward. */
+.app-shell.left-collapsed  #collapse-left  span { transform: rotate(180deg); display: inline-block; }
+.app-shell.right-collapsed #collapse-right span { transform: rotate(180deg); display: inline-block; }
+
+/* ============================================================
+   Responsive layout
+   ============================================================ */
+
+/* Default desktop: drawer-trigger buttons hidden. */
+.app-header__drawer-trigger {
+  display: none;
+}
+
+/* Tablet — collapse trace panel by default. */
+@media (max-width: 1099px) {
+  .app-shell:not(.right-collapsed) {
+    --col-right: 32px;
+  }
+  .app-shell:not(.right-collapsed) #trace-panel .panel__body,
+  .app-shell:not(.right-collapsed) #trace-panel .panel__title {
+    display: none;
+  }
+  .app-shell:not(.right-collapsed) #trace-panel .panel__header {
+    padding: var(--space-2) 0;
+    justify-content: center;
+    border-bottom: 0;
+  }
+}
+
+/* Mobile — both side panels become drawers. */
+@media (max-width: 899px) {
+  .grid-3col {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .panel--side {
+    display: none;
+  }
+
+  .app-header__drawer-trigger {
+    display: inline-flex;
+  }
+
+  /* Drawer surfaces (shown via panel--drawer-open). */
+  #profile-panel.panel--drawer-open,
+  #trace-panel.panel--drawer-open {
+    display: flex;
+    position: fixed;
+    top: var(--header-h);
+    bottom: 0;
+    width: min(85vw, 320px);
+    z-index: 50;
+    background: var(--surface-1);
+    box-shadow: var(--shadow-md);
+    overflow-y: auto;
+    animation: drawer-slide-in 200ms ease;
+  }
+
+  #profile-panel.panel--drawer-open { left: 0;  border-right: 1px solid var(--surface-4); }
+  #trace-panel.panel--drawer-open   { right: 0; border-left:  1px solid var(--surface-4);
+                                      animation-name: drawer-slide-in-right; }
+}
+
+/* ===== Message bubbles (slice 03) ===== */
+
+.message {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1, 4px);
+  max-width: 100%;
+}
+
+.message--user {
+  align-items: flex-end;
+}
+
+.message--assistant {
+  align-items: flex-start;
+}
+
+.message__bubble {
+  max-width: var(--bubble-max, 70%);
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  border-radius: 10px;
+  background: var(--assistant-bg);
+  color: var(--text-1);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  box-shadow: var(--shadow-sm);
+}
+
+.message--user .message__bubble {
+  background: var(--user-bubble);
+  border-radius: 10px 10px 2px 10px;
+}
+
+.message--assistant .message__bubble {
+  background: var(--assistant-bg);
+  border-radius: 10px 10px 10px 2px;
+}
+
+.message__bubble--full {
+  max-width: 100%;
+  width: 100%;
+  padding: var(--space-4, 16px) var(--space-5, 24px);
+  white-space: normal;  /* markdown handles its own whitespace */
+}
+
+.message__bubble--markdown {
+  white-space: normal;
+}
+
+.message__timestamp {
+  font-size: var(--text-xs, 12px);
+  color: var(--text-3);
+  padding: 0 var(--space-2, 8px);
+  font-variant-numeric: tabular-nums;
+}
+
+.message--assistant_error .message__bubble {
+  background: color-mix(in oklch, var(--negative) 12%, var(--surface-2));
+  border: 1px solid color-mix(in oklch, var(--negative) 35%, transparent);
+  color: var(--text-1);
+}
+
+.message__cta {
+  margin: var(--space-3, 12px) 0 0;
+  font-size: var(--text-sm, 13px);
+  color: var(--negative);
+  font-weight: 600;
+}
+
+/* "Đang suy nghĩ..." pending bubble — animated dots reuse @keyframes loading-dots. */
+.message__bubble--thinking {
+  color: var(--text-2);
+  font-style: italic;
+}
+
+.message__bubble--thinking::after {
+  content: "";
+  display: inline-block;
+  width: 1.2em;
+  text-align: left;
+  margin-left: 2px;
+  animation: loading-dots 1.4s steps(4, end) infinite;
+}
+
+/* ===== Composer (slice 03 polish) ===== */
+
+#chat-input {
+  width: 100%;
+  min-height: 56px;
+  max-height: 240px;
+  resize: none;
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  font-family: var(--font-sans);
+  font-size: var(--text-md, 15px);
+  line-height: var(--leading-base, 1.55);
+  background: var(--surface-2);
+  color: var(--text-1);
+  border: 1px solid var(--surface-4);
+  border-radius: var(--radius-md, 6px);
+  overflow-y: auto;
+  transition: border-color var(--transition-fast, 120ms ease);
+}
+
+#chat-input:focus {
+  outline: none;
+  border-color: var(--accent-1);
+}
+
+.chat-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  margin-top: var(--space-2, 8px);
+}
+
+.composer-hint {
+  flex: 0 0 auto;
+  font-size: var(--text-xs, 12px);
+  color: var(--text-3);
+}
+
+.composer-status {
+  flex: 1 1 auto;
+  text-align: center;
+  font-size: var(--text-sm, 13px);
+  color: var(--text-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2, 8px);
+}
+
+.composer-status[data-tone="pending"]::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--surface-4);
+  border-top-color: var(--accent-1);
+  border-radius: 50%;
+  animation: composer-spin 0.8s linear infinite;
+}
+
+@keyframes composer-spin {
+  to { transform: rotate(360deg); }
+}
+
+#send-button {
+  flex: 0 0 auto;
+  padding: var(--space-2, 8px) var(--space-5, 24px);
+  font-size: var(--text-base, 14px);
+  font-weight: 600;
+  background: var(--accent-1);
+  color: var(--accent-1-contrast);
+  border: 0;
+  border-radius: var(--radius-md, 6px);
+  cursor: pointer;
+  transition: background var(--transition-fast, 120ms ease);
+}
+
+#send-button:hover:not(:disabled) { background: var(--accent-1-hover); }
+#send-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ===== Greeting empty state ===== */
+
+.transcript-greeting {
+  margin: auto;
+  max-width: 480px;
+  padding: var(--space-6) var(--space-5);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--text-2);
+}
+
+.transcript-greeting__icon {
+  color: var(--accent-1);
+  background: var(--surface-3);
+  padding: var(--space-3);
+  border-radius: 999px;
+  display: inline-flex;
+}
+
+.transcript-greeting__title {
+  margin: 0;
+  font-size: var(--text-md);
+  color: var(--text-1);
+}
+
+.transcript-greeting__chips {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-2) 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.chip {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-2);
+  color: var(--text-1);
+  border: 1px solid var(--surface-4);
+  border-radius: var(--radius-md);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+.chip:hover { background: var(--surface-3); border-color: var(--accent-1); }
+.chip:focus-visible { outline: 2px solid var(--accent-1); outline-offset: 2px; }
+
+/* ===== Card empty state text ===== */
+
+.card-empty {
+  margin: 0;
+  color: var(--text-3);
+  font-style: italic;
+  font-size: var(--text-sm);
+}
+
+/* ===== Skeleton pulse ===== */
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.skeleton-line {
+  height: 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.skeleton-line--100 { width: 100%; }
+.skeleton-line--85  { width: 85%;  }
+.skeleton-line--60  { width: 60%;  }
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 0.7; }
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ===== Loading dots (used by the "Đang suy nghĩ..." bubble) ===== */
+
+@keyframes loading-dots {
+  0%   { content: ""; }
+  25%  { content: "."; }
+  50%  { content: ".."; }
+  75%  { content: "..."; }
+  100% { content: ""; }
+}
+
+/* ===== Toasts ===== */
+
+#toast-stack {
+  position: fixed;
+  top: calc(var(--header-h) + var(--space-3));
+  right: var(--space-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  z-index: 60;
+  pointer-events: none;
+  max-width: min(360px, calc(100vw - var(--space-5)));
+}
+
+.toast {
+  pointer-events: auto;
+  background: var(--surface-2);
+  color: var(--text-1);
+  border: 1px solid var(--surface-4);
+  border-left: 3px solid var(--accent-1);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-sm);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  animation: toast-in 200ms ease;
+}
+
+.toast--info    { border-left-color: var(--accent-1); }
+.toast--warning { border-left-color: var(--warning); }
+.toast--error   { border-left-color: var(--negative); }
+
+.toast--leaving { animation: toast-out 200ms ease forwards; }
+
+.toast__body { flex: 1; line-height: var(--leading-base); }
+
+.toast__close {
+  background: transparent;
+  border: 0;
+  color: var(--text-2);
+  font-size: 1.2em;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 var(--space-1);
+}
+.toast__close:hover { color: var(--text-1); }
+
+@keyframes toast-in {
+  from { transform: translateX(20px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes toast-out {
+  from { transform: translateX(0);    opacity: 1; }
+  to   { transform: translateX(20px); opacity: 0; }
+}
+
+/* ===== Mobile drawer polish ===== */
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 40;
+  animation: backdrop-fade-in var(--transition-base);
+}
+.drawer-backdrop[hidden] { display: none; }
+
+body.drawer-open { overflow: hidden; }
+
+.panel__drawer-close {
+  display: none;
+  background: transparent;
+  border: 0;
+  font-size: 1.4em;
+  color: var(--text-2);
+  cursor: pointer;
+  padding: 0 var(--space-1);
+}
+
+@media (max-width: 899px) {
+  .panel--drawer-open .panel__drawer-close {
+    display: inline-flex;
+  }
+}
+
+@keyframes backdrop-fade-in {
+  from { opacity: 0; } to { opacity: 1; }
+}
+@keyframes drawer-slide-in {
+  from { transform: translateX(-20px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+@keyframes drawer-slide-in-right {
+  from { transform: translateX(20px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+/* ===== Help popover ===== */
+
+.popover {
+  border: 1px solid var(--surface-4);
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
+  color: var(--text-1);
+  padding: var(--space-4);
+  max-width: 320px;
+  box-shadow: var(--shadow-md);
+}
+.popover::backdrop { background: rgba(0,0,0,0.35); }
+.popover__title  { margin: 0 0 var(--space-1); font-size: var(--text-md); }
+.popover__meta   { margin: 0; color: var(--text-3); font-size: var(--text-xs); }
+.popover__desc   { margin: var(--space-2) 0; color: var(--text-2); font-size: var(--text-sm); }
+.popover__divider {
+  border: 0;
+  border-top: 1px solid var(--surface-4);
+  margin: var(--space-2) 0;
+}
+.popover__link {
+  background: transparent;
+  border: 0;
+  color: var(--accent-1);
+  font: inherit;
+  cursor: pointer;
+  padding: var(--space-1) 0;
+}
+.popover__link:hover { color: var(--accent-1-hover); }

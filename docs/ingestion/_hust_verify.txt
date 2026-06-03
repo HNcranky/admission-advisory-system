@@ -1,0 +1,224 @@
+=== Program mapping (cross-source invariant) ===
+  [MATCH]
+    listing      : 'Kỹ thuật thực phẩm (Chương trình tiên tiến)' -> pid='food_technology'  canon='Kỹ thuật Thực phẩm'
+    announcement : 'Kỹ thuật Thực phẩm' -> pid='food_technology'  canon='Kỹ thuật Thực phẩm'
+  [MATCH]
+    listing      : 'Kỹ thuật sinh học (Chương trình tiên tiến)' -> pid='bioengineering'  canon='Kỹ thuật Sinh học'
+    announcement : 'Kỹ thuật sinh học' -> pid='bioengineering'  canon='Kỹ thuật Sinh học'
+  [MATCH]
+    listing      : 'Kỹ thuật Sinh học' -> pid='bioengineering'  canon='Kỹ thuật Sinh học'
+    announcement : 'Kỹ thuật Sinh học' -> pid='bioengineering'  canon='Kỹ thuật Sinh học'
+  [MATCH]
+    listing      : 'Kỹ thuật Thực phẩm' -> pid='food_technology'  canon='Kỹ thuật Thực phẩm'
+    announcement : 'Kỹ thuật Thực phẩm' -> pid='food_technology'  canon='Kỹ thuật Thực phẩm'
+  [MATCH]
+    listing      : 'Kỹ thuật Hóa dược (Chương trình tiên tiến)' -> pid='pharmaceutical_chemistry'  canon='Kỹ thuật Hóa dược'
+    announcement : 'Kỹ thuật Hóa dược' -> pid='pharmaceutical_chemistry'  canon='Kỹ thuật Hóa dược'
+  [MATCH]
+    listing      : 'Kỹ thuật Hóa học' -> pid='chemical_engineering'  canon='Kỹ thuật Hóa học'
+    announcement : 'Kỹ thuật Hóa học' -> pid='chemical_engineering'  canon='Kỹ thuật Hóa học'
+  [MATCH]
+    listing      : 'Hóa học' -> pid='chemical_engineering'  canon='Kỹ thuật Hóa học'
+    announcement : 'Hóa học' -> pid='chemical_engineering'  canon='Kỹ thuật Hóa học'
+  [MATCH]
+    listing      : 'Công nghệ giáo dục' -> pid='education_technology'  canon='Công nghệ Giáo dục'
+    announcement : 'Công nghệ Giáo dục' -> pid='education_technology'  canon='Công nghệ Giáo dục'
+  [MATCH]
+    listing      : 'Quản lý giáo dục' -> pid='education_management'  canon='Quản lý Giáo dục'
+    announcement : 'Quản lý Giáo dục' -> pid='education_management'  canon='Quản lý Giáo dục'
+  [MATCH]
+    listing      : 'Tâm lý học công nghiệp và tổ chức' -> pid='industrial_psychology'  canon='Tâm lý học Công nghiệp và Tổ chức'
+    announcement : 'Tâm lý học công nghiệp và tổ chức (mới)' -> pid='industrial_psychology'  canon='Tâm lý học Công nghiệp và Tổ chức'
+  [MATCH]
+    listing      : 'Hệ thống điện và năng lượng tái tạo (Chương trình tiên tiến)' -> pid='power_renewable_energy'  canon='Hệ thống Điện và Năng lượng Tái tạo'
+    announcement : 'Hệ thống điện và năng lượng tái tạo' -> pid='power_renewable_energy'  canon='Hệ thống Điện và Năng lượng Tái tạo'
+  [MATCH]
+    listing      : 'Kỹ thuật Điều khiển - Tự động hóa (Chương trình tiên tiến)' -> pid='control_automation'  canon='Kỹ thuật Điều khiển - Tự động hóa'
+    announcement : 'Kỹ thuật điều khiển-Tự động hóa' -> pid='control_automation'  canon='Kỹ thuật Điều khiển - Tự động hóa'
+  [MATCH]
+    listing      : 'Tin học công nghiệp và Tự động hóa (Chương trình Việt-Pháp PFIEV)' -> pid='control_automation'  canon='Kỹ thuật Điều khiển - Tự động hóa'
+    announcement : 'Tin học công nghiệp và Tự động hóa' -> pid='control_automation'  canon='Kỹ thuật Điều khiển - Tự động hóa'
+  [MATCH]
+    listing      : 'Kỹ thuật điện' -> pid='electrical_engineering'  canon='Kỹ thuật Điện'
+    announcement : 'Kỹ thuật điện' -> pid='electrical_engineering'  canon='Kỹ thuật Điện'
+  [MATCH]
+    listing      : 'Kỹ thuật Điều khiển - Tự động hóa' -> pid='control_automation'  canon='Kỹ thuật Điều khiển - Tự động hóa'
+    announcement : 'Kỹ thuật điều khiển & Tự động hóa' -> pid='control_automation'  canon='Kỹ thuật Điều khiển - Tự động hóa'
+  [MATCH]
+    listing      : 'Phân tích kinh doanh (Chương trình tiên tiến)' -> pid='business_administration'  canon='Quản trị Kinh doanh'
+    announcement : 'Phân tích Kinh doanh' -> pid='business_administration'  canon='Quản trị Kinh doanh'
+  [MATCH]
+    listing      : 'Logistics và Quản lý chuỗi cung ứng (Chương trình tiên tiến)' -> pid='logistics'  canon='Logistics và Quản lý Chuỗi cung ứng'
+    announcement : 'Logistics và Quản lý chuỗi cung ứng' -> pid='logistics'  canon='Logistics và Quản lý Chuỗi cung ứng'
+  [MATCH]
+    listing      : 'Kế toán (Chương trình tiên tiến)' -> pid='accounting'  canon='Kế toán'
+    announcement : 'Kế toán (mới)' -> pid='accounting'  canon='Kế toán'
+  [MATCH]
+    listing      : 'Quản lý năng lượng' -> pid='energy_management'  canon='Quản lý Năng lượng'
+    announcement : 'Quản lý Năng lượng' -> pid='energy_management'  canon='Quản lý Năng lượng'
+  [MATCH]
+    listing      : 'Quản lý công nghiệp' -> pid='industrial_management'  canon='Quản lý Công nghiệp'
+    announcement : 'Quản lý Công nghiệp' -> pid='industrial_management'  canon='Quản lý Công nghiệp'
+  [MATCH]
+    listing      : 'Quản trị kinh doanh' -> pid='business_administration'  canon='Quản trị Kinh doanh'
+    announcement : 'Quản trị Kinh doanh' -> pid='business_administration'  canon='Quản trị Kinh doanh'
+  [MATCH]
+    listing      : 'Tài chính - Ngân hàng' -> pid='finance_banking'  canon='Tài chính - Ngân hàng'
+    announcement : 'Tài chính-Ngân hàng' -> pid='finance_banking'  canon='Tài chính - Ngân hàng'
+  [MATCH]
+    listing      : 'Truyền thông số và Kỹ thuật đa phương tiện (Chương trình tiên tiến)' -> pid='ict'  canon='Công nghệ Thông tin - Truyền thông'
+    announcement : 'Truyền thông số và Kỹ thuật đa phương tiện' -> pid='ict'  canon='Công nghệ Thông tin - Truyền thông'
+  [MATCH]
+    listing      : 'Kỹ thuật Điện tử - Viễn thông (Chương trình tiên tiến)' -> pid='electronics_telecom'  canon='Kỹ thuật Điện tử - Viễn thông'
+    announcement : 'Kỹ thuật Điện tử - Viễn thông' -> pid='electronics_telecom'  canon='Kỹ thuật Điện tử - Viễn thông'
+  [MATCH]
+    listing      : 'Kỹ thuật Y sinh (Chương trình tiên tiến)' -> pid='biomedical_engineering'  canon='Kỹ thuật Y sinh'
+    announcement : 'Kỹ thuật Y sinh' -> pid='biomedical_engineering'  canon='Kỹ thuật Y sinh'
+  [MATCH]
+    listing      : 'Hệ thống nhúng thông minh và IoT (Chương trình tiên tiến)' -> pid='embedded_systems'  canon='Hệ thống Nhúng Thông minh và IoT'
+    announcement : 'Hệ thống nhúng thông minh và IoT (tăng cường tiếng Nhật)' -> pid='embedded_systems'  canon='Hệ thống Nhúng Thông minh và IoT'
+  [MATCH]
+    listing      : 'Điện tử-Viễn thông - ĐH Leibniz Hannover (Đức)' -> pid='electronics_telecom'  canon='Kỹ thuật Điện tử - Viễn thông'
+    announcement : 'Điện tử - Viễn thông - ĐH Leibniz Hannover (CHLB Đức)' -> pid='electronics_telecom'  canon='Kỹ thuật Điện tử - Viễn thông'
+  [MATCH]
+    listing      : 'Điện tử và Viễn thông' -> pid='electronics_telecom'  canon='Kỹ thuật Điện tử - Viễn thông'
+    announcement : 'Kỹ thuật Điện tử-Viễn thông' -> pid='electronics_telecom'  canon='Kỹ thuật Điện tử - Viễn thông'
+  [MATCH]
+    listing      : 'Kỹ thuật Y sinh' -> pid='biomedical_engineering'  canon='Kỹ thuật Y sinh'
+    announcement : 'Kỹ thuật Y sinh' -> pid='biomedical_engineering'  canon='Kỹ thuật Y sinh'
+  [MATCH]
+    listing      : 'Kỹ thuật Môi trường' -> pid='environmental_engineering'  canon='Kỹ thuật Môi trường'
+    announcement : 'Kỹ thuật Môi trường' -> pid='environmental_engineering'  canon='Kỹ thuật Môi trường'
+  [MATCH]
+    listing      : 'Quản lý Tài nguyên và Môi trường' -> pid='environmental_engineering'  canon='Kỹ thuật Môi trường'
+    announcement : 'Quản lý Tài nguyên và Môi trường' -> pid='environmental_engineering'  canon='Kỹ thuật Môi trường'
+  [MATCH]
+    listing      : 'Tiếng Anh Khoa học Kỹ thuật và Công nghệ' -> pid='english_science_tech'  canon='Tiếng Anh Khoa học Kỹ thuật và Công nghệ'
+    announcement : 'Tiếng Anh KHKT và Công nghệ' -> pid='english_science_tech'  canon='Tiếng Anh Khoa học Kỹ thuật và Công nghệ'
+  [MATCH]
+    listing      : 'Tiếng Anh Chuyên nghiệp Quốc tế' -> pid='english_professional'  canon='Tiếng Anh Chuyên nghiệp Quốc tế'
+    announcement : 'Tiếng Anh chuyên nghiệp quốc tế (do ĐHBK Hà Nội và ĐH Plymouth Marjon - Vương quốc Anh cấp bằng)' -> pid='english_professional'  canon='Tiếng Anh Chuyên nghiệp Quốc tế'
+  [MATCH]
+    listing      : 'Tiếng Trung Khoa học và Công nghệ' -> pid='chinese_science_tech'  canon='Tiếng Trung Khoa học và Công nghệ'
+    announcement : 'Tiếng Trung KH & CN' -> pid='chinese_science_tech'  canon='Tiếng Trung Khoa học và Công nghệ'
+  [MATCH]
+    listing      : 'Tiếng Hàn Khoa học và Công nghệ' -> pid='korean_science_tech'  canon='Tiếng Hàn Khoa học và Công nghệ'
+    announcement : 'Tiếng Hàn KH&CN (mới)' -> pid='korean_science_tech'  canon='Tiếng Hàn Khoa học và Công nghệ'
+  [MATCH]
+    listing      : 'Kỹ thuật Nhiệt' -> pid='heat_engineering'  canon='Kỹ thuật Nhiệt'
+    announcement : 'Kỹ thuật Nhiệt' -> pid='heat_engineering'  canon='Kỹ thuật Nhiệt'
+  [MATCH]
+    listing      : 'Khoa học Dữ liệu và Trí tuệ Nhân tạo' -> pid='data_science'  canon='Khoa học Dữ liệu và Trí tuệ Nhân tạo'
+    announcement : 'Khoa học Dữ liệu và Trí tuệ nhân tạo' -> pid='data_science'  canon='Khoa học Dữ liệu và Trí tuệ Nhân tạo'
+  [MATCH]
+    listing      : 'An toàn không gian số (Chương trình tiên tiến)' -> pid='cyber_security'  canon='An toàn Không gian số'
+    announcement : 'An toàn không gian số - Cyber Security' -> pid='cyber_security'  canon='An toàn Không gian số'
+  [MATCH]
+    listing      : 'Công nghệ thông tin (Việt-Nhật) (Chương trình tiên tiến)' -> pid='computer_science'  canon='Khoa học Máy tính'
+    announcement : 'Công nghệ Thông tin Việt - Nhật (tăng cường tiếng Nhật)' -> pid='computer_science'  canon='Khoa học Máy tính'
+  [MATCH]
+    listing      : 'Công nghệ thông tin (Global ICT)' -> pid='computer_science'  canon='Khoa học Máy tính'
+    announcement : 'Công nghệ Thông tin Global ICT' -> pid='computer_science'  canon='Khoa học Máy tính'
+  [MATCH]
+    listing      : 'Công nghệ thông tin (Việt-Pháp) (Chương trình tiên tiến)' -> pid='computer_science'  canon='Khoa học Máy tính'
+    announcement : 'Công nghệ Thông tin Việt - Pháp (tăng cường tiếng Pháp)' -> pid='computer_science'  canon='Khoa học Máy tính'
+  [MATCH]
+    listing      : 'CNTT: Khoa học Máy tính' -> pid='computer_science'  canon='Khoa học Máy tính'
+    announcement : 'CNTT: Khoa học Máy tính' -> pid='computer_science'  canon='Khoa học Máy tính'
+  [MATCH]
+    listing      : 'CNTT: Kỹ thuật máy tính' -> pid='computer_science'  canon='Khoa học Máy tính'
+    announcement : 'CNTT: Kỹ thuật Máy tính' -> pid='computer_science'  canon='Khoa học Máy tính'
+  [MATCH]
+    listing      : 'Kỹ thuật Cơ điện tử (Chương trình tiên tiến)' -> pid='mechatronics'  canon='Kỹ thuật Cơ điện tử'
+    announcement : 'Kỹ thuật Cơ điện tử' -> pid='mechatronics'  canon='Kỹ thuật Cơ điện tử'
+  [MATCH]
+    listing      : 'Cơ khí - Chế tạo máy - ĐH Griffith (Úc)' -> pid='mechanical_engineering'  canon='Kỹ thuật Cơ khí'
+    announcement : 'Cơ khí Chế tạo máy - hợp tác với trường ĐH Griffith (Úc)' -> pid='mechanical_engineering'  canon='Kỹ thuật Cơ khí'
+  [MATCH]
+    listing      : 'Cơ điện tử - ĐH Leibniz Hannover (Đức)' -> pid='mechatronics'  canon='Kỹ thuật Cơ điện tử'
+    announcement : 'Cơ điện tử - hợp tác với ĐH Leibniz Hannover (CHLB Đức)' -> pid='mechatronics'  canon='Kỹ thuật Cơ điện tử'
+  [MATCH]
+    listing      : 'Cơ điện tử - ĐH Nagaoka (Nhật Bản)' -> pid='mechatronics'  canon='Kỹ thuật Cơ điện tử'
+    announcement : 'Cơ điện tử - hợp tác với ĐHCN Nagaoka (Nhật Bản)' -> pid='mechatronics'  canon='Kỹ thuật Cơ điện tử'
+  [MATCH]
+    listing      : 'Kỹ thuật Cơ điện tử' -> pid='mechatronics'  canon='Kỹ thuật Cơ điện tử'
+    announcement : 'Kỹ thuật Cơ điện tử' -> pid='mechatronics'  canon='Kỹ thuật Cơ điện tử'
+  [MATCH]
+    listing      : 'Kỹ thuật Cơ khí' -> pid='mechanical_engineering'  canon='Kỹ thuật Cơ khí'
+    announcement : 'Kỹ thuật Cơ khí' -> pid='mechanical_engineering'  canon='Kỹ thuật Cơ khí'
+  [MATCH]
+    listing      : 'Toán - Tin' -> pid='math_informatics'  canon='Toán - Tin'
+    announcement : 'Toán-Tin' -> pid='math_informatics'  canon='Toán - Tin'
+  [MATCH]
+    listing      : 'Hệ thống thông tin quản lý' -> pid='information_systems'  canon='Hệ thống Thông tin'
+    announcement : 'Hệ thống Thông tin quản lý' -> pid='information_systems'  canon='Hệ thống Thông tin'
+  [MATCH]
+    listing      : 'Khoa học và Kỹ thuật Vật liệu (Chương trình tiên tiến)' -> pid='materials_science'  canon='Khoa học và Kỹ thuật Vật liệu'
+    announcement : 'Khoa học và Kỹ thuật Vật liệu' -> pid='materials_science'  canon='Khoa học và Kỹ thuật Vật liệu'
+  [MATCH]
+    listing      : 'Kỹ thuật Vật liệu' -> pid='materials_science'  canon='Khoa học và Kỹ thuật Vật liệu'
+    announcement : 'Kỹ thuật Vật liệu' -> pid='materials_science'  canon='Khoa học và Kỹ thuật Vật liệu'
+  [MATCH]
+    listing      : 'Chương trình Kỹ thuật vi điện tử và công nghệ Nano' -> pid='microelectronics_nano'  canon='Kỹ thuật Vi Điện tử và Công nghệ Nano'
+    announcement : 'Kỹ thuật Vi điện tử và Công nghệ nano' -> pid='microelectronics_nano'  canon='Kỹ thuật Vi Điện tử và Công nghệ Nano'
+  [MATCH]
+    listing      : 'Công nghệ vật liệu polyme và compozit' -> pid='mechanical_engineering'  canon='Kỹ thuật Cơ khí'
+    announcement : 'Công nghệ vật liệu Polyme và Compozit' -> pid='mechanical_engineering'  canon='Kỹ thuật Cơ khí'
+  [MATCH]
+    listing      : 'Kỹ thuật in' -> pid='printing_technology'  canon='Kỹ thuật In'
+    announcement : 'Kỹ thuật In' -> pid='printing_technology'  canon='Kỹ thuật In'
+  [MATCH]
+    listing      : 'Vật lý kỹ thuật' -> pid='physics'  canon='Vật lý Kỹ thuật'
+    announcement : 'Vật lý Kỹ thuật' -> pid='physics'  canon='Vật lý Kỹ thuật'
+  [MATCH]
+    listing      : 'Kỹ thuật hạt nhân' -> pid='nuclear_engineering'  canon='Kỹ thuật Hạt nhân'
+    announcement : 'Kỹ thuật Hạt nhân' -> pid='nuclear_engineering'  canon='Kỹ thuật Hạt nhân'
+  [MATCH]
+    listing      : 'Vật lý Y khoa' -> pid='medical_physics'  canon='Vật lý Y khoa'
+    announcement : 'Vật lý Y khoa' -> pid='medical_physics'  canon='Vật lý Y khoa'
+  [MATCH]
+    listing      : 'Kỹ thuật Ô tô (Chương trình tiên tiến)' -> pid='automotive_engineering'  canon='Kỹ thuật Ô tô'
+    announcement : 'Kỹ thuật Ô tô' -> pid='automotive_engineering'  canon='Kỹ thuật Ô tô'
+  [MATCH]
+    listing      : 'Cơ khí hàng không (Chương trình Việt - Pháp PFIEV)' -> pid='mechanical_engineering'  canon='Kỹ thuật Cơ khí'
+    announcement : 'Cơ khí Hàng không' -> pid='mechanical_engineering'  canon='Kỹ thuật Cơ khí'
+  [MATCH]
+    listing      : 'Kỹ thuật Ô tô' -> pid='automotive_engineering'  canon='Kỹ thuật Ô tô'
+    announcement : 'Kỹ thuật Ô tô' -> pid='automotive_engineering'  canon='Kỹ thuật Ô tô'
+  [MATCH]
+    listing      : 'Kỹ thuật Cơ khí động lực' -> pid='mechanical_engineering'  canon='Kỹ thuật Cơ khí'
+    announcement : 'Kỹ thuật Cơ khí động lực' -> pid='mechanical_engineering'  canon='Kỹ thuật Cơ khí'
+  [MATCH]
+    listing      : 'Kỹ thuật Hàng không' -> pid='aerospace_engineering'  canon='Kỹ thuật Hàng không'
+    announcement : 'Kỹ thuật Hàng không' -> pid='aerospace_engineering'  canon='Kỹ thuật Hàng không'
+  [MATCH]
+    listing      : 'Khoa học máy tính - ĐH Troy (Hoa Kỳ)' -> pid='computer_science'  canon='Khoa học Máy tính'
+    announcement : 'Khoa học Máy tính - ĐH Troy (Hoa Kỳ) (do ĐH Troy cấp bằng)' -> pid='computer_science'  canon='Khoa học Máy tính'
+  [MATCH]
+    listing      : 'Công nghệ Dệt May' -> pid='textile_technology'  canon='Công nghệ Dệt May'
+    announcement : 'Công nghệ Dệt May' -> pid='textile_technology'  canon='Công nghệ Dệt May'
+
+  Total pairs: 66  Mismatches: 0  Null pids: 0
+
+=== Method mapping ===
+  [OK] 'Xét tuyển tài năng' -> 'talent_admission'
+  [OK] 'xét tuyển tài năng' -> 'talent_admission'
+  [OK] 'xét tuyển tài năng 2023' -> 'talent_admission'
+  [OK] 'Xét tuyển bằng Giải thưởng HSG QG-QT/Chứng chỉ Quốc tế/HSNL' -> 'talent_admission'
+  [OK] 'Xét tuyển theo KQ Kỳ thi ĐGTD' -> 'competency_test'
+  [OK] 'xét tuyển theo KQ Kỳ thi ĐGTD' -> 'competency_test'
+  [OK] 'Xét tuyển theo KQ Kỳ thi TN THPT' -> 'thpt_score'
+  [OK] 'xét tuyển theo KQ Kỳ thi TN THPT' -> 'thpt_score'
+  [OK] 'Xét tuyển dựa trên kết quả thi tốt nghiệp THPT' -> 'thpt_score'
+  [OK] 'Xét tuyển dựa trên Kỳ thi đánh giá tư duy' -> 'competency_test'
+  [OK] 'Xét tuyển dựa trên kết quả Kỳ thi đánh giá tư duy' -> 'competency_test'
+  [OK] 'Xét tuyển dựa trên kết quả Kỳ thi Đánh giá tư duy' -> 'competency_test'
+  [OK] 'Xét tuyển dựa trên kết quả bài kiểm tra tư duy' -> 'competency_test'
+  [OK] 'Xét tuyển thẳng (Xét tuyển tài năng)' -> 'talent_admission'
+  [OK] 'Xét tuyển thẳng (xét tuyển tài năng)' -> 'talent_admission'
+  [OK] 'Xét tuyển tài năng (Xét tuyển thẳng)' -> 'talent_admission'
+  [OK] 'Xét tuyển tài năng (Xét tuyển thẳng )' -> 'talent_admission'
+
+  Total methods: 17  Failures: 0
+
+PASS

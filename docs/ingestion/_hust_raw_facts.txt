@@ -1,0 +1,154 @@
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc → 200 (500755 bytes, 1792ms)
+INFO ingestion.router.document_router: Document routed: https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc → DocumentType.HTML_ARTICLE
+INFO ingestion.parsers.parser_dispatcher: Using specialized parser 'hust_programs' (HustProgramParser)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/tieng-anh-chuyen-nghiep-quoc-te → 200 (93412 bytes, 477ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/tieng-anh-khoa-hoc-ky-thuat-va-cong-nghe → 200 (92635 bytes, 568ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/tieng-trung-khoa-hoc-va-cong-nghe → 200 (99126 bytes, 589ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/toan-tin → 200 (93466 bytes, 783ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-o-to → 200 (96019 bytes, 749ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/vat-ly-y-khoa → 200 (96066 bytes, 1809ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/vat-ly-ky-thuat → 200 (102545 bytes, 741ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-hat-nhan → 200 (95239 bytes, 1578ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-co-khi-dong-luc → 200 (97472 bytes, 1841ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/he-thong-thong-tin-quan-ly → 200 (95791 bytes, 1179ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-o-to-chuong-trinh-tien-tien → 200 (96904 bytes, 777ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/co-khi-che-tao-may-dh-griffith-uc → 200 (106555 bytes, 727ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-co-dien-tu-chuong-trinh-tien-tien- → 200 (95719 bytes, 2199ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/khoa-hoc-va-ky-thuat-vat-lieu-chuong-trinh-tien-tien → 200 (98466 bytes, 1398ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/co-khi-hang-khong-chuong-trinh-viet-phap-pfiev → 200 (95399 bytes, 883ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/cong-nghe-thong-tin-global-ict → 200 (96133 bytes, 1340ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/khoa-hoc-du-lieu-va-tri-tue-nhan-tao → 200 (95244 bytes, 621ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-dien-tu-vien-thong-chuong-trinh-tien-tien → 200 (97389 bytes, 681ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-nhiet → 200 (94981 bytes, 714ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-co-khi → 200 (96631 bytes, 565ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/he-thong-nhung-thong-minh-va-iot-chuong-trinh-tien-tien → 200 (95724 bytes, 595ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/dien-tu-vien-thong-dh-leibniz-hannover-duc → 200 (103033 bytes, 809ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/tieng-han-khoa-hoc-va-cong-nghe → 200 (94637 bytes, 933ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-co-dien-tu → 200 (97045 bytes, 574ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-hang-khong → 200 (95248 bytes, 849ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/an-toan-khong-gian-so-chuong-trinh-tien-tien → 200 (94636 bytes, 579ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-dien → 200 (96887 bytes, 1100ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/truyen-thong-so-va-ky-thuat-da-phuong-tien-chuong-trinh-tien-tien → 200 (95653 bytes, 710ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/cong-nghe-thong-tin-viet-phap-chuong-trinh-tien-tien → 200 (96102 bytes, 548ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/dien-tu-va-vien-thong → 200 (96746 bytes, 613ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/co-dien-tu-dh-nagaoka-nhat-ban → 200 (99984 bytes, 486ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/cong-nghe-thong-tin-viet-nhat-chuong-trinh-tien-tien → 200 (94872 bytes, 645ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/co-dien-tu-dh-leibniz-hannover-duc → 200 (97215 bytes, 647ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-dieu-khien-tu-dong-hoa → 200 (96671 bytes, 530ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/cntt-khoa-hoc-may-tinh → 200 (95403 bytes, 596ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/cntt-ky-thuat-may-tinh → 200 (97172 bytes, 625ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-y-sinh-chuong-trinh-tien-tien → 200 (95603 bytes, 509ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/khoa-hoc-tinh-toan-cho-cac-he-thong-thong-minh-cttt → 200 (96644 bytes, 684ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-dieu-khien-tu-dong-hoa-chuong-trinh-tien-tien → 200 (97784 bytes, 547ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/he-thong-dien-va-nang-luong-tai-tao-chuong-trinh-tien-tien → 200 (97198 bytes, 525ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-in → 200 (96169 bytes, 576ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/tin-hoc-cong-nghiep-va-tu-dong-hoa-chuong-trinh-viet-phap-pfiev → 200 (98710 bytes, 595ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-vat-lieu → 200 (96215 bytes, 565ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/cong-nghe-det-may → 200 (94748 bytes, 627ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/cong-nghe-vat-lieu-polyme-va-compozit → 200 (102534 bytes, 2082ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/chuong-trinh-ky-thuat-vi-dien-tu-va-cong-nghe-nano → 200 (95164 bytes, 1208ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/hoa-hoc → 200 (97467 bytes, 698ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/quan-ly-nang-luong → 200 (96028 bytes, 490ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/quan-ly-cong-nghiep → 200 (96479 bytes, 414ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/quan-tri-kinh-doanh → 200 (96203 bytes, 442ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/tai-chinh-ngan-hang → 200 (96117 bytes, 457ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-y-sinh → 200 (96407 bytes, 752ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-hoa-hoc → 200 (97062 bytes, 503ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-sinh-hoc → 200 (96009 bytes, 1486ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-thuc-pham → 200 (97020 bytes, 880ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-moi-truong → 200 (96281 bytes, 631ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/quan-ly-giao-duc → 200 (99553 bytes, 450ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/cong-nghe-giao-duc → 200 (94679 bytes, 581ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/quan-ly-tai-nguyen-va-moi-truong → 200 (96470 bytes, 635ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ke-toan-chuong-trinh-tien-tien → 200 (98134 bytes, 1693ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/khoa-hoc-may-tinh-dh-troy-hoa-ky → 200 (101503 bytes, 2974ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/phan-tich-kinh-doanh-chuong-trinh-tien-tien → 200 (95930 bytes, 1643ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/tam-ly-hoc-cong-nghiep-va-to-chuc → 200 (97363 bytes, 1993ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-sinh-hoc-chuong-trinh-tien-tien → 200 (95557 bytes, 2293ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-hoa-duoc-chuong-trinh-tien-tien → 200 (97077 bytes, 1562ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/hoa-hoc-my-pham-chuong-trinh-tien-tien → 200 (98633 bytes, 773ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-thuc-pham-chuong-trinh-tien-tien → 200 (97921 bytes, 1506ms)
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/logistics-va-quan-ly-chuoi-cung-ung-chuong-trinh-tien-tien → 200 (96631 bytes, 1129ms)
+INFO ingestion.parsers.hust_program_parser: Extracted 68 programs from Đại học Bách khoa Hà Nội listing
+INFO ingestion.fetchers.http_fetcher: Fetched https://ts.hust.edu.vn/tin-tuc/thong-tin-tuyen-sinh-dai-hoc-chinh-quy-nam-2026 → 200 (551704 bytes, 934ms)
+INFO ingestion.router.document_router: Document routed: https://ts.hust.edu.vn/tin-tuc/thong-tin-tuyen-sinh-dai-hoc-chinh-quy-nam-2026 → DocumentType.HTML_ARTICLE
+INFO ingestion.parsers.parser_dispatcher: Using specialized parser 'hust_announcement_html' (HustAnnouncementHtmlParser)
+INFO ingestion.parsers.hust_announcement_html_parser: HustAnnouncementHtmlParser: total 68 facts from https://ts.hust.edu.vn/tin-tuc/thong-tin-tuyen-sinh-dai-hoc-chinh-quy-nam-2026
+
+============================================================
+Source: hust_program_listing_2026
+Profile: hust_programs
+URL: https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc
+Doc type: DocumentType.HTML_ARTICLE
+Specialized parser returned 68 facts directly
+
+Sample facts (first 5):
+  program_name='Tiếng Anh Chuyên nghiệp Quốc tế'
+  program_code='FL2'
+  quota_raw='0'
+  method_raw='Xét tuyển tài năng; Xét tuyển bằng Giải thưởng HSG QG-QT/Chứng chỉ Quốc tế/HSNL; Xét tuyển theo KQ Kỳ thi ĐGTD; Xét tuyển theo KQ Kỳ thi TN THPT; xét tuyển tài năng 2023'
+  combos=['K01', 'D01']
+
+  program_name='Tiếng Anh Khoa học Kỹ thuật và Công nghệ'
+  program_code='FL1'
+  quota_raw='0'
+  method_raw='Xét tuyển tài năng; Xét tuyển bằng Giải thưởng HSG QG-QT/Chứng chỉ Quốc tế/HSNL; Xét tuyển theo KQ Kỳ thi ĐGTD; Xét tuyển theo KQ Kỳ thi TN THPT; xét tuyển tài năng 2023'
+  combos=['D01', 'K01']
+
+  program_name='Tiếng Trung Khoa học và Công nghệ'
+  program_code='FL3'
+  quota_raw='0'
+  method_raw='Xét tuyển tài năng; Xét tuyển theo KQ Kỳ thi ĐGTD; Xét tuyển theo KQ Kỳ thi TN THPT; xét tuyển tài năng 2023'
+  combos=['D01', 'K01', 'D04']
+
+  program_name='Toán - Tin'
+  program_code='MI1'
+  quota_raw='0'
+  method_raw='Xét tuyển tài năng; Xét tuyển theo KQ Kỳ thi ĐGTD; Xét tuyển theo KQ Kỳ thi TN THPT; xét tuyển tài năng 2023'
+  combos=['K00', 'A00', 'A01', 'K01']
+
+  program_name='Kỹ thuật Ô tô'
+  program_code='TE1'
+  quota_raw='0'
+  method_raw='Xét tuyển tài năng; Xét tuyển theo KQ Kỳ thi ĐGTD; Xét tuyển theo KQ Kỳ thi TN THPT; xét tuyển tài năng 2023'
+  combos=['K00', 'A00', 'A01', 'K01']
+
+
+============================================================
+Source: hust_announcement_html_2026
+Profile: hust_announcement_html
+URL: https://ts.hust.edu.vn/tin-tuc/thong-tin-tuyen-sinh-dai-hoc-chinh-quy-nam-2026
+Doc type: DocumentType.HTML_ARTICLE
+Specialized parser returned 68 facts directly
+
+Sample facts (first 5):
+  program_name='Kỹ thuật Sinh học'
+  program_code='BF1'
+  quota_raw='160'
+  method_raw='xét tuyển tài năng; xét tuyển theo KQ Kỳ thi ĐGTD; xét tuyển theo KQ Kỳ thi TN THPT'
+  combos=None
+
+  program_name='Kỹ thuật Thực phẩm'
+  program_code='BF2'
+  quota_raw='360'
+  method_raw='xét tuyển tài năng; xét tuyển theo KQ Kỳ thi ĐGTD; xét tuyển theo KQ Kỳ thi TN THPT'
+  combos=None
+
+  program_name='Kỹ thuật Hóa học'
+  program_code='CH1'
+  quota_raw='680'
+  method_raw='xét tuyển tài năng; xét tuyển theo KQ Kỳ thi ĐGTD; xét tuyển theo KQ Kỳ thi TN THPT'
+  combos=None
+
+  program_name='Hóa học'
+  program_code='CH2'
+  quota_raw='160'
+  method_raw='xét tuyển tài năng; xét tuyển theo KQ Kỳ thi ĐGTD; xét tuyển theo KQ Kỳ thi TN THPT'
+  combos=None
+
+  program_name='Công nghệ Giáo dục'
+  program_code='ED2'
+  quota_raw='120'
+  method_raw='xét tuyển tài năng; xét tuyển theo KQ Kỳ thi ĐGTD; xét tuyển theo KQ Kỳ thi TN THPT'
+  combos=None
+

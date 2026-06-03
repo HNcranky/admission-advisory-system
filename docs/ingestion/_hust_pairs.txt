@@ -1,0 +1,247 @@
+Source A: hust_program_listing_2026  (68 unique codes)
+Source B: hust_announcement_html_2026  (68 unique codes)
+Common codes: 66
+Only A: ['CH-E20', 'MI-E22']
+Only B: ['CH -E20', 'MI -E22']
+
+================================================================================
+CROSS-SOURCE PAIRS (by program_code)
+================================================================================
+  [MATCH] code=BF-E12
+    A: 'Kỹ thuật thực phẩm (Chương trình tiên tiến)' -> 'food_technology'
+    B: 'Kỹ thuật Thực phẩm' -> 'food_technology'
+  [MATCH] code=BF-E19
+    A: 'Kỹ thuật sinh học (Chương trình tiên tiến)' -> 'bioengineering'
+    B: 'Kỹ thuật sinh học' -> 'bioengineering'
+  [MATCH] code=BF1
+    A: 'Kỹ thuật Sinh học' -> 'bioengineering'
+    B: 'Kỹ thuật Sinh học' -> 'bioengineering'
+  [MATCH] code=BF2
+    A: 'Kỹ thuật Thực phẩm' -> 'food_technology'
+    B: 'Kỹ thuật Thực phẩm' -> 'food_technology'
+  [MISMATCH] code=CH-E11
+    A: 'Kỹ thuật Hóa dược (Chương trình tiên tiến)' -> None
+    B: 'Kỹ thuật Hóa dược' -> 'chemical_engineering'
+  [MATCH] code=CH1
+    A: 'Kỹ thuật Hóa học' -> 'chemical_engineering'
+    B: 'Kỹ thuật Hóa học' -> 'chemical_engineering'
+  [MATCH] code=CH2
+    A: 'Hóa học' -> 'chemical_engineering'
+    B: 'Hóa học' -> 'chemical_engineering'
+  [MATCH] code=ED2
+    A: 'Công nghệ giáo dục' -> 'education_technology'
+    B: 'Công nghệ Giáo dục' -> 'education_technology'
+  [MATCH] code=ED3
+    A: 'Quản lý giáo dục' -> 'education_management'
+    B: 'Quản lý Giáo dục' -> 'education_management'
+  [MATCH] code=ED5
+    A: 'Tâm lý học công nghiệp và tổ chức' -> 'industrial_psychology'
+    B: 'Tâm lý học công nghiệp và tổ chức (mới)' -> 'industrial_psychology'
+  [MISMATCH] code=EE-E18
+    A: 'Hệ thống điện và năng lượng tái tạo (Chương trình tiên tiến)' -> None
+    B: 'Hệ thống điện và năng lượng tái tạo' -> None
+  [MATCH] code=EE-E8
+    A: 'Kỹ thuật Điều khiển - Tự động hóa (Chương trình tiên tiến)' -> 'control_automation'
+    B: 'Kỹ thuật điều khiển-Tự động hóa' -> 'control_automation'
+  [MATCH] code=EE-EP
+    A: 'Tin học công nghiệp và Tự động hóa (Chương trình Việt-Pháp PFIEV)' -> 'control_automation'
+    B: 'Tin học công nghiệp và Tự động hóa' -> 'control_automation'
+  [MATCH] code=EE1
+    A: 'Kỹ thuật điện' -> 'electrical_engineering'
+    B: 'Kỹ thuật điện' -> 'electrical_engineering'
+  [MATCH] code=EE2
+    A: 'Kỹ thuật Điều khiển - Tự động hóa' -> 'control_automation'
+    B: 'Kỹ thuật điều khiển & Tự động hóa' -> 'control_automation'
+  [MATCH] code=EM-E13
+    A: 'Phân tích kinh doanh (Chương trình tiên tiến)' -> 'business_administration'
+    B: 'Phân tích Kinh doanh' -> 'business_administration'
+  [MISMATCH] code=EM-E14
+    A: 'Logistics và Quản lý chuỗi cung ứng (Chương trình tiên tiến)' -> 'computer_science'
+    B: 'Logistics và Quản lý chuỗi cung ứng' -> 'logistics'
+  [MATCH] code=EM-E17
+    A: 'Kế toán (Chương trình tiên tiến)' -> 'accounting'
+    B: 'Kế toán (mới)' -> 'accounting'
+  [MISMATCH] code=EM1
+    A: 'Quản lý năng lượng' -> None
+    B: 'Quản lý Năng lượng' -> None
+  [MATCH] code=EM2
+    A: 'Quản lý công nghiệp' -> 'industrial_management'
+    B: 'Quản lý Công nghiệp' -> 'industrial_management'
+  [MATCH] code=EM3
+    A: 'Quản trị kinh doanh' -> 'business_administration'
+    B: 'Quản trị Kinh doanh' -> 'business_administration'
+  [MATCH] code=EM5
+    A: 'Tài chính - Ngân hàng' -> 'finance_banking'
+    B: 'Tài chính-Ngân hàng' -> 'finance_banking'
+  [MATCH] code=ET-E16
+    A: 'Truyền thông số và Kỹ thuật đa phương tiện (Chương trình tiên tiến)' -> 'ict'
+    B: 'Truyền thông số và Kỹ thuật đa phương tiện' -> 'ict'
+  [MISMATCH] code=ET-E4
+    A: 'Kỹ thuật Điện tử - Viễn thông (Chương trình tiên tiến)' -> 'electrical_engineering'
+    B: 'Kỹ thuật Điện tử - Viễn thông' -> 'electronics_telecom'
+  [MATCH] code=ET-E5
+    A: 'Kỹ thuật Y sinh (Chương trình tiên tiến)' -> 'biomedical_engineering'
+    B: 'Kỹ thuật Y sinh' -> 'biomedical_engineering'
+  [MATCH] code=ET-E9
+    A: 'Hệ thống nhúng thông minh và IoT (Chương trình tiên tiến)' -> 'printing_technology'
+    B: 'Hệ thống nhúng thông minh và IoT (tăng cường tiếng Nhật)' -> 'printing_technology'
+  [MISMATCH] code=ET-LUH
+    A: 'Điện tử-Viễn thông - ĐH Leibniz Hannover (Đức)' -> None
+    B: 'Điện tử - Viễn thông - ĐH Leibniz Hannover (CHLB Đức)' -> None
+  [MISMATCH] code=ET1
+    A: 'Điện tử và Viễn thông' -> 'electronics_telecom'
+    B: 'Kỹ thuật Điện tử-Viễn thông' -> 'electrical_engineering'
+  [MATCH] code=ET2
+    A: 'Kỹ thuật Y sinh' -> 'biomedical_engineering'
+    B: 'Kỹ thuật Y sinh' -> 'biomedical_engineering'
+  [MATCH] code=EV1
+    A: 'Kỹ thuật Môi trường' -> 'environmental_engineering'
+    B: 'Kỹ thuật Môi trường' -> 'environmental_engineering'
+  [MATCH] code=EV2
+    A: 'Quản lý Tài nguyên và Môi trường' -> 'environmental_engineering'
+    B: 'Quản lý Tài nguyên và Môi trường' -> 'environmental_engineering'
+  [MISMATCH] code=FL1
+    A: 'Tiếng Anh Khoa học Kỹ thuật và Công nghệ' -> 'english_science_tech'
+    B: 'Tiếng Anh KHKT và Công nghệ' -> 'english_language'
+  [MISMATCH] code=FL2
+    A: 'Tiếng Anh Chuyên nghiệp Quốc tế' -> 'english_professional'
+    B: 'Tiếng Anh chuyên nghiệp quốc tế (do ĐHBK Hà Nội và ĐH Plymouth Marjon - Vương quốc Anh cấp bằng)' -> 'english_language'
+  [MATCH] code=FL3
+    A: 'Tiếng Trung Khoa học và Công nghệ' -> 'chinese_science_tech'
+    B: 'Tiếng Trung KH & CN' -> 'chinese_science_tech'
+  [MATCH] code=FL4
+    A: 'Tiếng Hàn Khoa học và Công nghệ' -> 'korean_science_tech'
+    B: 'Tiếng Hàn KH&CN (mới)' -> 'korean_science_tech'
+  [MATCH] code=HE1
+    A: 'Kỹ thuật Nhiệt' -> 'heat_engineering'
+    B: 'Kỹ thuật Nhiệt' -> 'heat_engineering'
+  [MATCH] code=IT-E10
+    A: 'Khoa học Dữ liệu và Trí tuệ Nhân tạo' -> 'data_science'
+    B: 'Khoa học Dữ liệu và Trí tuệ nhân tạo' -> 'data_science'
+  [MISMATCH] code=IT-E15
+    A: 'An toàn không gian số (Chương trình tiên tiến)' -> None
+    B: 'An toàn không gian số - Cyber Security' -> 'software_engineering'
+  [MATCH] code=IT-E6
+    A: 'Công nghệ thông tin (Việt-Nhật) (Chương trình tiên tiến)' -> 'computer_science'
+    B: 'Công nghệ Thông tin Việt - Nhật (tăng cường tiếng Nhật)' -> 'computer_science'
+  [MATCH] code=IT-E7
+    A: 'Công nghệ thông tin (Global ICT)' -> 'computer_science'
+    B: 'Công nghệ Thông tin Global ICT' -> 'computer_science'
+  [MATCH] code=IT-EP
+    A: 'Công nghệ thông tin (Việt-Pháp) (Chương trình tiên tiến)' -> 'computer_science'
+    B: 'Công nghệ Thông tin Việt - Pháp (tăng cường tiếng Pháp)' -> 'computer_science'
+  [MATCH] code=IT1
+    A: 'CNTT: Khoa học Máy tính' -> 'computer_science'
+    B: 'CNTT: Khoa học Máy tính' -> 'computer_science'
+  [MATCH] code=IT2
+    A: 'CNTT: Kỹ thuật máy tính' -> 'computer_science'
+    B: 'CNTT: Kỹ thuật Máy tính' -> 'computer_science'
+  [MATCH] code=ME-E1
+    A: 'Kỹ thuật Cơ điện tử (Chương trình tiên tiến)' -> 'mechatronics'
+    B: 'Kỹ thuật Cơ điện tử' -> 'mechatronics'
+  [MATCH] code=ME-GU
+    A: 'Cơ khí - Chế tạo máy - ĐH Griffith (Úc)' -> 'mechanical_engineering'
+    B: 'Cơ khí Chế tạo máy - hợp tác với trường ĐH Griffith (Úc)' -> 'mechanical_engineering'
+  [MATCH] code=ME-LUH
+    A: 'Cơ điện tử - ĐH Leibniz Hannover (Đức)' -> 'mechatronics'
+    B: 'Cơ điện tử - hợp tác với ĐH Leibniz Hannover (CHLB Đức)' -> 'mechatronics'
+  [MATCH] code=ME-NUT
+    A: 'Cơ điện tử - ĐH Nagaoka (Nhật Bản)' -> 'mechatronics'
+    B: 'Cơ điện tử - hợp tác với ĐHCN Nagaoka (Nhật Bản)' -> 'mechatronics'
+  [MATCH] code=ME1
+    A: 'Kỹ thuật Cơ điện tử' -> 'mechatronics'
+    B: 'Kỹ thuật Cơ điện tử' -> 'mechatronics'
+  [MATCH] code=ME2
+    A: 'Kỹ thuật Cơ khí' -> 'mechanical_engineering'
+    B: 'Kỹ thuật Cơ khí' -> 'mechanical_engineering'
+  [MISMATCH] code=MI1
+    A: 'Toán - Tin' -> 'math_informatics'
+    B: 'Toán-Tin' -> 'printing_technology'
+  [MATCH] code=MI2
+    A: 'Hệ thống thông tin quản lý' -> 'information_systems'
+    B: 'Hệ thống Thông tin quản lý' -> 'information_systems'
+  [MATCH] code=MS-E3
+    A: 'Khoa học và Kỹ thuật Vật liệu (Chương trình tiên tiến)' -> 'materials_science'
+    B: 'Khoa học và Kỹ thuật Vật liệu' -> 'materials_science'
+  [MATCH] code=MS1
+    A: 'Kỹ thuật Vật liệu' -> 'materials_science'
+    B: 'Kỹ thuật Vật liệu' -> 'materials_science'
+  [MISMATCH] code=MS2
+    A: 'Chương trình Kỹ thuật vi điện tử và công nghệ Nano' -> None
+    B: 'Kỹ thuật Vi điện tử và Công nghệ nano' -> None
+  [MATCH] code=MS3
+    A: 'Công nghệ vật liệu polyme và compozit' -> 'mechanical_engineering'
+    B: 'Công nghệ vật liệu Polyme và Compozit' -> 'mechanical_engineering'
+  [MATCH] code=MS5
+    A: 'Kỹ thuật in' -> 'printing_technology'
+    B: 'Kỹ thuật In' -> 'printing_technology'
+  [MATCH] code=PH1
+    A: 'Vật lý kỹ thuật' -> 'physics'
+    B: 'Vật lý Kỹ thuật' -> 'physics'
+  [MATCH] code=PH2
+    A: 'Kỹ thuật hạt nhân' -> 'nuclear_engineering'
+    B: 'Kỹ thuật Hạt nhân' -> 'nuclear_engineering'
+  [MATCH] code=PH3
+    A: 'Vật lý Y khoa' -> 'medical_physics'
+    B: 'Vật lý Y khoa' -> 'medical_physics'
+  [MATCH] code=TE-E2
+    A: 'Kỹ thuật Ô tô (Chương trình tiên tiến)' -> 'automotive_engineering'
+    B: 'Kỹ thuật Ô tô' -> 'automotive_engineering'
+  [MATCH] code=TE-EP
+    A: 'Cơ khí hàng không (Chương trình Việt - Pháp PFIEV)' -> 'mechanical_engineering'
+    B: 'Cơ khí Hàng không' -> 'mechanical_engineering'
+  [MATCH] code=TE1
+    A: 'Kỹ thuật Ô tô' -> 'automotive_engineering'
+    B: 'Kỹ thuật Ô tô' -> 'automotive_engineering'
+  [MATCH] code=TE2
+    A: 'Kỹ thuật Cơ khí động lực' -> 'mechanical_engineering'
+    B: 'Kỹ thuật Cơ khí động lực' -> 'mechanical_engineering'
+  [MATCH] code=TE3
+    A: 'Kỹ thuật Hàng không' -> 'aerospace_engineering'
+    B: 'Kỹ thuật Hàng không' -> 'aerospace_engineering'
+  [MATCH] code=TROY-IT
+    A: 'Khoa học máy tính - ĐH Troy (Hoa Kỳ)' -> 'computer_science'
+    B: 'Khoa học Máy tính - ĐH Troy (Hoa Kỳ) (do ĐH Troy cấp bằng)' -> 'computer_science'
+  [MATCH] code=TX1
+    A: 'Công nghệ Dệt May' -> 'textile_technology'
+    B: 'Công nghệ Dệt May' -> 'textile_technology'
+
+================================================================================
+MISMATCH SUMMARY: 12 codes
+================================================================================
+  CH-E11: A(None) vs B(chemical_engineering)
+     A name: 'Kỹ thuật Hóa dược (Chương trình tiên tiến)'
+     B name: 'Kỹ thuật Hóa dược'
+  EE-E18: A(None) vs B(None)
+     A name: 'Hệ thống điện và năng lượng tái tạo (Chương trình tiên tiến)'
+     B name: 'Hệ thống điện và năng lượng tái tạo'
+  EM-E14: A(computer_science) vs B(logistics)
+     A name: 'Logistics và Quản lý chuỗi cung ứng (Chương trình tiên tiến)'
+     B name: 'Logistics và Quản lý chuỗi cung ứng'
+  EM1: A(None) vs B(None)
+     A name: 'Quản lý năng lượng'
+     B name: 'Quản lý Năng lượng'
+  ET-E4: A(electrical_engineering) vs B(electronics_telecom)
+     A name: 'Kỹ thuật Điện tử - Viễn thông (Chương trình tiên tiến)'
+     B name: 'Kỹ thuật Điện tử - Viễn thông'
+  ET-LUH: A(None) vs B(None)
+     A name: 'Điện tử-Viễn thông - ĐH Leibniz Hannover (Đức)'
+     B name: 'Điện tử - Viễn thông - ĐH Leibniz Hannover (CHLB Đức)'
+  ET1: A(electronics_telecom) vs B(electrical_engineering)
+     A name: 'Điện tử và Viễn thông'
+     B name: 'Kỹ thuật Điện tử-Viễn thông'
+  FL1: A(english_science_tech) vs B(english_language)
+     A name: 'Tiếng Anh Khoa học Kỹ thuật và Công nghệ'
+     B name: 'Tiếng Anh KHKT và Công nghệ'
+  FL2: A(english_professional) vs B(english_language)
+     A name: 'Tiếng Anh Chuyên nghiệp Quốc tế'
+     B name: 'Tiếng Anh chuyên nghiệp quốc tế (do ĐHBK Hà Nội và ĐH Plymouth Marjon - Vương quốc Anh cấp bằng)'
+  IT-E15: A(None) vs B(software_engineering)
+     A name: 'An toàn không gian số (Chương trình tiên tiến)'
+     B name: 'An toàn không gian số - Cyber Security'
+  MI1: A(math_informatics) vs B(printing_technology)
+     A name: 'Toán - Tin'
+     B name: 'Toán-Tin'
+  MS2: A(None) vs B(None)
+     A name: 'Chương trình Kỹ thuật vi điện tử và công nghệ Nano'
+     B name: 'Kỹ thuật Vi điện tử và Công nghệ nano'

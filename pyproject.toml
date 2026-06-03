@@ -1,0 +1,9 @@
+[tool.pytest.ini_options]
+# Only collect the real suite. Without this, `pytest` from the repo root also
+# imports scripts/ (one-off probe/verify drivers that fetch the network at
+# import time) and any test_*-named script there.
+testpaths = ["tests"]
+markers = [
+    "integration: tests that require a live Postgres database",
+    "requires_real_dataset: tests that require the curated real conflict dataset",
+]
