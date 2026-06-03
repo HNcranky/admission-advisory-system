@@ -80,3 +80,30 @@ def test_to_page_tuples_matches_pages_to_marked_text_shape(monkeypatch):
     result = extract_pages_hybrid(b"%PDF", FakeOCR(), render=_fake_render)
 
     assert result.to_page_tuples() == [(1, LONG)]
+
+
+def test_failed_ocr_page_continues_with_other_pages(monkeypatch):
+    _patch_layers(monkeypatch, ["", "", LONG])
+    ocr = FakeOCR(exc_on={1})                 # call OCR thứ nhất (trang 1) fail
+
+    result = extract_pages_hybrid(b"%PDF", ocr, render=_fake_render)
+
+    assert [p.method for p in result.pages] == ["failed", "ocr", "text_layer"]
+    assert result.pages_failed == 1 and result.pages_ocr == 1 and result.pages_text == 1
+    assert result.pages[0].text == ""         # trang fail giữ chỗ bằng text rỗng
+
+
+def test_document_with_no_text_at_all_raises(monkeypatch):
+    _patch_layers(monkeypatch, ["", ""])
+    ocr = FakeOCR(exc_on={1, 2})              # mọi trang OCR đều fail
+
+    with pytest.raises(HybridExtractionError):
+        extract_pages_hybrid(b"%PDF", ocr, render=_fake_render)
+
+
+def test_document_where_ocr_returns_empty_everywhere_raises(monkeypatch):
+    _patch_layers(monkeypatch, ["", ""])
+    ocr = FakeOCR(text="")                    # OCR "thành công" nhưng không có chữ
+
+    with pytest.raises(HybridExtractionError):
+        extract_pages_hybrid(b"%PDF", ocr, render=_fake_render)
