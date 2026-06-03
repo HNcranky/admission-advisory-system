@@ -30,3 +30,18 @@ def test_chat_template_has_send_button_and_status_slot():
     assert response.status_code == 200
     assert 'id="send-button"' in response.text
     assert 'id="composer-status"' in response.text
+
+
+# Verified SHA-384 of https://cdn.jsdelivr.net/npm/marked@13.0.3/marked.min.js
+# (computed from the raw bytes of the served file). A mismatching integrity
+# attribute makes the browser refuse to execute marked, leaving window.marked
+# undefined so the chat falls back to escaping markdown instead of rendering it.
+MARKED_13_0_3_SRI = "sha384-YTBHtsL8yVTHcLakYNyrOfK3K+QQcXiECuaALJ+3j7Mo681Rtzadt8NR6WrZH+eQ"
+
+
+def test_chat_template_marked_sri_matches_served_file():
+    client = TestClient(build_app())
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "marked@13.0.3/marked.min.js" in response.text
+    assert MARKED_13_0_3_SRI in response.text
