@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, Field
 
@@ -15,6 +15,9 @@ class InferenceRequest(BaseModel):
     output_mode: str = "free_text"
     schema_name: Optional[str] = None
     temperature: float = 0.0
+    # (mime_type, raw_bytes) attachments for multimodal (vision) calls.
+    # Default empty => every existing text-only call site is unaffected.
+    media: List[Tuple[str, bytes]] = Field(default_factory=list)
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 

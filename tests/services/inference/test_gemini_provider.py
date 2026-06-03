@@ -198,3 +198,22 @@ def test_default_constructor_uses_env_singleton(monkeypatch):
     reset_key_pool()
     provider = GeminiProvider()
     assert provider.is_available() is False
+
+
+# --- multimodal media ----------------------------------------------------------
+
+def test_inference_request_media_defaults_to_empty_list():
+    # Call site cũ không truyền media → field phải tồn tại và rỗng.
+    request = _request()
+    assert request.media == []
+
+
+def test_inference_request_accepts_media_tuples():
+    request = InferenceRequest(
+        agent_name="knowledge_ocr",
+        task_type="page_ocr",
+        system_prompt="sys",
+        user_prompt="usr",
+        media=[("image/png", b"\x89PNG")],
+    )
+    assert request.media == [("image/png", b"\x89PNG")]
