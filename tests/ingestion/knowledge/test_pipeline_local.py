@@ -247,3 +247,78 @@ def test_pdf_scanned_all_text_layer_is_info_not_warning(tmp_path, monkeypatch):
     )
 
     assert result.warnings == []      # không tốn OCR, không cần cảnh báo
+
+
+# --- run_for_local_dir ------------------------------------------------------------
+
+def test_run_for_local_dir_scans_both_folders_recursively(tmp_path, monkeypatch):
+    root = _make_tree(tmp_path, {
+        "pdf_text/a.pdf": b"%PDF-a",
+        "pdf_text/sub/b.pdf": b"%PDF-b",          # đệ quy
+        "pdf_scanned/c.pdf": b"%PDF-c",
+        "pdf_text/not-a-pdf.txt": "bỏ qua".encode(),   # không phải *.pdf
+    })
+    _patch_hybrid(monkeypatch, _hybrid([PAGE], text=1))
+    doc_repo, chunk_repo = FakeDocRepo(), FakeChunkRepo()
+    pipe = _pipeline(doc_repo, chunk_repo)
+
+    results = pipe.run_for_local_dir(root, ocr=lambda png: "x", classify=_classify())
+
+    assert len(results) == 3
+    assert all(r.source_url.startswith("file:///") for r in results)
+    assert {d.document_type for d in doc_repo.created} == {"pdf_text", "pdf_scanned"}
+
+
+def test_run_for_local_dir_reads_overrides_json(tmp_path, monkeypatch):
+    root = _make_tree(tmp_path, {"pdf_text/a.pdf": b"%PDF-a"})
+    (root / "overrides.json").write_text(
+        '{"a.pdf": {"school": "NEU", "year": 2024}}', encoding="utf-8"
+    )
+    _patch_hybrid(monkeypatch, _hybrid([PAGE], text=1))
+    seen = {}
+
+    def classify(first_pages_text, filename, overrides):
+        seen["overrides"] = overrides
+        # classifier thật (resolve_metadata) sẽ ưu tiên override — mô phỏng:
+        entry = overrides[filename]
+        return ResolvedMetadata(school=entry["school"], year=entry["year"])
+
+    results = _pipeline().run_for_local_dir(root, ocr=lambda png: "x", classify=classify)
+
+    assert seen["overrides"] == {"a.pdf": {"school": "NEU", "year": 2024}}
+    assert results[0].school == "NEU"
+
+
+def test_one_failing_file_does_not_abort_the_run(tmp_path, monkeypatch):
+    from ingestion.knowledge.pdf_ocr import HybridExtractionError
+
+    root = _make_tree(tmp_path, {
+        "pdf_text/bad.pdf": b"%PDF-bad",
+        "pdf_text/good.pdf": b"%PDF-good",
+    })
+
+    def factory(content):
+        if content == b"%PDF-bad":
+            raise HybridExtractionError("no text at all")
+        return _hybrid([PAGE], text=1)
+
+    _patch_hybrid(monkeypatch, factory)
+    doc_repo = FakeDocRepo()
+    pipe = _pipeline(doc_repo)
+
+    results = pipe.run_for_local_dir(root, ocr=lambda png: "x", classify=_classify())
+
+    # file hỏng bị nuốt (đã log error), file tốt vẫn ingest
+    assert len(results) == 1
+    assert results[0].source_url.endswith("good.pdf")
+    # file hỏng KHÔNG được mark_ingested → lần chạy sau còn retry
+    assert len(doc_repo.marked) == 1
+
+
+def test_missing_folder_is_tolerated(tmp_path, monkeypatch):
+    root = _make_tree(tmp_path, {"pdf_text/a.pdf": b"%PDF-a"})   # không có pdf_scanned/
+    _patch_hybrid(monkeypatch, _hybrid([PAGE], text=1))
+
+    results = _pipeline().run_for_local_dir(root, ocr=lambda png: "x", classify=_classify())
+
+    assert len(results) == 1

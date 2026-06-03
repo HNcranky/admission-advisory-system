@@ -221,6 +221,31 @@ class KnowledgePipeline:
             school=meta.school, year=meta.year, warnings=warnings,
         )
 
+    def run_for_local_dir(self, root, ocr=None, classify=None) -> list[KnowledgeIngestResult]:
+        """Auto-discovery (D4): scan <root>/pdf_text + <root>/pdf_scanned for
+        *.pdf recursively — no per-file registration anywhere."""
+        root = Path(root)
+        if ocr is None:
+            ocr = build_gateway_ocr()
+        if classify is None:
+            classify = build_gateway_classifier()
+        overrides = load_overrides(root)
+
+        results: list[KnowledgeIngestResult] = []
+        for folder in LOCAL_FOLDERS:
+            folder_path = root / folder
+            if not folder_path.is_dir():
+                logger.warning("Local folder missing, skipping: %s", folder_path)
+                continue
+            for pdf_path in sorted(folder_path.rglob("*.pdf")):
+                try:
+                    results.append(
+                        self.run_for_local_file(pdf_path, root, overrides, ocr, classify)
+                    )
+                except Exception as exc:  # one bad file must not abort the run
+                    logger.error("Local file failed %s: %r", pdf_path, exc)
+        return results
+
     def run_for_school(self, school: str) -> list[KnowledgeIngestResult]:
         results: list[KnowledgeIngestResult] = []
         for source in self.registry.get_sources_by_school(school):
