@@ -69,8 +69,50 @@ def year_from_filename(filename: str) -> int | None:
     return int(m.group(0)) if m else None
 
 
-def resolve_metadata(first_pages_text, filename, overrides, gateway):
-    raise NotImplementedError
+def resolve_metadata(
+    first_pages_text: str,
+    filename: str,
+    overrides: dict,
+    gateway,
+) -> ResolvedMetadata:
+    """Resolve {school, year} for one local PDF (see module docstring for priority)."""
+    entry = overrides.get(filename)
+    if entry is not None:
+        return metadata_from_override(entry)
+
+    data: dict = {}
+    try:
+        result = gateway.run(InferenceRequest(
+            agent_name="knowledge_classify",
+            task_type="local_pdf_metadata",
+            system_prompt=CLASSIFY_SYSTEM_PROMPT,
+            user_prompt=CLASSIFY_USER_TEMPLATE.format(
+                schools=", ".join(KNOWN_SCHOOLS),
+                filename=filename,
+                text=first_pages_text[:CLASSIFY_TEXT_LIMIT],
+            ),
+            output_mode="json",
+            temperature=0.0,
+        ))
+        data = result.parsed_data or {}
+    except InferenceError as exc:
+        # Degrade gracefully: the file still ingests with school="unknown".
+        logger.warning("Metadata classify failed for %s: %r", filename, exc)
+
+    school = data.get("school")
+    if school not in KNOWN_SCHOOLS:
+        school = UNKNOWN_SCHOOL
+    try:
+        year = int(data.get("year"))
+    except (TypeError, ValueError):
+        year = year_from_filename(filename)
+
+    warnings: list[str] = []
+    if school == UNKNOWN_SCHOOL:
+        warnings.append(
+            f"{filename}: school=unknown — thêm entry vào overrides.json rồi chạy lại"
+        )
+    return ResolvedMetadata(school=school, year=year, warnings=warnings)
 
 
 def build_gateway_classifier(gateway=None):
