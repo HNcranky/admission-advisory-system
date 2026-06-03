@@ -196,7 +196,9 @@ class KnowledgeChunkRepository:
             sql += " AND school = %s"
             params.append(school)
         if topic is not None:
-            sql += " AND topic = %s"
+            # NULL topic = wildcard: locally-ingested official PDFs are
+            # multi-topic, so they stay candidates for every topic filter.
+            sql += " AND (topic = %s OR topic IS NULL)"
             params.append(topic)
         sql += " ORDER BY embedding <=> %s::vector LIMIT %s"
         params.append(literal)
