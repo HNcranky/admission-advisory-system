@@ -217,3 +217,39 @@ def test_inference_request_accepts_media_tuples():
         media=[("image/png", b"\x89PNG")],
     )
     assert request.media == [("image/png", b"\x89PNG")]
+
+
+def test_media_request_builds_multimodal_contents():
+    captured = {}
+    pool = _pool({"k1": FakeClient(text="# OCR markdown", captured=captured)})
+    provider = GeminiProvider(pool=pool)
+    request = InferenceRequest(
+        agent_name="knowledge_ocr",
+        task_type="page_ocr",
+        system_prompt="sys",
+        user_prompt="usr",
+        output_mode="free_text",
+        temperature=0.0,
+        media=[("image/png", b"\x89PNG-bytes")],
+    )
+
+    result = provider.generate(request, _policy(agent="knowledge_ocr"))
+
+    contents = captured["contents"]
+    assert isinstance(contents, list)
+    assert contents[-1] == "usr"                       # prompt đứng SAU ảnh
+    part = contents[0]                                 # google.genai types.Part
+    assert part.inline_data.mime_type == "image/png"
+    assert part.inline_data.data == b"\x89PNG-bytes"
+    assert result.content == "# OCR markdown"
+
+
+def test_request_without_media_keeps_plain_string_contents():
+    # Regression: hành vi cũ nguyên vẹn khi không có media.
+    captured = {}
+    pool = _pool({"k1": FakeClient(text="hello", captured=captured)})
+    provider = GeminiProvider(pool=pool)
+
+    provider.generate(_request(output_mode="free_text"), _policy())
+
+    assert captured["contents"] == "usr"
