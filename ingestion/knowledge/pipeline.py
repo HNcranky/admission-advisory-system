@@ -1,8 +1,16 @@
+import hashlib
 import logging
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from ingestion.fetchers.http_fetcher import http_fetch
 from ingestion.parsers.html_parser import parse_html
+from ingestion.knowledge.local_metadata import (
+    build_gateway_classifier,
+    load_overrides,
+    metadata_from_override,
+)
+from ingestion.knowledge.pdf_ocr import build_gateway_ocr, extract_pages_hybrid
 from ingestion.knowledge.pdf_pages import extract_pages, pages_to_marked_text
 from ingestion.knowledge.chunker import split_into_chunks
 from ingestion.knowledge.embedder import GeminiEmbedder
@@ -15,6 +23,15 @@ from services.knowledge.repository import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Folder layout under --local-dir. Folder name doubles as document_type (D7);
+# both folders run the SAME hybrid extractor — folder is intent, not command (D3).
+LOCAL_FOLDERS = ("pdf_text", "pdf_scanned")
+
+
+def _folder_intent_warnings(folder: str, hybrid, filename: str) -> list[str]:
+    """Quality gate D3: folder is intent; mismatch warns but never blocks."""
+    return []
 
 
 @dataclass
@@ -131,6 +148,64 @@ class KnowledgePipeline:
             chunks_total=total,
             chunks_embedded=embedded,
             chunks_reused=reused,
+        )
+
+    def run_for_local_file(self, pdf_path: Path, root: Path, overrides: dict,
+                           ocr, classify) -> KnowledgeIngestResult:
+        content = pdf_path.read_bytes()
+        content_hash = hashlib.sha256(content).hexdigest()
+        source_url = pdf_path.resolve().as_uri()      # citation trỏ về file gốc
+        folder = pdf_path.relative_to(root).parts[0]  # "pdf_text" | "pdf_scanned"
+        override_entry = overrides.get(pdf_path.name)
+
+        existing = self.doc_repo.get_document_by_url(source_url)
+        if existing is not None and existing.content_hash == content_hash:
+            if override_entry is None:
+                logger.info("Unchanged, skipping %s", source_url)
+                return KnowledgeIngestResult(source_url=source_url, skipped=True)
+            # Override on an unchanged file: re-chunk from the stored raw_text —
+            # no extract/OCR cost; chunk embeddings are reused by content_hash.
+            meta = metadata_from_override(override_entry)
+            text = existing.raw_text or ""
+            warnings: list[str] = []
+            pages_text = pages_ocr = pages_failed = 0
+        else:
+            hybrid = extract_pages_hybrid(content, ocr)
+            text = pages_to_marked_text(hybrid.to_page_tuples())
+            first_pages = "\n\n".join(
+                p.text for p in hybrid.pages[:2] if p.text.strip()
+            )
+            meta = classify(first_pages, pdf_path.name, overrides)
+            warnings = list(meta.warnings)
+            warnings += _folder_intent_warnings(folder, hybrid, pdf_path.name)
+            pages_text, pages_ocr, pages_failed = (
+                hybrid.pages_text, hybrid.pages_ocr, hybrid.pages_failed,
+            )
+
+        doc_id = self.doc_repo.get_or_create_document(KnowledgeDocument(
+            school=meta.school,
+            document_type=folder,
+            source_url=source_url,
+            raw_text=text,
+        ))
+        total, embedded, reused = self._chunk_embed_upsert(
+            doc_id, text,
+            school=meta.school, topic=None, program=None, year=meta.year,
+            document_type=folder, source_url=source_url,
+        )
+        self.doc_repo.mark_ingested(doc_id, content_hash)
+        logger.info(
+            "Ingested %s: %d chunks (%d embedded, %d reused), "
+            "pages text/ocr/failed=%d/%d/%d",
+            source_url, total, embedded, reused,
+            pages_text, pages_ocr, pages_failed,
+        )
+        return KnowledgeIngestResult(
+            source_url=source_url, skipped=False,
+            chunks_total=total, chunks_embedded=embedded, chunks_reused=reused,
+            pages_text=pages_text, pages_ocr=pages_ocr,
+            pages_ocr_failed=pages_failed,
+            school=meta.school, year=meta.year, warnings=warnings,
         )
 
     def run_for_school(self, school: str) -> list[KnowledgeIngestResult]:
