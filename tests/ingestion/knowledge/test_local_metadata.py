@@ -130,3 +130,25 @@ def test_structure_failure_parsed_none_degrades_like_empty():
 
     assert meta.school == UNKNOWN_SCHOOL
     assert meta.year is None
+
+
+# --- build_gateway_classifier -----------------------------------------------------
+
+def test_build_gateway_classifier_binds_gateway():
+    gw = FakeGateway(parsed={"school": "HUST", "year": 2026})
+    classify = build_gateway_classifier(gateway=gw)
+
+    meta = classify("text trang 1", "x.pdf", {})
+
+    assert meta == ResolvedMetadata(school="HUST", year=2026)
+    assert len(gw.requests) == 1
+
+
+def test_build_gateway_classifier_callable_honors_overrides():
+    gw = FakeGateway(parsed={"school": "HUST", "year": 2026})
+    classify = build_gateway_classifier(gateway=gw)
+
+    meta = classify("text", "x.pdf", {"x.pdf": {"school": "NEU", "year": 2024}})
+
+    assert meta.school == "NEU"
+    assert gw.requests == []

@@ -116,4 +116,13 @@ def resolve_metadata(
 
 
 def build_gateway_classifier(gateway=None):
-    raise NotImplementedError
+    """Classify callable for the pipeline:
+    (first_pages_text, filename, overrides) -> ResolvedMetadata."""
+    from services.inference.factory import build_default_gateway
+
+    gw = gateway if gateway is not None else build_default_gateway()
+
+    def _classify(first_pages_text: str, filename: str, overrides: dict) -> ResolvedMetadata:
+        return resolve_metadata(first_pages_text, filename, overrides, gw)
+
+    return _classify
