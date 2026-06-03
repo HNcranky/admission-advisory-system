@@ -67,3 +67,32 @@ def test_upsert_is_idempotent_on_source_url_span(knowledge_repo):
     rows = knowledge_repo.search_by_metadata("HUST", topic="curriculum")
     assert len(rows) == 1
     assert rows[0].chunk_text == "v2"
+
+
+def test_vector_search_includes_null_topic_excludes_other_topics(knowledge_repo):
+    web_tuition = KnowledgeChunk(
+        school="HUST", topic="tuition", chunk_text="học phí web",
+        embedding=_vec(1.0, 0.0), source_url="http://x/tuition",
+        span_start=0, span_end=1,
+    )
+    local_pdf = KnowledgeChunk(
+        school="HUST", topic=None, chunk_text="quy chế pdf",
+        embedding=_vec(0.9, 0.1), source_url="file:///d/quy-che-2026.pdf",
+        span_start=0, span_end=1,
+    )
+    web_dorm = KnowledgeChunk(
+        school="HUST", topic="dormitory", chunk_text="ký túc xá web",
+        embedding=_vec(0.8, 0.2), source_url="http://x/dorm",
+        span_start=0, span_end=1,
+    )
+    for chunk in (web_tuition, local_pdf, web_dorm):
+        knowledge_repo.upsert_chunk(chunk)
+
+    results = knowledge_repo.vector_search(
+        _vec(1.0, 0.0), school="HUST", topic="tuition", limit=10
+    )
+
+    urls = {r.source_url for r in results}
+    assert "http://x/tuition" in urls                  # đúng topic: giữ
+    assert "file:///d/quy-che-2026.pdf" in urls        # NULL topic: wildcard
+    assert "http://x/dorm" not in urls                 # topic khác: vẫn bị loại
