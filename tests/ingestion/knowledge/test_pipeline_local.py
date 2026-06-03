@@ -322,3 +322,41 @@ def test_missing_folder_is_tolerated(tmp_path, monkeypatch):
     results = _pipeline().run_for_local_dir(root, ocr=lambda png: "x", classify=_classify())
 
     assert len(results) == 1
+
+
+# --- CLI + summary ----------------------------------------------------------------
+
+def test_main_local_dir_prints_ocr_summary_and_warnings(tmp_path, monkeypatch, capsys):
+    canned = [
+        KnowledgeIngestResult(
+            source_url="file:///x/a.pdf", skipped=False,
+            chunks_total=41, chunks_embedded=40, chunks_reused=1,
+            pages_text=3, pages_ocr=12, pages_ocr_failed=0,
+            school="HUST", year=2026,
+            warnings=["scan.pdf có vẻ là scan (>50% trang phải OCR), nên chuyển sang pdf_scanned/"],
+        ),
+        KnowledgeIngestResult(source_url="file:///x/b.pdf", skipped=True),
+    ]
+
+    class FakePipeline:
+        def run_for_local_dir(self, root):
+            return canned
+
+    monkeypatch.setattr(pipeline_mod, "KnowledgePipeline", lambda: FakePipeline())
+
+    rc = pipeline_mod._main(["--local-dir", str(tmp_path)])
+
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "school=HUST" in out
+    assert "year=2026" in out
+    assert "pages(text/ocr/fail)=3/12/0" in out
+    assert "chunks=41" in out
+    assert "WARN" in out and "pdf_scanned/" in out
+    assert "SKIP   file:///x/b.pdf (unchanged)" in out
+
+
+def test_main_local_dir_is_mutually_exclusive_with_school(tmp_path):
+    import pytest
+    with pytest.raises(SystemExit):
+        pipeline_mod._main(["--local-dir", str(tmp_path), "--school", "HUST"])

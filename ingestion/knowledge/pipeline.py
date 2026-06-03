@@ -269,18 +269,33 @@ def _main(argv=None) -> int:
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--school", help="ingest one school, e.g. HUST")
     group.add_argument("--all", action="store_true", help="ingest all schools")
+    group.add_argument(
+        "--local-dir",
+        help="ingest local PDFs from <dir>/pdf_text and <dir>/pdf_scanned",
+    )
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     pipeline = KnowledgePipeline()
-    results = pipeline.run_all() if args.all else pipeline.run_for_school(args.school)
+    if args.local_dir:
+        results = pipeline.run_for_local_dir(Path(args.local_dir))
+    elif args.all:
+        results = pipeline.run_all()
+    else:
+        results = pipeline.run_for_school(args.school)
 
     for r in results:
         if r.skipped:
             print(f"SKIP   {r.source_url} (unchanged)")
+        elif r.source_url.startswith("file://"):
+            print(f"OK     {r.source_url} school={r.school} year={r.year} "
+                  f"pages(text/ocr/fail)={r.pages_text}/{r.pages_ocr}/{r.pages_ocr_failed} "
+                  f"chunks={r.chunks_total}")
         else:
             print(f"OK     {r.source_url}  chunks={r.chunks_total} "
                   f"embedded={r.chunks_embedded} reused={r.chunks_reused}")
+        for w in r.warnings:
+            print(f"WARN   {w}")
     print(f"Done: {len(results)} source(s) processed")
     return 0
 
