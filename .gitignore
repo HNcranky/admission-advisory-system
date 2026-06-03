@@ -216,3 +216,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local knowledge corpus (official PDFs, not committed)
+data/knowledge/
