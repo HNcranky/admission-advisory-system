@@ -1,5 +1,5 @@
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from ingestion.fetchers.http_fetcher import http_fetch
 from ingestion.parsers.html_parser import parse_html
@@ -24,6 +24,13 @@ class KnowledgeIngestResult:
     chunks_total: int = 0
     chunks_embedded: int = 0
     chunks_reused: int = 0
+    # Local-PDF (hybrid OCR) stats — stay at defaults for URL sources.
+    pages_text: int = 0
+    pages_ocr: int = 0
+    pages_ocr_failed: int = 0
+    school: str = ""
+    year: int | None = None
+    warnings: list[str] = field(default_factory=list)
 
 
 class KnowledgePipeline:
