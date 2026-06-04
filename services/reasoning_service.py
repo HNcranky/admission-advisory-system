@@ -2,6 +2,11 @@ from typing import Dict, List, Tuple
 
 from agents.models import CandidateProgram, EligibilityCheck, RankedRecommendation, StudentProfile
 from services.explanation_service import _program_label
+from services.profile.admission_methods import (
+    THANG_30_METHODS,
+    candidate_method_codes,
+    method_display,
+)
 
 
 def _major_matches(profile: StudentProfile, candidate: CandidateProgram) -> bool:
@@ -32,11 +37,19 @@ def _score_to_band(score: float, has_missing_critical: bool) -> str:
     return "reach"
 
 
+def _max_confidence(candidate: CandidateProgram):
+    return max(
+        [ev.confidence_score for ev in candidate.evidence if ev.confidence_score is not None]
+        or [None]
+    )
+
+
 def reason_candidates(
     profile: StudentProfile, candidates: List[CandidateProgram]
 ) -> Tuple[List[EligibilityCheck], List[RankedRecommendation]]:
     checks: List[EligibilityCheck] = []
     recommendations: List[RankedRecommendation] = []
+    profile_method = getattr(profile, "admission_method", None)
 
     for candidate in candidates:
         score = 0.0
@@ -45,7 +58,18 @@ def reason_candidates(
         cautions: List[str] = []
         eligible = True
 
-        if profile.subject_combination:
+        codes = candidate_method_codes(candidate)
+        method_mismatch = bool(profile_method and codes and profile_method not in codes)
+
+        if method_mismatch:
+            # Ngả 1 — khác phương thức: xếp theo ngành/trường, KHÔNG đối chiếu
+            # điểm/tổ hợp (tổ hợp của row thuộc phương thức khác).
+            eligible = None
+            cautions.append(
+                f"Chương trình này xét theo {candidate.admission_method}, khác phương thức "
+                f"em đã chọn ({method_display(profile_method)}); điểm và tổ hợp chưa được đối chiếu."
+            )
+        elif profile.subject_combination:
             if (
                 not candidate.subject_combinations
                 or profile.subject_combination in candidate.subject_combinations
@@ -53,12 +77,26 @@ def reason_candidates(
                 score += 0.40
                 reasons.append("Tổ hợp xét tuyển phù hợp.")
             else:
-                eligible = False
-                risks.append("Tổ hợp xét tuyển không khớp với các tổ hợp được công bố.")
+                # Ngả 2 — NOT_ELIGIBLE (EC-12): ghi check, KHÔNG xếp hạng,
+                # KHÔNG tính tiếp score-fit.
+                combos = ", ".join(candidate.subject_combinations)
+                checks.append(
+                    EligibilityCheck(
+                        candidate_id=candidate.candidate_id,
+                        eligible=False,
+                        risks=[
+                            f"Chương trình không nhận tổ hợp {profile.subject_combination} "
+                            f"theo phương thức đã chọn — các tổ hợp được công bố: {combos}."
+                        ],
+                        confidence=_max_confidence(candidate),
+                    )
+                )
+                continue
         else:
             eligible = None
             risks.append("Hồ sơ còn thiếu tổ hợp xét tuyển.")
 
+        # Ngả 3 — chấm điểm như cũ, nhưng score-fit bonus chỉ cho thang 30.
         if _major_matches(profile, candidate):
             score += 0.35
             reasons.append("Ngành ưu tiên khớp với chương trình.")
@@ -68,14 +106,26 @@ def reason_candidates(
             reasons.append("Trường ưu tiên khớp với nguyện vọng.")
 
         if profile.total_score is not None:
-            if profile.total_score >= 26:
-                score += 0.10
-                reasons.append("Điểm dự kiến đang ở mức cạnh tranh tốt.")
-            elif profile.total_score >= 24:
-                score += 0.05
-                reasons.append("Điểm dự kiến đang ở mức có thể cân nhắc.")
+            if method_mismatch:
+                pass  # đã caution ở ngả 1; không đối chiếu điểm
+            elif profile_method in THANG_30_METHODS:
+                if profile.total_score >= 26:
+                    score += 0.10
+                    reasons.append("Điểm dự kiến đang ở mức cạnh tranh tốt.")
+                elif profile.total_score >= 24:
+                    score += 0.05
+                    reasons.append("Điểm dự kiến đang ở mức có thể cân nhắc.")
+                else:
+                    cautions.append(
+                        "Điểm dự kiến có thể thấp hơn mức cạnh tranh của một số chương trình."
+                    )
+            elif profile_method is None:
+                cautions.append("Hồ sơ chưa rõ phương thức xét tuyển nên chưa đánh giá mức điểm.")
             else:
-                cautions.append("Điểm dự kiến có thể thấp hơn mức cạnh tranh của một số chương trình.")
+                cautions.append(
+                    f"Điểm theo {method_display(profile_method)} chưa thể đối chiếu trực tiếp "
+                    "với dữ liệu tham chiếu hiện có."
+                )
         else:
             cautions.append("Hồ sơ còn thiếu điểm nên chưa thể ước lượng mức cạnh tranh.")
 
@@ -93,10 +143,7 @@ def reason_candidates(
                 eligible=eligible,
                 reasons=reasons,
                 risks=risks,
-                confidence=max(
-                    [ev.confidence_score for ev in candidate.evidence if ev.confidence_score is not None]
-                    or [None]
-                ),
+                confidence=_max_confidence(candidate),
             )
         )
         recommendations.append(
