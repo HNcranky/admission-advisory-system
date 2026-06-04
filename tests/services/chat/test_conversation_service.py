@@ -875,3 +875,77 @@ def test_r2_choosing_method_after_provisional_high_score_clears_it():
     assert repo.profile_state.total_score is None                # điểm vô lệ bị xoá
     assert "99" in result.assistant_message
     assert "bao nhiêu" in result.assistant_message               # re-ask điểm
+
+
+# ─── Plan reasoning-integrity 4: RESET hồ sơ (EC-22) ──────────────────────────
+
+def _full_old_profile():
+    return ChatProfileState(
+        admission_year=2026, total_score=27.0, subject_combination="A01",
+        admission_method="thpt_score",
+        explicit_preferred_majors=["computer_science"], preferred_majors=["computer_science"],
+    )
+
+
+def test_ec22_deterministic_reset_clears_profile_and_asks_first_slot():
+    service, repo = _make_service(
+        # router cố tình trả route khác — pre-check deterministic phải thắng
+        intent_result=IntentResult(route="CONVERSATIONAL", subtype="EMOTIONAL_SUPPORT"),
+        profile=_full_old_profile(),
+        status="completed",
+        extract=lambda text, known_state=None, active_slot=None: {},
+    )
+    result = service.handle_user_message("tok", "Xoá thông tin cũ đi, em muốn tư vấn lại từ đầu")
+
+    assert repo.profile_state.total_score is None         # hồ sơ cũ đã xoá
+    assert repo.profile_state.preferred_majors == []
+    assert "hồ sơ tư vấn mới" in result.assistant_message
+    assert "năm nào" in result.assistant_message           # hỏi slot đầu tiên
+    assert result.should_start_run is False
+    assert repo.status == "collecting_profile"
+    assert repo.flow_state.pending_question == "Bạn đang xét tuyển cho năm nào?"
+
+
+def test_ec22_reset_applies_same_turn_delta_to_fresh_profile():
+    """Hijack guard: đang chờ slot năm, user nói 'xoá hết..., năm 2026' —
+    KHÔNG được để _maybe_continue_advisory nuốt '2026' vào hồ sơ CŨ."""
+    flow = FlowState(active_flow="ADVISORY_FLOW",
+                     pending_question="Bạn đang xét tuyển cho năm nào?")
+    profile = _full_old_profile().model_copy(update={"admission_year": None})
+    service, repo = _make_service(
+        intent_result=IntentResult(route="CONVERSATIONAL", subtype="EMOTIONAL_SUPPORT"),
+        profile=profile, flow=flow, status="completed",
+        extract=lambda text, known_state=None, active_slot=None: {},
+    )
+    result = service.handle_user_message("tok", "Xoá hết đi, tư vấn cho em gái em, năm 2026")
+
+    assert repo.profile_state.admission_year == 2026      # delta áp lên hồ sơ TRẮNG
+    assert repo.profile_state.total_score is None          # điểm cũ KHÔNG còn
+    assert repo.profile_state.preferred_majors == []
+    assert "hồ sơ tư vấn mới" in result.assistant_message
+    assert "bao nhiêu" in result.assistant_message         # hỏi tiếp slot điểm
+
+
+def test_ec22_llm_routed_reset_uses_same_handler():
+    """Cách nói mềm không khớp phrase deterministic → LLM route RESET_PROFILE."""
+    service, repo = _make_service(
+        intent_result=IntentResult(route="RESET_PROFILE"),
+        profile=_full_old_profile(),
+        status="completed",
+        extract=lambda text, known_state=None, active_slot=None: {},
+    )
+    result = service.handle_user_message("tok", "giờ tư vấn cho đứa bạn của em nhé")
+
+    assert repo.profile_state.total_score is None
+    assert "hồ sơ tư vấn mới" in result.assistant_message
+
+
+def test_normal_messages_do_not_trigger_deterministic_reset():
+    """'tư vấn cho em' thông thường KHÔNG được reset."""
+    service, repo = _make_service(
+        intent_result=IntentResult(route="ADVISORY_FLOW"),
+        profile=_full_old_profile(),
+        extract=lambda text, known_state=None, active_slot=None: {},
+    )
+    service.handle_user_message("tok", "tư vấn cho em ngành phù hợp với 27 điểm")
+    assert repo.profile_state.total_score == 27.0          # hồ sơ giữ nguyên

@@ -2,7 +2,7 @@ import logging
 
 from services import build_default_gateway
 from services.chat.intent_router import IntentRouter
-from services.chat.models import ConversationTurnResult
+from services.chat.models import ChatProfileState, ConversationTurnResult
 from services.chat.knowledge_fanout import format_knowledge_blocks, run_knowledge_fanout
 from services.chat.repository import ChatSessionRepository
 from services.knowledge.qa_service import KnowledgeQAService
@@ -11,6 +11,7 @@ from services.profile.slots import (
 )
 from services.profile.extractor import apply_profile_delta, extract_profile_update
 from services.profile.validation import validate_profile_delta
+from services.profile_service import normalize_text
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,18 @@ CLARIFICATION_FIELD_ORDER = ["school", "programs", "subject_combination", "admis
 GENERIC_CLARIFICATION = (
     "Bạn có thể nói rõ hơn câu hỏi của mình không? Mình muốn hiểu đúng để hỗ trợ tốt hơn."
 )
+
+# Cụm từ reset tường minh (đã normalize). CỐ Ý hẹp — cách nói mềm ("tư vấn cho
+# em gái em") để LLM route RESET_PROFILE xử lý, tránh false positive.
+_RESET_PHRASES = (
+    "xoa thong tin", "xoa ho so", "xoa het",
+    "bat dau lai", "lam lai tu dau", "tu van lai tu dau", "reset",
+)
+
+
+def _is_reset_request(content: str) -> bool:
+    normalized = normalize_text(content or "")
+    return any(phrase in normalized for phrase in _RESET_PHRASES)
 
 
 class ConversationService:
@@ -61,6 +74,12 @@ class ConversationService:
         active_slot = (missing_critical_slots(profile_state) or [None])[0]
         delta = self.extract_profile(content, profile_state, active_slot)
         delta = self._deterministic_safety_net(delta, content, active_slot)
+
+        # EC-22: reset tường minh phải thắng mọi nhánh khác — kể cả
+        # _maybe_continue_advisory (tránh "xoá hết..., năm 2026" bị nuốt vào hồ sơ cũ).
+        if _is_reset_request(content):
+            return self._handle_reset(session_token, delta, flow_state)
+
         delta, rejections = validate_profile_delta(delta, profile_state)
         if rejections:
             return self._handle_rejection(
@@ -98,6 +117,8 @@ class ConversationService:
             return self._handle_conversational(
                 session_token, content, intent, profile_state, flow_state, session_status
             )
+        if intent.route == "RESET_PROFILE":
+            return self._handle_reset(session_token, delta, flow_state)
         return self._handle_clarification(
             session_token, intent, profile_state, flow_state, session_status
         )
@@ -215,6 +236,35 @@ class ConversationService:
             should_start_run=True,
             profile_state=merged,
             correction_note=correction,
+        )
+
+    def _handle_reset(self, session_token, delta, flow_state):
+        """EC-22: bắt đầu hồ sơ trắng; delta của CHÍNH lượt này áp lên hồ sơ mới
+        (user kèm "năm 2026" thì khỏi hỏi lại năm). Không xoá lịch sử chat."""
+        fresh = ChatProfileState()
+        clean_delta, _ = validate_profile_delta(delta, fresh)
+        merged = apply_profile_delta(fresh, clean_delta)
+
+        follow_up = next_follow_up_question(merged)
+        if follow_up is None:
+            # Hiếm: delta một lượt điền đủ slot critical → vào thẳng phân tích.
+            return self._advance_advisory(session_token, merged, flow_state)
+
+        self.repository.update_profile_state(session_token, merged, "collecting_profile")
+        self.repository.update_flow_state(
+            session_token,
+            flow_state.model_copy(update={
+                "active_flow": "ADVISORY_FLOW",
+                "pending_question": follow_up,
+            }),
+        )
+        message = f"Mình đã bắt đầu hồ sơ tư vấn mới. {follow_up}"
+        self.repository.append_message(session_token, "assistant", message, "assistant_follow_up")
+        return ConversationTurnResult(
+            session_status="collecting_profile",
+            assistant_message=message,
+            should_start_run=False,
+            profile_state=merged,
         )
 
     def _handle_advisory(self, session_token, profile_state, flow_state, delta):
