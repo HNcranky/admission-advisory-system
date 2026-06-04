@@ -17,7 +17,12 @@ logger = logging.getLogger(__name__)
 
 # Hard filter in vector_search — MUST stay in sync with the school codes used in
 # knowledge_sources.json and the intent router. Anything else maps to "unknown".
-KNOWN_SCHOOLS = ("HUST", "NEU", "VNU-UET")
+# NATIONAL_SCHOOL ("MOET") is a national-scope sentinel, not a real school: it
+# tags Bộ GD&ĐT regulations that apply to every school. It is NOT offered to
+# students as a selectable school (the chat picker does not read KNOWN_SCHOOLS).
+from services.knowledge.scope import NATIONAL_SCHOOL
+
+KNOWN_SCHOOLS = ("HUST", "NEU", "VNU-UET", NATIONAL_SCHOOL)
 UNKNOWN_SCHOOL = "unknown"
 
 # Only the first pages go to the classifier; official cover pages name the

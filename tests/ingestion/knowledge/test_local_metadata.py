@@ -152,3 +152,15 @@ def test_build_gateway_classifier_callable_honors_overrides():
 
     assert meta.school == "NEU"
     assert gw.requests == []
+
+
+# --- national-scope sentinel ------------------------------------------------------
+
+from services.knowledge.scope import NATIONAL_SCHOOL
+
+
+def test_national_sentinel_is_a_known_school():
+    # MOET is a valid scope tag so storage/vector_search accept it,
+    # while the per-school codes remain present.
+    assert NATIONAL_SCHOOL in KNOWN_SCHOOLS
+    assert {"HUST", "NEU", "VNU-UET"}.issubset(set(KNOWN_SCHOOLS))
