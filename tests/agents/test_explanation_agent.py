@@ -286,3 +286,98 @@ def test_explanation_prepends_correction_sentence_when_correction_note_present()
     assert "27" in output.final_answer
     assert "25.75" in output.final_answer
     assert "thứ tự ưu tiên thay đổi" in output.final_answer
+
+
+from agents.models import EligibilityCheck
+
+
+def test_explanation_renders_not_eligible_section_with_reason():
+    """EC-12: chương trình sai tổ hợp xuất hiện ở section riêng kèm lý do,
+    KHÔNG nằm trong danh sách đề xuất đánh số."""
+    state = AgentState(user_query="Tu van", admission_year=2026)
+    state.student_profile = StudentProfile(
+        total_score=28.0, subject_combination="D01", admission_method="thpt_score",
+        preferred_majors=["computer_science"],
+    )
+    state.retrieved_programs = [
+        CandidateProgram(
+            candidate_id="uet:ne", school_id="vnu_uet",
+            school_name="Đại học Công nghệ - ĐHQGHN",
+            admission_year=2026, program_id="computer_science",
+            program_name="Khoa học máy tính", admission_method="thpt_score",
+            subject_combinations=["A00", "A01"],
+        ),
+        CandidateProgram(
+            candidate_id="hust:ok", school_id="hust", school_name="HUST",
+            admission_year=2026, program_id="data_science",
+            program_name="Khoa học dữ liệu", admission_method="thpt_score",
+            subject_combinations=["A00", "A01", "D01"],
+        ),
+    ]
+    state.eligibility_checks = [
+        EligibilityCheck(
+            candidate_id="uet:ne", eligible=False,
+            risks=["Chương trình không nhận tổ hợp D01 theo phương thức đã chọn — các tổ hợp được công bố: A00, A01."],
+        ),
+        EligibilityCheck(candidate_id="hust:ok", eligible=True),
+    ]
+    state.ranked_recommendations = [
+        RankedRecommendation(candidate_id="hust:ok", band="match", score=0.75, summary="fit"),
+    ]
+
+    output = explanation_agent(state)
+
+    assert "**Không đủ điều kiện xét tuyển**" in output.final_answer
+    assert "không nhận tổ hợp D01" in output.final_answer
+    # Chương trình NOT_ELIGIBLE không được nằm trong danh sách đề xuất đánh số
+    assert "### 1. HUST — Khoa học dữ liệu" in output.final_answer
+    assert "### 2." not in output.final_answer
+    assert output.final_answer.index("### 1.") < output.final_answer.index("Không đủ điều kiện")
+
+
+def test_explanation_no_not_eligible_section_when_all_eligible():
+    state = AgentState(user_query="Tu van")
+    state.retrieved_programs = [
+        CandidateProgram(
+            candidate_id="hust:1", school_id="hust", school_name="HUST",
+            admission_year=2026, program_id="computer_science",
+            program_name="Khoa hoc May tinh", admission_method="thpt_score",
+        )
+    ]
+    state.eligibility_checks = [EligibilityCheck(candidate_id="hust:1", eligible=True)]
+    state.ranked_recommendations = [
+        RankedRecommendation(candidate_id="hust:1", band="match", score=0.6, summary="fit"),
+    ]
+
+    output = explanation_agent(state)
+
+    assert "Không đủ điều kiện" not in output.final_answer
+
+
+def test_intro_paragraph_mentions_admission_method():
+    state = AgentState(user_query="Tu van", admission_year=2026)
+    state.student_profile = StudentProfile(
+        total_score=27.0, admission_method="thpt_score", subject_combination="A00",
+    )
+    state.retrieved_programs = [
+        CandidateProgram(
+            candidate_id="hust:1", school_id="hust", school_name="HUST",
+            admission_year=2026, program_id="computer_science",
+            program_name="Khoa hoc May tinh", admission_method="thpt_score",
+        )
+    ]
+    state.ranked_recommendations = [
+        RankedRecommendation(candidate_id="hust:1", band="match", score=0.6, summary="fit"),
+    ]
+
+    output = explanation_agent(state)
+
+    assert "phương thức điểm thi tốt nghiệp THPT" in output.final_answer
+
+
+def test_correction_sentence_labels_admission_method():
+    from services.explanation_service import _correction_sentence
+    sentence = _correction_sentence(
+        {"slot": "admission_method", "previous_value": "thpt_score", "new_value": "school_record"}
+    )
+    assert "phương thức xét tuyển" in sentence

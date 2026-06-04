@@ -1,8 +1,15 @@
 from typing import Any, Dict, List, Optional
 
-from agents.models import CandidateProgram, PolicyDecision, RankedRecommendation, StudentProfile
+from agents.models import (
+    CandidateProgram,
+    EligibilityCheck,
+    PolicyDecision,
+    RankedRecommendation,
+    StudentProfile,
+)
 from services.conflict.models import ResolutionOutcome
 from services.conflict.source_labels import label_for_source
+from services.profile.admission_methods import method_display
 
 
 REASON_TRANSLATIONS = {
@@ -33,6 +40,7 @@ BAND_FIT_LABELS = {
 # Nhãn slot cho câu thông báo correction (AC7).
 _SLOT_LABELS = {
     "total_score": "điểm dự kiến",
+    "admission_method": "phương thức xét tuyển",
     "location_preference": "khu vực mong muốn",
     "subject_combination": "tổ hợp xét tuyển",
     "tuition_budget": "mức học phí",
@@ -104,6 +112,8 @@ def _intro_paragraph(profile: StudentProfile, admission_year: Optional[int], n: 
     facts: List[str] = []
     if admission_year:
         facts.append(f"xét tuyển năm {admission_year}")
+    if getattr(profile, "admission_method", None):
+        facts.append(f"phương thức {method_display(profile.admission_method)}")
     if profile.total_score is not None:
         facts.append(f"dự kiến {_fmt_num(profile.total_score)} điểm")
     if profile.subject_combination:
@@ -147,6 +157,31 @@ def _data_note(candidate: CandidateProgram, outcome_by_key: Dict[str, Resolution
     )
 
 
+def _not_eligible_lines(
+    eligibility_checks: List[EligibilityCheck],
+    candidates_by_id: Dict[str, List[CandidateProgram]],
+) -> List[str]:
+    """Section 'Không đủ điều kiện xét tuyển' (EC-12): cap 3, dedupe theo chương trình."""
+    lines: List[str] = []
+    seen = set()
+    for check in eligibility_checks or []:
+        if check.eligible is not False:
+            continue
+        group = candidates_by_id.get(check.candidate_id, [])
+        if not group:
+            continue
+        candidate = group[0]
+        key = (candidate.school_id, candidate.program_id or candidate.program_name)
+        if key in seen:
+            continue
+        seen.add(key)
+        reason = check.risks[0] if check.risks else "Không đáp ứng điều kiện xét tuyển đã công bố."
+        lines.append(f"- {candidate.school_name} — {_program_label(candidate)}: {reason}")
+        if len(lines) >= 3:
+            break
+    return lines
+
+
 def build_explanation(
     profile: StudentProfile,
     recommendations: List[RankedRecommendation],
@@ -155,6 +190,7 @@ def build_explanation(
     resolution_outcomes: Optional[List[ResolutionOutcome]] = None,
     admission_year: Optional[int] = None,
     correction_note: Optional[Dict[str, Any]] = None,
+    eligibility_checks: Optional[List[EligibilityCheck]] = None,
 ) -> str:
     resolution_outcomes = resolution_outcomes or []
     lines: List[str] = []
@@ -204,6 +240,16 @@ def build_explanation(
                 lines.append(note)
     else:
         lines.append("Chưa có đề xuất phù hợp từ dữ liệu hiện tại.")
+
+    # Section "Không đủ điều kiện xét tuyển" (EC-12) — render cả khi có lẫn khi
+    # không có đề xuất (policy_agent ghi đè ranked_recommendations nên các
+    # chương trình NOT_ELIGIBLE không còn trong danh sách đề xuất).
+    ne_lines = _not_eligible_lines(eligibility_checks or [], candidates_by_id)
+    if ne_lines:
+        lines.append("")
+        lines.append("**Không đủ điều kiện xét tuyển**")
+        lines.append("")
+        lines.extend(ne_lines)
 
     # Nguồn tham chiếu (dedup URL theo các đề xuất hiển thị).
     cited_sources: List[str] = []
