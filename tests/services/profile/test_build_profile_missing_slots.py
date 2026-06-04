@@ -7,3 +7,4 @@ def test_build_profile_missing_slots_uses_registry_critical_set():
     assert "total_score" in profile.missing_slots
     assert "preferred_majors" in profile.missing_slots
     assert "subject_combination" in profile.missing_slots  # nay critical
+    assert "admission_method" in profile.missing_slots

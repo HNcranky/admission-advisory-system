@@ -6,6 +6,7 @@ from services.profile.extractor import extract_profile_update
 
 def _state(**kw):
     base = dict(admission_year=None, total_score=None, subject_combination=None,
+                admission_method=None,
                 preferred_majors=[], preferred_schools=[], location_preference=None,
                 tuition_budget=None, constraints=[])
     base.update(kw)
@@ -123,3 +124,27 @@ def test_llm_output_strips_majors_and_unknown_keys():
         "mình được 30 điểm", known_state=_state(), active_slot=None,
         gateway=gw, resolver=_no_majors)
     assert delta == {"total_score": 30.0}  # preferred_majors (do resolver lo) & key lạ bị loại
+
+
+def test_llm_admission_method_display_name_is_coerced_to_code():
+    # LLM hay trả display tiếng Việt thay vì mã → coerce qua parser.
+    gw = FakeGatewayFields({"admission_method": "học bạ"})
+    delta = extract_profile_update(
+        "em xét học bạ nhé", known_state=_state(), active_slot=None,
+        gateway=gw, resolver=_no_majors)
+    assert delta["admission_method"] == "school_record"
+
+
+def test_llm_admission_method_garbage_is_dropped():
+    gw = FakeGatewayFields({"admission_method": "phương thức vũ trụ"})
+    delta = extract_profile_update(
+        "abc", known_state=_state(), active_slot=None,
+        gateway=gw, resolver=_no_majors)
+    assert "admission_method" not in delta
+
+
+def test_deterministic_method_bare_answer_skips_llm():
+    delta = extract_profile_update(
+        "điểm thi THPT", known_state=_state(admission_year=2026, total_score=27.0),
+        active_slot="admission_method", gateway=UnavailableGateway(), resolver=_no_majors)
+    assert delta == {"admission_method": "thpt_score"}

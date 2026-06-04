@@ -78,9 +78,9 @@ def test_build_profile_with_gateway_falls_back_when_gateway_is_unavailable():
     # (Tier1 alias) running on the query.
     assert profile.preferred_majors == ["information_technology_uet"]
     assert profile.preferred_schools == ["hust"]
-    # missing_slots now comes from the registry critical set; only admission_year
-    # is missing here (location_preference is no longer critical — spec mục 8).
-    assert profile.missing_slots == ["admission_year"]
+    # missing_slots now comes from the registry critical set; admission_method
+    # is a new critical slot (location_preference is no longer critical — spec mục 8).
+    assert profile.missing_slots == ["admission_year", "admission_method"]
 
 
 def test_natural_interest_query_resolves_majors_via_resolver():
