@@ -805,3 +805,73 @@ def test_method_bare_answer_fills_pending_method_slot():
 
     assert repo.profile_state.admission_method == "thpt_score"
     assert "ngành" in result.assistant_message.lower()  # hỏi tiếp slot ngành
+
+
+# ─── Plan reasoning-integrity 2: validate thang điểm (EC-04) ──────────────────
+
+def test_ec04_score_over_scale_is_rejected_with_explanation():
+    """EC-04: 35 điểm thang 30 → không lưu, trả lời yêu cầu kiểm tra lại."""
+    profile = ChatProfileState(admission_year=2026, admission_method="thpt_score")
+    flow = FlowState(active_flow="ADVISORY_FLOW",
+                     pending_question="Tổng điểm hoặc mức điểm ước tính của bạn là bao nhiêu?")
+    service, repo = _make_service(
+        profile=profile, flow=flow,
+        extract=lambda text, known_state=None, active_slot=None: {"total_score": 35.0},
+    )
+    result = service.handle_user_message("tok", "Em được 35 điểm theo thang 30")
+
+    assert repo.profile_state.total_score is None          # KHÔNG lưu điểm vô lệ
+    assert "35" in result.assistant_message
+    assert "chưa hợp lệ" in result.assistant_message
+    assert result.should_start_run is False
+    # pending_question trỏ về slot bị từ chối để bare answer lượt sau được nhận
+    assert repo.flow_state.pending_question == (
+        "Tổng điểm hoặc mức điểm ước tính của bạn là bao nhiêu?"
+    )
+    assert repo.messages[-1][1] == "assistant_validation"
+
+
+def test_ec04_valid_fields_in_same_turn_still_applied():
+    profile = ChatProfileState(admission_year=2026, admission_method="thpt_score")
+    service, repo = _make_service(
+        profile=profile,
+        extract=lambda text, known_state=None, active_slot=None: {
+            "total_score": 35.0, "location_preference": "Ha Noi",
+        },
+    )
+    service.handle_user_message("tok", "35 điểm, muốn học ở Hà Nội")
+
+    assert repo.profile_state.total_score is None
+    assert repo.profile_state.location_preference == "Ha Noi"  # phần hợp lệ vẫn ghi
+
+
+def test_ec04_correction_to_invalid_score_is_blocked():
+    """Sửa điểm sau khi đã có kết quả → vẫn phải qua validation, không re-run."""
+    service, repo = _make_service(
+        profile=_completed_profile().model_copy(update={"admission_method": "thpt_score"}),
+        flow=FlowState(active_flow="ADVISORY_FLOW", pending_question=None),
+        status="completed",
+        extract=lambda text, known_state=None, active_slot=None: {"total_score": 35.0},
+    )
+    result = service.handle_user_message("tok", "em nhầm, 35 điểm")
+
+    assert result.should_start_run is False                 # KHÔNG re-run với điểm rác
+    assert result.correction_note is None
+    assert repo.profile_state.total_score == 27.0           # giữ điểm cũ
+
+
+def test_r2_choosing_method_after_provisional_high_score_clears_it():
+    """99 điểm nhận tạm khi chưa biết phương thức; chọn 'điểm thi THPT' → xoá, hỏi lại."""
+    profile = ChatProfileState(admission_year=2026, total_score=99.0)
+    flow = FlowState(active_flow="ADVISORY_FLOW",
+                     pending_question="Bạn xét tuyển theo phương thức nào?")
+    service, repo = _make_service(
+        profile=profile, flow=flow,
+        extract=lambda text, known_state=None, active_slot=None: {},
+    )
+    result = service.handle_user_message("tok", "điểm thi tốt nghiệp THPT")
+
+    assert repo.profile_state.admission_method == "thpt_score"  # phương thức vẫn nhận
+    assert repo.profile_state.total_score is None                # điểm vô lệ bị xoá
+    assert "99" in result.assistant_message
+    assert "bao nhiêu" in result.assistant_message               # re-ask điểm

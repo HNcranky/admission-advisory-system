@@ -6,8 +6,11 @@ from services.chat.models import ConversationTurnResult
 from services.chat.knowledge_fanout import format_knowledge_blocks, run_knowledge_fanout
 from services.chat.repository import ChatSessionRepository
 from services.knowledge.qa_service import KnowledgeQAService
-from services.profile.slots import SLOTS, missing_critical_slots, next_follow_up_question, parse_slot
+from services.profile.slots import (
+    SLOTS, follow_up_for, missing_critical_slots, next_follow_up_question, parse_slot,
+)
 from services.profile.extractor import apply_profile_delta, extract_profile_update
+from services.profile.validation import validate_profile_delta
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +61,11 @@ class ConversationService:
         active_slot = (missing_critical_slots(profile_state) or [None])[0]
         delta = self.extract_profile(content, profile_state, active_slot)
         delta = self._deterministic_safety_net(delta, content, active_slot)
+        delta, rejections = validate_profile_delta(delta, profile_state)
+        if rejections:
+            return self._handle_rejection(
+                session_token, profile_state, flow_state, delta, rejections
+            )
 
         # A reply to a pending advisory follow-up is an *answer*, not a fresh
         # intent. Route it back into the advisory flow when it actually fills the
@@ -110,6 +118,31 @@ class ConversationService:
             if val is not None:
                 delta[active_slot] = val
         return delta
+
+    def _handle_rejection(self, session_token, profile_state, flow_state, clean_delta, rejections):
+        """Giá trị vô lệ theo thang phương thức (EC-04): áp phần hợp lệ, trả lời
+        từ chối kèm hướng dẫn, và trỏ pending_question về slot bị từ chối để câu
+        trả lời cụt lượt sau vẫn được safety-net nhận."""
+        merged = apply_profile_delta(profile_state, clean_delta)
+        self.repository.update_profile_state(session_token, merged, "collecting_profile")
+
+        rejected_slot = rejections[0]["slot"]
+        pending = follow_up_for(rejected_slot) or next_follow_up_question(merged)
+        self.repository.update_flow_state(
+            session_token,
+            flow_state.model_copy(update={
+                "active_flow": "ADVISORY_FLOW",
+                "pending_question": pending,
+            }),
+        )
+        message = rejections[0]["message"]
+        self.repository.append_message(session_token, "assistant", message, "assistant_validation")
+        return ConversationTurnResult(
+            session_status="collecting_profile",
+            assistant_message=message,
+            should_start_run=False,
+            profile_state=merged,
+        )
 
     def _maybe_continue_advisory(self, session_token, content, profile_state, flow_state, delta):
         """Treat a reply as the answer to a pending advisory follow-up.
