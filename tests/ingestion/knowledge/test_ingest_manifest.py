@@ -1,4 +1,9 @@
-from ingestion.knowledge.crawler.manifest import ManifestEntry
+import ingestion.knowledge.ingest_manifest as mod
+from ingestion.knowledge.crawler.manifest import (
+    ManifestEntry,
+    load_manifest,
+    save_manifest,
+)
 from ingestion.knowledge.ingest_manifest import ingest_keep_entries
 from ingestion.knowledge.pipeline import KnowledgeIngestResult
 
@@ -63,3 +68,42 @@ def test_failure_keeps_status_for_retry():
     results = ingest_keep_entries(entries, pipe)
     assert entries[0].status == "keep"        # not done → retried next run
     assert results == [("FAIL", "https://a.vn/bad.pdf")]
+
+
+def test_main_ingests_keep_and_persists_status(tmp_path, monkeypatch, capsys):
+    path = tmp_path / "manifest.json"
+    save_manifest(path, [
+        ManifestEntry(school="HUST", url="https://a.vn/k.pdf", status="keep"),
+        ManifestEntry(school="HUST", url="https://a.vn/s.pdf", status="skip"),
+    ])
+
+    class FakePipeline:
+        def run_for_url(self, url, *, school, **kwargs):
+            return KnowledgeIngestResult(source_url=url, skipped=False)
+
+    monkeypatch.setattr(mod, "KnowledgePipeline", lambda: FakePipeline())
+
+    rc = mod._main(["--manifest", str(path)])
+
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "https://a.vn/k.pdf" in out
+    assert "ok=1" in out
+    after = {e.url: e.status for e in load_manifest(path)}
+    assert after == {"https://a.vn/k.pdf": "done", "https://a.vn/s.pdf": "skip"}
+
+
+def test_main_no_keep_entries_is_a_noop(tmp_path, monkeypatch, capsys):
+    path = tmp_path / "manifest.json"
+    save_manifest(path, [ManifestEntry(school="HUST", url="https://a.vn/p.pdf",
+                                       status="pending")])
+
+    def _boom():
+        raise AssertionError("pipeline must not be built when nothing is kept")
+
+    monkeypatch.setattr(mod, "KnowledgePipeline", _boom)
+
+    rc = mod._main(["--manifest", str(path)])
+
+    assert rc == 0
+    assert "No entries with status=keep" in capsys.readouterr().out
