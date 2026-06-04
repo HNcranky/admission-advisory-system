@@ -162,7 +162,7 @@ def test_vector_search_builds_cosine_query_with_filters():
     assert "ORDER BY embedding <=> %s::vector" in sql
     assert "embedding IS NOT NULL" in sql
     assert "AND school = %s" in sql
-    assert "AND topic = %s" in sql
+    assert "AND (topic = %s OR topic IS NULL)" in sql
     # literal appears twice (SELECT score + ORDER BY), filters between, limit last
     assert params == ("[0.1,0.2]", "VNU-UET", "tuition", "[0.1,0.2]", 3)
     assert results[0].score == 0.9
@@ -179,3 +179,27 @@ def test_vector_search_without_filters_omits_metadata_clauses():
     assert "school = %s" not in sql
     assert "topic = %s" not in sql
     assert params == ("[1.0,0.0]", "[1.0,0.0]", 5)   # default limit
+
+
+def test_vector_search_topic_filter_includes_null_topic_chunks():
+    # PDF local ingest với topic=NULL — NULL là wildcard, không bị lọc rớt.
+    connection = FakeConnection(fetchall_return=[])
+    repo = _repo(connection)
+
+    repo.vector_search([0.1, 0.2], school="VNU-UET", topic="tuition", limit=3)
+
+    sql, params = connection.cursor_obj.statements[0]
+    assert "AND (topic = %s OR topic IS NULL)" in sql
+    assert params == ("[0.1,0.2]", "VNU-UET", "tuition", "[0.1,0.2]", 3)
+
+
+def test_search_by_metadata_topic_filter_stays_strict():
+    # Regression: search_by_metadata caller truyền topic tường minh → vẫn lọc cứng.
+    connection = FakeConnection(fetchall_return=[])
+    repo = _repo(connection)
+
+    repo.search_by_metadata("VNU-UET", topic="tuition")
+
+    sql, _ = connection.cursor_obj.statements[0]
+    assert "AND topic = %s" in sql
+    assert "IS NULL" not in sql

@@ -194,3 +194,78 @@ def test_gateway_exception_degrades_to_no_data():
     res = service.answer("q", "VNU-UET", "tuition")
     assert res.has_data is False
     assert len(gateway.calls) == 1
+
+
+# ─── national-scope augmentation ─────────────────────────────────────────────
+
+from ingestion.config.settings import KNOWLEDGE_QA_NATIONAL_TOP_K
+from services.knowledge.scope import NATIONAL_SCHOOL
+
+
+class RepoBySchool:
+    """vector_search returns a different chunk list per school, and records calls."""
+
+    def __init__(self, by_school):
+        self._by_school = by_school
+        self.calls = []
+
+    def vector_search(self, embedding, school=None, topic=None, limit=5):
+        self.calls.append({"school": school, "topic": topic, "limit": limit})
+        return list(self._by_school.get(school, []))
+
+
+def _service_with(repo, parsed_data, min_score=0.5, top_k=5):
+    return KnowledgeQAService(
+        chunk_repository=repo,
+        embedder=FakeEmbedder(),
+        gateway=FakeGateway(parsed_data=parsed_data),
+        min_score=min_score,
+        top_k=top_k,
+    )
+
+
+def test_specific_school_query_also_pulls_national_chunks():
+    repo = RepoBySchool({
+        "HUST": [_chunk("Phương thức xét tuyển HUST", "http://hust/a", 0.92,
+                        school="HUST", topic="admission_policy")],
+        NATIONAL_SCHOOL: [_chunk("Điểm ưu tiên khu vực tối đa 0,75",
+                                 "https://chinhphu/r.pdf", 0.80,
+                                 school=NATIONAL_SCHOOL, topic="admission_policy")],
+    })
+    service = _service_with(repo, parsed_data={"answer": "...", "used_source_ids": []})
+    res = service.answer("HUST xét tuyển thế nào", school="HUST", topic="admission_policy")
+    # two retrievals: the school scope, then the national scope with its own budget
+    assert [c["school"] for c in repo.calls] == ["HUST", NATIONAL_SCHOOL]
+    assert repo.calls[1]["limit"] == KNOWLEDGE_QA_NATIONAL_TOP_K
+    # the national source is woven into the answer's citations
+    assert "https://chinhphu/r.pdf" in {c.source_url for c in res.citations}
+
+
+def test_no_school_query_does_not_add_national_pass():
+    repo = RepoBySchool({None: [_chunk("x", "http://x", 0.9)]})
+    service = _service_with(repo, parsed_data={"answer": "ok"})
+    service.answer("quy chế tuyển sinh 2026", school=None, topic="admission_policy")
+    assert [c["school"] for c in repo.calls] == [None]   # school=None already scans national
+
+
+def test_national_school_query_does_not_recurse():
+    repo = RepoBySchool({NATIONAL_SCHOOL: [
+        _chunk("y", "https://chinhphu/y.pdf", 0.9, school=NATIONAL_SCHOOL)]})
+    service = _service_with(repo, parsed_data={"answer": "ok"})
+    service.answer("q", school=NATIONAL_SCHOOL, topic="admission_policy")
+    assert [c["school"] for c in repo.calls] == [NATIONAL_SCHOOL]   # single call only
+
+
+def test_low_score_national_chunks_are_dropped():
+    repo = RepoBySchool({
+        "HUST": [_chunk("HUST a", "http://hust/a", 0.92, school="HUST")],
+        NATIONAL_SCHOOL: [_chunk("weak", "https://chinhphu/weak.pdf", 0.30,
+                                 school=NATIONAL_SCHOOL)],
+    })
+    service = _service_with(repo,
+                            parsed_data={"answer": "ans", "used_source_ids": []},
+                            min_score=0.5)
+    res = service.answer("q", school="HUST", topic="admission_policy")
+    urls = {c.source_url for c in res.citations}
+    assert "https://chinhphu/weak.pdf" not in urls   # below min_score → dropped
+    assert "http://hust/a" in urls

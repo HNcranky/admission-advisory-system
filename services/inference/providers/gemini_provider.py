@@ -36,9 +36,17 @@ class GeminiProvider:
     @staticmethod
     def _call(client, request, policy):
         json_mode = request.output_mode == "json"
+        if request.media:
+            # Vision call: image parts first, then the instruction text.
+            contents = [
+                types.Part.from_bytes(data=data, mime_type=mime)
+                for mime, data in request.media
+            ] + [request.user_prompt]
+        else:
+            contents = request.user_prompt
         return client.models.generate_content(
             model=policy.primary_model,
-            contents=request.user_prompt,
+            contents=contents,
             config=types.GenerateContentConfig(
                 system_instruction=request.system_prompt,
                 temperature=request.temperature,

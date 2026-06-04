@@ -1,0 +1,17 @@
+[
+  {"school": "HUST",
+   "seeds": ["https://www.hust.edu.vn/vi/tuyen-sinh/dai-hoc/"],
+   "allow_domains": ["hust.edu.vn"],
+   "allow_path_prefixes": ["/tuyen-sinh", "/uploads"],
+   "max_depth": 2, "max_pages": 300},
+  {"school": "NEU",
+   "seeds": ["https://tuyensinh.neu.edu.vn/"],
+   "allow_domains": ["neu.edu.vn"],
+   "allow_path_prefixes": [],
+   "max_depth": 2, "max_pages": 300},
+  {"school": "VNU-UET",
+   "seeds": ["https://tuyensinh.uet.vnu.edu.vn/"],
+   "allow_domains": ["uet.vnu.edu.vn"],
+   "allow_path_prefixes": [],
+   "max_depth": 2, "max_pages": 300}
+]

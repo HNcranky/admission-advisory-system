@@ -32,3 +32,20 @@ def test_synthesis_agent_is_registered():
     assert policy.output_mode == "free_text"
     assert policy.allow_fallback is True
     assert policy.fallback_model == "gemini-2.5-flash-lite"
+
+
+def test_knowledge_ocr_agent_uses_default_model_with_fallback():
+    gateway = build_default_gateway()
+    policy = gateway.registry.resolve("knowledge_ocr")
+    assert policy.primary_model == "gemini-2.5-flash-lite"   # default model (spec D1)
+    assert policy.output_mode == "free_text"
+    assert policy.allow_fallback is True
+    assert policy.fallback_model == "gemini-2.5-flash"
+
+
+def test_knowledge_classify_agent_uses_json_mode():
+    gateway = build_default_gateway()
+    policy = gateway.registry.resolve("knowledge_classify")
+    assert policy.primary_model == "gemini-2.5-flash-lite"
+    assert policy.output_mode == "json"
+    assert policy.max_retries == 1
