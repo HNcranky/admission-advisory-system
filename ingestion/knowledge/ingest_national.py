@@ -31,3 +31,36 @@ def ingest_sources(sources, pipe):
             continue
         results.append(("SKIP" if result.skipped else "OK", url))
     return results
+
+
+def _main(argv=None) -> int:
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Ingest curated official national admission regulations"
+    )
+    parser.add_argument("--sources", default=None,
+                        help="path to national_sources.json (default: committed seed)")
+    args = parser.parse_args(argv)
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+
+    sources = load_national_sources(args.sources)
+    if not sources:
+        print("No national sources configured. Add rows to "
+              "ingestion/knowledge/seeds/national_sources.json first.")
+        return 0
+
+    results = ingest_sources(sources, KnowledgePipeline())
+
+    for label, url in results:
+        print(f"{label:<5} {url}")
+    ok = sum(1 for s, _ in results if s == "OK")
+    skipped = sum(1 for s, _ in results if s == "SKIP")
+    failed = sum(1 for s, _ in results if s == "FAIL")
+    print(f"Done: {len(results)} processed (ok={ok} skip={skipped} fail={failed})")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(_main())

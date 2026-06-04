@@ -55,3 +55,35 @@ def test_one_failure_does_not_abort_the_batch():
     assert results == [("OK", "https://cp/a.pdf"),
                        ("FAIL", "https://cp/bad.pdf"),
                        ("OK", "https://cp/c.pdf")]
+
+
+def test_main_ingests_sources_and_prints_summary(monkeypatch, capsys):
+    monkeypatch.setattr(mod, "load_national_sources",
+                        lambda path=None: [{"url": "https://cp/a.pdf", "title": "A"}])
+
+    class FakePipeline:
+        def run_for_url(self, url, *, school, document_type=None, **kwargs):
+            return KnowledgeIngestResult(source_url=url, skipped=False)
+
+    monkeypatch.setattr(mod, "KnowledgePipeline", lambda: FakePipeline())
+
+    rc = mod._main([])
+
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "https://cp/a.pdf" in out
+    assert "ok=1" in out
+
+
+def test_main_no_sources_is_a_noop(monkeypatch, capsys):
+    monkeypatch.setattr(mod, "load_national_sources", lambda path=None: [])
+
+    def _boom():
+        raise AssertionError("pipeline must not be built when there are no sources")
+
+    monkeypatch.setattr(mod, "KnowledgePipeline", _boom)
+
+    rc = mod._main([])
+
+    assert rc == 0
+    assert "No national sources" in capsys.readouterr().out
