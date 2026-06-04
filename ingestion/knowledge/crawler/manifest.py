@@ -78,3 +78,10 @@ def merge_candidates(existing: list[ManifestEntry], candidates: list[CandidatePd
             status="pending", already_ingested=False,
         )
     return list(by_url.values())
+
+
+def mark_already_ingested(entries: list[ManifestEntry], doc_repo) -> list[ManifestEntry]:
+    """Set already_ingested by checking the knowledge_documents store by URL."""
+    for e in entries:
+        e.already_ingested = doc_repo.get_document_by_url(e.url) is not None
+    return entries

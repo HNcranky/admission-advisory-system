@@ -1,5 +1,6 @@
 from ingestion.knowledge.crawler.manifest import (
-    ManifestEntry, load_manifest, merge_candidates, save_manifest, tag_relevance,
+    ManifestEntry, load_manifest, mark_already_ingested, merge_candidates,
+    save_manifest, tag_relevance,
 )
 from ingestion.knowledge.crawler.pdf_crawler import CandidatePdf
 
@@ -57,3 +58,21 @@ def test_merge_keeps_decision_for_rediscovered_url():
     assert len(merged) == 1
     assert merged[0].status == "skip"          # not reset to pending
     assert merged[0].size_bytes == 999         # metadata refreshed
+
+
+class _FakeDocRepo:
+    def __init__(self, known_urls):
+        self._known = set(known_urls)
+
+    def get_document_by_url(self, url):
+        return object() if url in self._known else None
+
+
+def test_mark_already_ingested_sets_flag():
+    entries = [
+        ManifestEntry(school="HUST", url="https://a.vn/seen.pdf"),
+        ManifestEntry(school="HUST", url="https://a.vn/fresh.pdf"),
+    ]
+    mark_already_ingested(entries, _FakeDocRepo({"https://a.vn/seen.pdf"}))
+    flags = {e.url: e.already_ingested for e in entries}
+    assert flags == {"https://a.vn/seen.pdf": True, "https://a.vn/fresh.pdf": False}
