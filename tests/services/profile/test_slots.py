@@ -7,8 +7,20 @@ def test_parse_score_bare_number_in_range():
 
 
 def test_parse_score_out_of_range_returns_none():
-    assert parse_score("99") is None
+    assert parse_score("999") is None       # > 150 sanity cap
     assert parse_score("không có") is None
+
+
+def test_parse_score_accepts_three_digit_competency_scores():
+    assert parse_score("105") == 105.0      # điểm ĐGNL/ĐGTD
+    assert parse_score("128,5") == 128.5
+
+
+def test_parse_score_ignores_four_digit_year_tokens():
+    # Bug cũ: "2026" bị regex \d{1,2} cắt thành 20.0 → điểm rác lọt vào profile.
+    assert parse_score("2026") is None
+    assert parse_score("năm 2026") is None
+    assert parse_score("2026 em được 26.5") == 26.5
 
 
 def test_parse_admission_year_extracts_four_digit_year():
@@ -34,6 +46,7 @@ from services.profile.slots import (
 def _state(**kwargs):
     base = dict(
         admission_year=None, total_score=None, subject_combination=None,
+        admission_method=None,
         preferred_majors=[], inferred_interest_tags=[], explicit_preferred_majors=[],
         preferred_schools=[], location_preference=None,
         tuition_budget=None, constraints=[],
@@ -43,16 +56,16 @@ def _state(**kwargs):
 
 
 def test_missing_critical_slots_empty_state_returns_current_critical_set():
-    # location_preference KHÔNG còn critical (spec mục 8).
     missing = missing_critical_slots(_state())
     assert missing == [
-        "admission_year", "total_score", "preferred_majors", "subject_combination",
+        "admission_year", "total_score", "admission_method",
+        "preferred_majors", "subject_combination",
     ]
 
 
 def test_missing_critical_slots_complete_returns_empty():
     state = _state(
-        admission_year=2026, total_score=25.0,
+        admission_year=2026, total_score=25.0, admission_method="thpt_score",
         preferred_majors=["computer_science"], subject_combination="A00",
     )
     assert missing_critical_slots(state) == []
@@ -60,7 +73,7 @@ def test_missing_critical_slots_complete_returns_empty():
 
 def test_major_slot_satisfied_by_inferred_tags_only():
     state = _state(
-        admission_year=2026, total_score=25.0,
+        admission_year=2026, total_score=25.0, admission_method="thpt_score",
         inferred_interest_tags=["data_science"], subject_combination="A00",
     )
     assert "preferred_majors" not in missing_critical_slots(state)
@@ -69,7 +82,7 @@ def test_major_slot_satisfied_by_inferred_tags_only():
 
 def test_major_slot_satisfied_by_explicit_majors_only():
     state = _state(
-        admission_year=2026, total_score=25.0,
+        admission_year=2026, total_score=25.0, admission_method="thpt_score",
         explicit_preferred_majors=["computer_science"], subject_combination="A00",
     )
     assert "preferred_majors" not in missing_critical_slots(state)
@@ -77,7 +90,7 @@ def test_major_slot_satisfied_by_explicit_majors_only():
 
 def test_location_preference_is_not_critical():
     state = _state(
-        admission_year=2026, total_score=25.0,
+        admission_year=2026, total_score=25.0, admission_method="thpt_score",
         explicit_preferred_majors=["computer_science"], subject_combination="A00",
     )
     # location chưa điền nhưng vẫn đủ điều kiện retrieval.
@@ -87,7 +100,7 @@ def test_location_preference_is_not_critical():
 def test_next_follow_up_question_returns_first_missing_prompt():
     assert next_follow_up_question(_state()) == "Bạn đang xét tuyển cho năm nào?"
     assert next_follow_up_question(_state(
-        admission_year=2026, total_score=25.0,
+        admission_year=2026, total_score=25.0, admission_method="thpt_score",
         preferred_majors=["x"], subject_combination="A00", location_preference="Ha Noi",
     )) is None
 
@@ -96,3 +109,13 @@ def test_parse_slot_dispatches_to_named_parser():
     assert parse_slot("total_score", "29") == 29.0
     assert parse_slot("admission_year", "năm 2026") == 2026
     assert parse_slot("preferred_majors", "bất kỳ") is None  # không có parser
+
+
+def test_admission_method_slot_asked_right_after_score():
+    state = _state(admission_year=2026, total_score=27.0)
+    assert missing_critical_slots(state)[0] == "admission_method"
+    assert "phương thức" in next_follow_up_question(state)
+
+
+def test_parse_slot_dispatches_admission_method():
+    assert parse_slot("admission_method", "em xét học bạ") == "school_record"
