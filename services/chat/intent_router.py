@@ -37,13 +37,18 @@ logger = logging.getLogger(__name__)
 INTENT_SYSTEM_PROMPT = """
 Bạn là bộ phân loại intent cho hệ thống tư vấn tuyển sinh đại học Việt Nam.
 
-Phân loại tin nhắn của user vào đúng 1 trong 6 route:
+Phân loại tin nhắn của user vào đúng 1 trong 7 route:
 
 CONVERSATIONAL — chào hỏi, hỏi năng lực trợ lý, cảm ơn, tạm biệt, hỏi danh tính,
   hoặc bộc lộ cảm xúc/lo lắng về tuyển sinh. Trả thêm "subtype":
   GREETING | CAPABILITY | THANKS | GOODBYE | IDENTITY | EMOTIONAL_SUPPORT
   Ví dụ: "xin chào", "bạn giúp được gì", "cảm ơn nhé", "tạm biệt", "bạn là ai",
          "mình lo không đỗ đại học"
+
+RESET_PROFILE — yêu cầu xoá hồ sơ tư vấn hiện tại, bắt đầu lại từ đầu, hoặc
+  tư vấn cho người khác (hồ sơ mới).
+  Ví dụ: "xoá thông tin cũ đi", "bắt đầu lại từ đầu", "tư vấn lại cho em gái em",
+         "làm hồ sơ khác cho bạn em", "giờ tư vấn cho đứa em mình nhé"
 
 ADVISORY_FLOW — câu hỏi tư vấn chọn ngành/trường dựa trên điểm số, nguyện vọng, khả năng đậu
   Ví dụ: "25 điểm A00 nên chọn trường nào", "em có đậu NEU không", "tư vấn ngành CNTT"
@@ -120,6 +125,7 @@ class IntentResult(BaseModel):
         "CLARIFICATION",
         "OUT_OF_SCOPE",
         "CONVERSATIONAL",
+        "RESET_PROFILE",
     ]
     subtype: Optional[
         Literal[

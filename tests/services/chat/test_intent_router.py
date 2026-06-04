@@ -363,3 +363,21 @@ def test_intent_prompt_enumerates_topics_and_maps_admission_methods():
     from services.chat.intent_router import INTENT_SYSTEM_PROMPT
     assert "admission_policy" in INTENT_SYSTEM_PROMPT
     assert "phương thức xét tuyển" in INTENT_SYSTEM_PROMPT
+
+
+# --- RESET_PROFILE (reasoning-integrity plan 4) ---
+
+def test_intent_result_accepts_reset_profile_route():
+    assert IntentResult(route="RESET_PROFILE").route == "RESET_PROFILE"
+
+
+def test_classify_reset_profile_passthrough():
+    r = _router(parsed_data={"route": "RESET_PROFILE"})
+    result = r.classify("xoá thông tin cũ đi, tư vấn lại cho em gái em", ChatProfileState())
+    assert result.route == "RESET_PROFILE"
+
+
+def test_intent_prompt_documents_reset_profile_route():
+    from services.chat.intent_router import INTENT_SYSTEM_PROMPT
+    assert "RESET_PROFILE" in INTENT_SYSTEM_PROMPT
+    assert "tư vấn cho người khác" in INTENT_SYSTEM_PROMPT
