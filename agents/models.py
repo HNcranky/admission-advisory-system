@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 class StudentProfile(BaseModel):
     total_score: Optional[float] = None
+    admission_method: Optional[str] = None
     subject_combination: Optional[str] = None
     preferred_majors: List[str] = Field(default_factory=list)
     preferred_schools: List[str] = Field(default_factory=list)

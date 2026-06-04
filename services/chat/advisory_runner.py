@@ -7,6 +7,7 @@ def run_advisory_for_session(profile_state, latest_user_message: str, trace_run_
                              correction_note: dict | None = None):
     student_profile = StudentProfile(
         total_score=profile_state.total_score,
+        admission_method=profile_state.admission_method,
         subject_combination=profile_state.subject_combination,
         preferred_majors=profile_state.preferred_majors,
         preferred_schools=profile_state.preferred_schools,

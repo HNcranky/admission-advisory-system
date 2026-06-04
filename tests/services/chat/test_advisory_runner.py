@@ -59,3 +59,20 @@ def test_run_advisory_for_session_default_trace_run_id_is_none(monkeypatch):
     )
 
     assert captured["trace_run_id"] is None
+
+
+def test_run_advisory_for_session_maps_admission_method(monkeypatch):
+    captured = {}
+
+    def fake_invoke(state):
+        captured["state"] = state
+        return {"final_answer": "ok"}
+
+    monkeypatch.setattr("services.chat.advisory_runner.graph.invoke", fake_invoke)
+
+    run_advisory_for_session(
+        ChatProfileState(admission_year=2026, admission_method="thpt_score"),
+        latest_user_message="hello",
+    )
+
+    assert captured["state"].student_profile.admission_method == "thpt_score"
