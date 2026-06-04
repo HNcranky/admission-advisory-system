@@ -96,3 +96,34 @@ def parse_admission_method(raw_message) -> Optional[str]:
 
 def method_display(code) -> str:
     return _METHOD_DISPLAY.get(code, str(code))
+
+
+def candidate_method_codes(candidate) -> Optional[Set[str]]:
+    """Set mã phương thức của một CandidateProgram; None = không xác định.
+
+    Store lưu display name (có thể ghép ';'); fixture/dev lưu thẳng mã.
+    Bất kỳ phần nào không map được → None (caller không được gate)."""
+    raw = (getattr(candidate, "admission_method", None) or "").strip()
+    if not raw:
+        return None
+    codes: Set[str] = set()
+    for part in [p.strip() for p in raw.split(";") if p.strip()]:
+        if part in METHOD_CODES:
+            codes.add(part)
+            continue
+        mapped = None
+        try:
+            from ingestion.normalization.method_mapper import map_method
+            mapped = map_method(part, school_id=getattr(candidate, "school_id", "") or "")
+        except Exception as exc:  # ingestion không sẵn sàng → unknown, không raise
+            logger.warning("candidate_method_codes: map_method lỗi cho %r: %r", part, exc)
+            return None
+        matched = False
+        for code in str(mapped or "").split(";"):
+            code = code.strip()
+            if code in METHOD_CODES:
+                codes.add(code)
+                matched = True
+        if not matched:
+            return None  # một phần không map được → coi toàn bộ là unknown
+    return codes or None

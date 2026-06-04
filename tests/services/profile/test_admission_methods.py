@@ -61,3 +61,39 @@ def test_method_display_has_vietnamese_labels():
     assert method_display("combined") == "xét tuyển kết hợp"
     assert method_display("talent_admission") == "xét tuyển tài năng / tuyển thẳng"
     assert method_display("unknown_code") == "unknown_code"  # fallback an toàn
+
+
+from types import SimpleNamespace
+
+from services.profile.admission_methods import candidate_method_codes
+
+
+def _candidate(method, school_id="hust"):
+    return SimpleNamespace(admission_method=method, school_id=school_id)
+
+
+def test_candidate_codes_accepts_raw_canonical_code():
+    # Fixture/dev rows lưu thẳng mã code.
+    assert candidate_method_codes(_candidate("thpt_score")) == {"thpt_score"}
+
+
+def test_candidate_codes_maps_display_name():
+    assert candidate_method_codes(_candidate("Xét điểm thi TN THPT")) == {"thpt_score"}
+
+
+def test_candidate_codes_maps_joined_display_names():
+    codes = candidate_method_codes(_candidate("Xét điểm thi TN THPT; Xét tuyển kết hợp"))
+    assert codes == {"thpt_score", "combined"}
+
+
+def test_candidate_codes_school_specific_display():
+    assert candidate_method_codes(
+        _candidate("Đánh giá tư duy (TSA)", school_id="hust")
+    ) == {"competency_test"}
+
+
+def test_candidate_codes_unknown_returns_none():
+    # Không map được → None = unknown → caller KHÔNG gate theo phương thức.
+    assert candidate_method_codes(_candidate("Phương thức bí ẩn XYZ")) is None
+    assert candidate_method_codes(_candidate(None)) is None
+    assert candidate_method_codes(_candidate("")) is None
