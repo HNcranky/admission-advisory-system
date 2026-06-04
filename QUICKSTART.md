@@ -9,7 +9,7 @@ How to run the advisory-agent locally on Windows.
 .\.venv\Scripts\Activate.ps1      # activate venv in your shell
 ```
 
-The script is idempotent — safe to re-run. Steps 1–4 below break down what it does; jump to step 3 (load `.env`) and step 5 (run the app) once it finishes.
+The script is idempotent — safe to re-run. Steps 1–4 below break down what it does; jump to step 3 (load `.env`) and step 6 (run the app) once it finishes.
 
 ## Prerequisites
 
@@ -96,7 +96,83 @@ Tests do not need a live Gemini key — they stub the provider.
 
 Integration tests (`pytest -m integration`) require the Docker DB from step 1 to be running. Skip them with `pytest -m "not integration"` if Docker is unavailable.
 
-## 5. Run the chat web app
+## 5. Ingest data
+
+Two pipeline families feed two different stores. Both need the Docker DB from
+step 1; the knowledge flows also call Gemini (OCR + embeddings), so load `.env`
+first (step 3).
+
+| Pipeline | Store | Used by |
+|---|---|---|
+| Canonical (`ingestion.main`) | per-program quota/method tables | advisory recommendations |
+| Knowledge (`ingestion.knowledge.*`) | `knowledge_chunks` (pgvector) | RAG Q&A |
+
+> SSL verification is intentionally off by default for crawling
+> (`ADVISORY_FETCH_VERIFY_SSL` — several official `.gov.vn` sources have broken
+> certs); each fetch logs whether it verified.
+
+### Canonical admission data (quota / method)
+
+```powershell
+python -m ingestion.main --list-schools     # list configured schools and sources
+python -m ingestion.main --school vnu_uet   # run all sources for one school
+python -m ingestion.main --source <id>      # run one registered source
+python -m ingestion.main --url <url>        # process a single URL
+python -m ingestion.main --all              # run every active school
+```
+
+### Knowledge corpus (pgvector RAG)
+
+Four ways to feed it. All are idempotent — unchanged URLs `SKIP` on content
+hash — and one bad URL never aborts the batch.
+
+**a) Curated per-school seeds** — edit
+`ingestion/knowledge/registry/seeds/knowledge_sources.json`, then:
+
+```powershell
+python -m ingestion.knowledge.pipeline --school HUST    # or --all
+```
+
+**b) Crawl → review manifest → ingest** — discover new PDFs on school sites:
+
+```powershell
+python -m ingestion.knowledge.crawl --school HUST       # or --all
+# review data/knowledge/manifest.json: set "status" to keep / skip per entry
+python -m ingestion.knowledge.ingest_manifest
+```
+
+Useful crawl flags: `--no-sitemap`, `--delay 1.0`, `--manifest <path>`.
+A kept URL flips to `done` on success and stays `keep` on failure, so
+re-running `ingest_manifest` retries only the failures.
+
+**c) Local PDFs** — files already on disk:
+
+```powershell
+python -m ingestion.knowledge.pipeline --local-dir data/knowledge
+```
+
+Expects `<dir>/pdf_text/` (text-layer PDFs) and `<dir>/pdf_scanned/`
+(scanned PDFs, sent through OCR).
+
+**d) National regulations (MOET)** — curated official PDFs in
+`ingestion/knowledge/seeds/national_sources.json`, ingested under the national
+scope (`school="MOET"`, `document_type="national_regulation"`) so they apply to
+every school's answers:
+
+```powershell
+python -m ingestion.knowledge.ingest_national           # or --sources <path>
+```
+
+### Verify the corpus
+
+```powershell
+python -m ingestion.knowledge.verify_corpus
+```
+
+Prints chunk counts per school/topic and flags schools with zero chunks or
+chunks left with NULL embeddings.
+
+## 6. Run the chat web app
 
 ```powershell
 uvicorn web.app:build_app --factory --reload --host 127.0.0.1 --port 8000
@@ -120,7 +196,7 @@ In debug mode each card becomes clickable and expands to pretty-printed
 `output_json` for that stage. Without the env flag or query param the panel
 remains visible during a run but cards are non-interactive.
 
-## 6. Demo flow
+## 7. Demo flow
 
 1. Send a freeform message describing a student's situation.
 2. The assistant will ask follow-up questions until the profile is complete.
@@ -148,7 +224,7 @@ pytest -m requires_real_dataset -v
 
 This requires a reachable Postgres database and `tests/e2e/fixtures/real_dataset_dump.sql` exported from accepted HUST/VNU-UET ingestion. The real-data test is the thesis/demo-prep gate; mock mode does not replace it.
 
-## 7. UI features
+## 8. UI features
 
 - **Theme toggle** — click `🌙` in the header to switch dark / light; preference
   persists per browser via `localStorage`. The page also honours
@@ -185,6 +261,6 @@ After any UI change run this checklist locally:
 
 ## Troubleshooting
 
-- **"GEMINI_API_KEY is not configured"** — step 2 was skipped or run in a different shell than step 4. Re-run the export block in the same PowerShell window before starting uvicorn.
+- **"GEMINI_API_KEY is not configured"** — step 3 was skipped or run in a different shell than step 6. Re-run the export block in the same PowerShell window before starting uvicorn.
 - **Port 8000 in use** — pass a different `--port` to uvicorn.
 - **Chat page loads but shows a startup error** — open the browser devtools network tab; a `404` on `/api/sessions` means the server did not start the chat router. Restart uvicorn.
