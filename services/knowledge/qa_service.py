@@ -1,12 +1,15 @@
 import logging
 from typing import Optional
 
-from ingestion.config.settings import KNOWLEDGE_QA_MIN_SCORE, KNOWLEDGE_QA_TOP_K
+from ingestion.config.settings import (
+    KNOWLEDGE_QA_MIN_SCORE, KNOWLEDGE_QA_NATIONAL_TOP_K, KNOWLEDGE_QA_TOP_K,
+)
 from ingestion.knowledge.embedder import GeminiEmbedder
 from services import build_default_gateway
 from services.inference.models import InferenceRequest
 from services.knowledge.models import Citation, KnowledgeQAResult
 from services.knowledge.repository import KnowledgeChunkRepository
+from services.knowledge.scope import NATIONAL_SCHOOL
 
 logger = logging.getLogger(__name__)
 
@@ -33,12 +36,14 @@ class KnowledgeQAService:
         gateway=None,
         top_k: int = KNOWLEDGE_QA_TOP_K,
         min_score: float = KNOWLEDGE_QA_MIN_SCORE,
+        national_top_k: int = KNOWLEDGE_QA_NATIONAL_TOP_K,
     ):
         self._chunk_repository = chunk_repository or KnowledgeChunkRepository()
         self._embedder = embedder or GeminiEmbedder()
         self._gateway = gateway or build_default_gateway()
         self._top_k = top_k
         self._min_score = min_score
+        self._national_top_k = national_top_k
 
     def answer(
         self,
@@ -51,10 +56,28 @@ class KnowledgeQAService:
         chunks = self._chunk_repository.vector_search(
             embedding, school=school, topic=topic, limit=self._top_k
         )
+        chunks = self._augment_with_national(embedding, school, topic, chunks)
         confidence = chunks[0].score if chunks else 0.0
         if not chunks or confidence < self._min_score:
             return KnowledgeQAResult(has_data=False, confidence=confidence)
         return self._generate(question, chunks, confidence, conversation_context)
+
+    def _augment_with_national(self, embedding, school, topic, chunks):
+        """A school-scoped query also pulls national-scope (Bộ GD&ĐT) chunks with
+        their own budget — national regulations apply to every school. The two
+        scopes keep separate top_k, so national never crowds out the school's own
+        chunks. Skipped when the query isn't school-scoped (school=None already
+        scans national chunks) or is already national."""
+        if school in (None, NATIONAL_SCHOOL):
+            return chunks
+        national = self._chunk_repository.vector_search(
+            embedding, school=NATIONAL_SCHOOL, topic=topic,
+            limit=self._national_top_k,
+        )
+        national = [c for c in national if c.score >= self._min_score]
+        merged = list(chunks) + national
+        merged.sort(key=lambda c: c.score, reverse=True)
+        return merged
 
     def _generate(self, question, chunks, confidence, conversation_context) -> KnowledgeQAResult:
         try:
