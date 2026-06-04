@@ -187,7 +187,8 @@ def test_advisory_flow_handles_empty_retrieval(monkeypatch):
     )
     result = graph.invoke(state)
 
-    assert "Chưa có đề xuất phù hợp" in result["final_answer"]
+    assert "chưa tìm thấy chương trình đáp ứng đồng thời" in result["final_answer"]
+    assert "tổ hợp A00" in result["final_answer"]
     assert result["policy_decision"] is not None
     assert "empty_retrieval" in result["policy_decision"].policy_flags
 

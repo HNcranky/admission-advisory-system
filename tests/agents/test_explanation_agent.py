@@ -381,3 +381,78 @@ def test_correction_sentence_labels_admission_method():
         {"slot": "admission_method", "previous_value": "thpt_score", "new_value": "school_record"}
     )
     assert "phương thức xét tuyển" in sentence
+
+
+def test_no_match_lists_active_criteria_and_suggestions():
+    """EC-24: 0 đề xuất → liệt kê đúng tiêu chí đang áp + gợi ý nới minh bạch."""
+    state = AgentState(user_query="Tu van", admission_year=2026)
+    state.student_profile = StudentProfile(
+        total_score=23.0, subject_combination="A01", admission_method="thpt_score",
+        preferred_majors=["artificial_intelligence"],
+        location_preference="Ha Noi", tuition_budget="duoi 20 trieu",
+    )
+    state.retrieved_programs = []
+    state.ranked_recommendations = []
+    state.policy_decision = PolicyDecision(policy_flags=["empty_retrieval"])
+
+    output = explanation_agent(state)
+
+    answer = output.final_answer
+    assert "chưa tìm thấy chương trình đáp ứng đồng thời" in answer
+    assert "năm 2026" in answer
+    assert "phương thức điểm thi tốt nghiệp THPT" in answer
+    assert "tổ hợp A01" in answer
+    assert "artificial_intelligence" in answer
+    assert "Ha Noi" in answer
+    assert "duoi 20 trieu" in answer
+    # Gợi ý nới CHỈ những tiêu chí đang set, nói rõ không tự nới
+    assert "ngành gần" in answer
+    assert "khu vực" in answer
+    assert "ngân sách" in answer
+    assert "không tự nới" in answer
+    # Không có câu hỏi chốt khi không có đề xuất
+    assert "Em có muốn ưu tiên theo tiêu chí nào hơn" not in answer
+
+
+def test_no_match_all_not_eligible_explains_combination_cause():
+    """EC-24 + EC-12: mọi chương trình bị loại vì tổ hợp → nói thẳng nguyên nhân."""
+    state = AgentState(user_query="Tu van", admission_year=2026)
+    state.student_profile = StudentProfile(
+        total_score=28.0, subject_combination="D01", admission_method="thpt_score",
+        preferred_majors=["computer_science"],
+    )
+    state.retrieved_programs = [
+        CandidateProgram(
+            candidate_id="uet:ne", school_id="vnu_uet",
+            school_name="Đại học Công nghệ - ĐHQGHN",
+            admission_year=2026, program_id="computer_science",
+            program_name="Khoa học máy tính", admission_method="thpt_score",
+            subject_combinations=["A00", "A01"],
+        ),
+    ]
+    state.eligibility_checks = [
+        EligibilityCheck(
+            candidate_id="uet:ne", eligible=False,
+            risks=["Chương trình không nhận tổ hợp D01 theo phương thức đã chọn — các tổ hợp được công bố: A00, A01."],
+        ),
+    ]
+    state.ranked_recommendations = []
+    state.policy_decision = PolicyDecision(policy_flags=["no_eligible_recommendations"])
+
+    output = explanation_agent(state)
+
+    answer = output.final_answer
+    assert "không nhận tổ hợp D01" in answer               # section NOT_ELIGIBLE vẫn render
+    assert "cân nhắc tổ hợp khác hoặc ngành gần" in answer  # gợi ý đúng nguyên nhân
+
+
+def test_no_match_without_any_criteria_falls_back_generic():
+    # Qua agent thì admission_year luôn có default (state.py:25) nên test fallback
+    # generic ở mức service: không có bất kỳ tiêu chí nào → câu generic.
+    from services.explanation_service import build_explanation
+
+    answer = build_explanation(
+        profile=StudentProfile(), recommendations=[], candidates=[], policy=None,
+    )
+
+    assert "chưa tìm thấy chương trình phù hợp trong dữ liệu hiện có" in answer

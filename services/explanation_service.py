@@ -132,6 +132,68 @@ def _intro_paragraph(profile: StudentProfile, admission_year: Optional[int], n: 
     return f"Dựa trên thông tin hiện có, mình đề xuất {n} lựa chọn sau:"
 
 
+def _profile_criteria(profile: StudentProfile, admission_year: Optional[int]) -> List[str]:
+    facts: List[str] = []
+    if admission_year:
+        facts.append(f"năm {admission_year}")
+    if getattr(profile, "admission_method", None):
+        facts.append(f"phương thức {method_display(profile.admission_method)}")
+    if profile.total_score is not None:
+        facts.append(f"mức điểm {_fmt_num(profile.total_score)}")
+    if profile.subject_combination:
+        facts.append(f"tổ hợp {profile.subject_combination}")
+    if profile.preferred_majors:
+        facts.append("ngành " + ", ".join(profile.preferred_majors[:3]))
+    if profile.location_preference:
+        facts.append(f"khu vực {profile.location_preference}")
+    if profile.tuition_budget:
+        facts.append(f"ngân sách {profile.tuition_budget}")
+    return facts
+
+
+def _no_match_block(
+    profile: StudentProfile,
+    admission_year: Optional[int],
+    eligibility_checks: List[EligibilityCheck],
+) -> List[str]:
+    """EC-24: nói rõ tiêu chí đang áp, nguyên nhân (nếu biết) và gợi ý nới minh bạch.
+    KHÔNG bịa chương trình; KHÔNG tự nới tiêu chí."""
+    facts = _profile_criteria(profile, admission_year)
+    lines: List[str] = []
+    if facts:
+        lines.append(
+            "Mình chưa tìm thấy chương trình đáp ứng đồng thời: "
+            + "; ".join(facts) + " — trong dữ liệu hiện có."
+        )
+    else:
+        lines.append("Mình chưa tìm thấy chương trình phù hợp trong dữ liệu hiện có.")
+
+    not_eligible = [c for c in eligibility_checks if c.eligible is False]
+    if not_eligible and profile.subject_combination:
+        majors = ", ".join(profile.preferred_majors[:3]) or "em quan tâm"
+        lines.append("")
+        lines.append(
+            f"Các chương trình ngành {majors} trong dữ liệu hiện không nhận tổ hợp "
+            f"{profile.subject_combination}; em có thể cân nhắc tổ hợp khác hoặc ngành gần."
+        )
+        return lines
+
+    suggestions: List[str] = []
+    if profile.preferred_majors:
+        suggestions.append("mở rộng sang ngành gần")
+    if profile.location_preference:
+        suggestions.append("nới khu vực học")
+    if profile.tuition_budget:
+        suggestions.append("điều chỉnh ngân sách")
+    if suggestions:
+        lines.append("")
+        lines.append(
+            "Em có thể cân nhắc: " + "; ".join(suggestions)
+            + ". Mình sẽ không tự nới tiêu chí khi chưa có xác nhận của em."
+        )
+    return lines
+
+
 def _data_note(candidate: CandidateProgram, outcome_by_key: Dict[str, ResolutionOutcome]) -> Optional[str]:
     """Khối '**Lưu ý dữ liệu:**' theo từng chương trình (AC6)."""
     outcome = outcome_by_key.get(_candidate_conflict_key(candidate))
@@ -239,7 +301,7 @@ def build_explanation(
                 lines.append("")
                 lines.append(note)
     else:
-        lines.append("Chưa có đề xuất phù hợp từ dữ liệu hiện tại.")
+        lines.extend(_no_match_block(profile, admission_year, eligibility_checks or []))
 
     # Section "Không đủ điều kiện xét tuyển" (EC-12) — render cả khi có lẫn khi
     # không có đề xuất (policy_agent ghi đè ranked_recommendations nên các
