@@ -52,3 +52,37 @@ def test_build_manifest_preserves_existing_decisions():
     merged = build_manifest(targets, existing=existing, crawl=fake_crawl,
                             doc_repo=_FakeDocRepo(), discovered_at="2026-06-04")
     assert merged[0].status == "skip"
+
+
+import ingestion.knowledge.crawl as crawl_mod
+
+
+def test_main_passes_robots_gate_to_crawl_target(tmp_path, monkeypatch):
+    captured = {}
+
+    def fake_crawl_target(target, *, sitemap=True, allowed=None, delay=0.0):
+        captured["allowed"] = allowed
+        captured["delay"] = delay
+        return []
+
+    monkeypatch.setattr(crawl_mod, "crawl_target", fake_crawl_target)
+    monkeypatch.setattr(crawl_mod, "load_targets",
+                        lambda: [CrawlTarget(school="HUST", seeds=["https://a.vn/s"],
+                                             allow_domains=["a.vn"])])
+
+    class _DocRepo:
+        def get_document_by_url(self, url):
+            return None
+
+    monkeypatch.setattr(
+        "services.knowledge.repository.KnowledgeDocumentRepository",
+        lambda: _DocRepo(),
+    )
+
+    rc = crawl_mod._main(["--school", "HUST", "--delay", "0.5",
+                          "--manifest", str(tmp_path / "m.json")])
+
+    assert rc == 0
+    assert callable(captured["allowed"])         # robots gate wired by default
+    assert captured["allowed"]("https://a.vn/x") in (True, False)
+    assert captured["delay"] == 0.5

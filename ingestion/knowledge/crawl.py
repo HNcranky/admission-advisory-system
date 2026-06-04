@@ -8,11 +8,13 @@ Then edit data/knowledge/manifest.json (set status keep/skip) and run
 import logging
 from pathlib import Path
 
+from ingestion.fetchers.http_fetcher import http_fetch
 from ingestion.knowledge.crawler.config import load_targets
 from ingestion.knowledge.crawler.manifest import (
     load_manifest, mark_already_ingested, merge_candidates, save_manifest,
 )
 from ingestion.knowledge.crawler.pdf_crawler import crawl_target
+from ingestion.knowledge.crawler.robots import build_robots_checker
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +49,10 @@ def _main(argv=None) -> int:
     parser.add_argument("--manifest", default=str(DEFAULT_MANIFEST))
     parser.add_argument("--no-sitemap", action="store_true",
                         help="skip sitemap.xml discovery")
+    parser.add_argument("--ignore-robots", action="store_true",
+                        help="do not consult robots.txt")
+    parser.add_argument("--delay", type=float, default=0.0,
+                        help="seconds to sleep between page fetches")
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -58,8 +64,14 @@ def _main(argv=None) -> int:
             parser.error(f"no crawl target configured for school {args.school!r}")
 
     existing = load_manifest(args.manifest)
+    checker = build_robots_checker(fetch=http_fetch, respect=not args.ignore_robots)
+
+    def crawl(target, sitemap=True):
+        return crawl_target(target, sitemap=sitemap, allowed=checker,
+                            delay=args.delay)
+
     merged = build_manifest(
-        targets, existing, crawl=crawl_target,
+        targets, existing, crawl=crawl,
         doc_repo=KnowledgeDocumentRepository(),
         discovered_at=date.today().isoformat(), sitemap=not args.no_sitemap,
     )
