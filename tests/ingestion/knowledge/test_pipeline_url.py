@@ -124,3 +124,39 @@ def test_run_for_url_school_is_authoritative_over_classifier(monkeypatch):
     assert result.school == "NEU"          # from config, not classifier
     assert result.year == 2025             # year still taken from classifier
     assert all(c.school == "NEU" for c in chunk_repo.upserts)
+
+
+def test_run_for_url_skips_unchanged_by_content_hash(monkeypatch):
+    url = "https://hust.edu.vn/x.pdf"
+    existing = KnowledgeDocument(school="HUST", document_type="crawled_pdf",
+                                 source_url=url, content_hash="h1",
+                                 raw_text="[Trang 1]\nCũ")
+    calls = _patch_hybrid(monkeypatch, _hybrid([PAGE], text=1))
+    doc_repo, chunk_repo = FakeDocRepo({url: existing}), FakeChunkRepo()
+    pipe = _pipeline(doc_repo, chunk_repo,
+                     fetch=lambda u: FakeFetchResult(content_hash="h1"))
+
+    result = pipe.run_for_url(url, school="HUST",
+                              ocr=lambda png: "x", classify=_classify())
+
+    assert result == KnowledgeIngestResult(source_url=url, skipped=True)
+    assert calls == []                 # no extract/OCR when unchanged
+    assert chunk_repo.upserts == []
+    assert doc_repo.marked == []
+
+
+def test_run_for_url_reingests_when_hash_differs(monkeypatch):
+    url = "https://hust.edu.vn/x.pdf"
+    existing = KnowledgeDocument(school="HUST", document_type="crawled_pdf",
+                                 source_url=url, content_hash="OLD",
+                                 raw_text="cũ")
+    _patch_hybrid(monkeypatch, _hybrid([PAGE], text=1))
+    doc_repo, chunk_repo = FakeDocRepo({url: existing}), FakeChunkRepo()
+    pipe = _pipeline(doc_repo, chunk_repo,
+                     fetch=lambda u: FakeFetchResult(content_hash="NEW"))
+
+    result = pipe.run_for_url(url, school="HUST",
+                              ocr=lambda png: "x", classify=_classify())
+
+    assert result.skipped is False
+    assert doc_repo.marked == [(1, "NEW")]
