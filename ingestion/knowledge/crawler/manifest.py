@@ -45,3 +45,10 @@ def save_manifest(path, entries: list[ManifestEntry]) -> None:
         json.dumps([asdict(e) for e in entries], ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+
+
+def tag_relevance(anchor_text: str, url: str) -> str:
+    # Normalize URL separators (slug hyphens, path slashes) to spaces so
+    # keywords like "tuyen sinh" match URL slugs like ".../tuyen-sinh/...".
+    haystack = f"{anchor_text} {url}".lower().translate(str.maketrans("-_/.", "    "))
+    return "high" if any(k in haystack for k in RELEVANCE_KEYWORDS) else "low"

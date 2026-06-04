@@ -1,5 +1,5 @@
 from ingestion.knowledge.crawler.manifest import (
-    ManifestEntry, load_manifest, save_manifest,
+    ManifestEntry, load_manifest, save_manifest, tag_relevance,
 )
 
 
@@ -22,3 +22,15 @@ def test_save_creates_parent_dirs(tmp_path):
     path = tmp_path / "data" / "knowledge" / "manifest.json"
     save_manifest(path, [])
     assert path.exists()
+
+
+def test_relevance_high_on_anchor_keyword():
+    assert tag_relevance("Đề án tuyển sinh 2026", "https://a.vn/x.pdf") == "high"
+
+
+def test_relevance_high_on_url_keyword_no_accent():
+    assert tag_relevance("", "https://a.vn/tuyen-sinh/chi-tieu.pdf") == "high"
+
+
+def test_relevance_low_when_no_keyword():
+    assert tag_relevance("Quyết định nhân sự", "https://a.vn/qd-123.pdf") == "low"
