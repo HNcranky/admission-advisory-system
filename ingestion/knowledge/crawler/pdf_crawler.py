@@ -1,5 +1,6 @@
 """Focused per-school PDF crawler: BFS same-domain + sitemap, returns candidates."""
 import logging
+import time
 from collections import deque
 from dataclasses import dataclass
 
@@ -81,7 +82,8 @@ def _expand_sitemap(target: CrawlTarget, fetch, seen: dict, head) -> None:
 
 
 def crawl_target(target: CrawlTarget, *, fetch=http_fetch, head=fetch_head,
-                 sitemap: bool = True) -> list[CandidatePdf]:
+                 sitemap: bool = True, allowed=None,
+                 delay: float = 0.0) -> list[CandidatePdf]:
     """BFS same-domain from seeds (bounded by max_depth/max_pages), plus sitemap.
     Returns deduped CandidatePdf list. One bad page never aborts the crawl."""
     seen_pdfs: dict[str, CandidatePdf] = {}
@@ -99,12 +101,17 @@ def crawl_target(target: CrawlTarget, *, fetch=http_fetch, head=fetch_head,
         if url in visited:
             continue
         visited.add(url)
+        if allowed is not None and not allowed(url):
+            logger.info("robots.txt disallows %s", url)
+            continue
         try:
             fr = fetch(url)
         except Exception as exc:  # one bad page must not abort the crawl
             logger.warning("crawl fetch failed %s: %r", url, exc)
             continue
         pages_crawled += 1
+        if delay:
+            time.sleep(delay)
         for raw_url, anchor in extract_links(fr.raw_content, url):
             n = normalize_url(raw_url)
             if is_pdf_url(n):
