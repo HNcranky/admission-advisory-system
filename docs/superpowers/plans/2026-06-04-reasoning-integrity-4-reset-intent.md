@@ -22,7 +22,7 @@
 - Modify: `services/chat/intent_router.py:37-112` (prompt), `:115-123` (Literal)
 - Test: `tests/services/chat/test_intent_router.py`
 
-- [ ] **Step 1: Viết test fail (append vào test_intent_router.py)**
+- [x] **Step 1: Viết test fail (append vào test_intent_router.py)**
 
 ```python
 # --- RESET_PROFILE (reasoning-integrity plan 4) ---
@@ -43,12 +43,12 @@ def test_intent_prompt_documents_reset_profile_route():
     assert "tư vấn cho người khác" in INTENT_SYSTEM_PROMPT
 ```
 
-- [ ] **Step 2: Chạy test, xác nhận fail**
+- [x] **Step 2: Chạy test, xác nhận fail**
 
 Run: `python -m pytest tests/services/chat/test_intent_router.py -v`
 Expected: FAIL — `RESET_PROFILE` không nằm trong Literal → ValidationError
 
-- [ ] **Step 3: Implementation (intent_router.py)**
+- [x] **Step 3: Implementation (intent_router.py)**
 
 Trong `IntentResult.route` Literal, thêm `"RESET_PROFILE"`:
 
@@ -75,12 +75,12 @@ RESET_PROFILE — yêu cầu xoá hồ sơ tư vấn hiện tại, bắt đầu 
          "làm hồ sơ khác cho bạn em", "giờ tư vấn cho đứa em mình nhé"
 ```
 
-- [ ] **Step 4: Chạy test, xác nhận pass**
+- [x] **Step 4: Chạy test, xác nhận pass**
 
 Run: `python -m pytest tests/services/chat/test_intent_router.py -v`
 Expected: PASS toàn bộ
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add services/chat/intent_router.py tests/services/chat/test_intent_router.py
@@ -95,7 +95,7 @@ git commit -m "feat: RESET_PROFILE intent route"
 - Modify: `services/chat/conversation_service.py`
 - Test: `tests/services/chat/test_conversation_service.py`
 
-- [ ] **Step 1: Viết test fail (append cuối test_conversation_service.py)**
+- [x] **Step 1: Viết test fail (append cuối test_conversation_service.py)**
 
 ```python
 # ─── Plan reasoning-integrity 4: RESET hồ sơ (EC-22) ──────────────────────────
@@ -172,12 +172,12 @@ def test_normal_messages_do_not_trigger_deterministic_reset():
     assert repo.profile_state.total_score == 27.0          # hồ sơ giữ nguyên
 ```
 
-- [ ] **Step 2: Chạy test, xác nhận fail**
+- [x] **Step 2: Chạy test, xác nhận fail**
 
 Run: `python -m pytest tests/services/chat/test_conversation_service.py -k "ec22 or deterministic_reset" -v`
 Expected: FAIL — hồ sơ cũ vẫn còn / không có message "hồ sơ tư vấn mới"
 
-- [ ] **Step 3: Implementation (conversation_service.py)**
+- [x] **Step 3: Implementation (conversation_service.py)**
 
 ```python
 # Import: bổ sung
@@ -252,17 +252,17 @@ Method mới (đặt sau `_maybe_correction_rerun`):
 
 Lưu ý: `ConversationTurnResult` đã được import sẵn ở đầu file — chỉ cần thêm `ChatProfileState` vào cùng dòng import từ `services.chat.models`.
 
-- [ ] **Step 4: Chạy test, xác nhận pass**
+- [x] **Step 4: Chạy test, xác nhận pass**
 
 Run: `python -m pytest tests/services/chat/test_conversation_service.py -v`
 Expected: PASS toàn bộ (test cũ không đổi hành vi — message thường không chứa phrase reset)
 
-- [ ] **Step 5: Chạy toàn bộ suite**
+- [x] **Step 5: Chạy toàn bộ suite**
 
 Run: `python -m pytest -q`
 Expected: PASS (0 failed)
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add services/chat/conversation_service.py tests/services/chat/test_conversation_service.py
