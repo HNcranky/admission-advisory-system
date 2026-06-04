@@ -250,6 +250,7 @@ def test_handle_advisory_clears_pending_question_when_complete():
         extract=lambda text, known_state=None, active_slot=None: {
             "total_score": 25.0,
             "subject_combination": "A00",
+            "admission_method": "thpt_score",
             "preferred_majors": ["computer_science"],
             "location_preference": "Ha Noi",
         },
@@ -418,6 +419,7 @@ def _complete_profile():
     return ChatProfileState(
         admission_year=2026,
         total_score=27.0,
+        admission_method="thpt_score",
         preferred_majors=["computer_science"],
         subject_combination="A00",
         location_preference="Ha Noi",
@@ -585,8 +587,8 @@ def test_pending_advisory_answer_via_llm_extracted_slot_continues_flow():
     )
     service, repo = _make_service(
         intent_result=IntentResult(route="CONVERSATIONAL", subtype="EMOTIONAL_SUPPORT"),
-        # year + score already known → preferred_majors is the first missing slot
-        profile=ChatProfileState(admission_year=2026, total_score=25.0),
+        # year + score + method already known → preferred_majors is the first missing slot
+        profile=ChatProfileState(admission_year=2026, total_score=25.0, admission_method="thpt_score"),
         flow=flow,
         extract=lambda text, known_state=None, active_slot=None: {"preferred_majors": ["computer_science"]},
     )
@@ -658,7 +660,8 @@ def test_bare_number_out_of_score_range_is_not_taken_as_total_score():
         extract=lambda text, known_state=None, active_slot=None: {},
     )
 
-    result = service.handle_user_message("tok", "99")
+    # parser mới nhận tới 150 nên "99" giờ hợp lệ ở tầng parser → dùng "999".
+    result = service.handle_user_message("tok", "999")
 
     assert repo.profile_state.total_score is None
 
@@ -720,6 +723,7 @@ def test_inferred_interest_persists_across_turns():
 def _completed_profile():
     return ChatProfileState(
         admission_year=2026, total_score=27.0, subject_combination="A01",
+        admission_method="thpt_score",
         explicit_preferred_majors=["computer_science"], preferred_majors=["computer_science"],
     )
 
@@ -766,3 +770,38 @@ def test_first_fill_during_collection_is_not_a_correction():
     )
     result = service.handle_user_message("tok", "em được 25 điểm")
     assert result.correction_note is None
+
+
+# ─── Plan reasoning-integrity 1: admission_method slot (EC-13 thu thập) ───────
+
+def test_score_answer_then_system_asks_admission_method():
+    """EC-13: có điểm nhưng chưa biết phương thức → câu hỏi kế tiếp là phương thức."""
+    profile = ChatProfileState(admission_year=2026)
+    flow = FlowState(active_flow="ADVISORY_FLOW",
+                     pending_question="Tổng điểm hoặc mức điểm ước tính của bạn là bao nhiêu?")
+    service, repo = _make_service(
+        profile=profile, flow=flow,
+        extract=lambda text, known_state=None, active_slot=None: {},
+    )
+    result = service.handle_user_message("tok", "27")
+
+    assert repo.profile_state.total_score == 27.0
+    assert "phương thức" in result.assistant_message
+    assert repo.flow_state.pending_question == (
+        "Bạn xét tuyển theo phương thức nào: điểm thi tốt nghiệp THPT, học bạ, "
+        "đánh giá năng lực hay xét tuyển kết hợp?"
+    )
+
+
+def test_method_bare_answer_fills_pending_method_slot():
+    profile = ChatProfileState(admission_year=2026, total_score=27.0)
+    flow = FlowState(active_flow="ADVISORY_FLOW",
+                     pending_question="Bạn xét tuyển theo phương thức nào?")
+    service, repo = _make_service(
+        profile=profile, flow=flow,
+        extract=lambda text, known_state=None, active_slot=None: {},
+    )
+    result = service.handle_user_message("tok", "điểm thi tốt nghiệp THPT")
+
+    assert repo.profile_state.admission_method == "thpt_score"
+    assert "ngành" in result.assistant_message.lower()  # hỏi tiếp slot ngành

@@ -53,6 +53,7 @@ def _mock_candidates():
 def _mock_profile():
     return StudentProfile(
         total_score=27,
+        admission_method="thpt_score",
         subject_combination="A00",
         preferred_majors=["computer_science"],
         preferred_schools=["hust"],
