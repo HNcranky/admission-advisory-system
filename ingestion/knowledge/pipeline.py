@@ -221,6 +221,59 @@ class KnowledgePipeline:
             school=meta.school, year=meta.year, warnings=warnings,
         )
 
+    def run_for_url(self, url: str, *, school: str,
+                    document_type: str = "crawled_pdf",
+                    ocr=None, classify=None) -> KnowledgeIngestResult:
+        """Ingest a PDF straight from its URL using the hybrid extractor
+        (text-layer + OCR). `school` comes from the crawl config (authoritative);
+        the classifier only fills `year`. Citation = the school URL."""
+        if ocr is None:
+            ocr = build_gateway_ocr()
+        if classify is None:
+            classify = build_gateway_classifier()
+
+        fr = self.fetch(url)
+        content = fr.raw_content
+        content_hash = fr.content_hash or hashlib.sha256(content).hexdigest()
+
+        existing = self.doc_repo.get_document_by_url(url)
+        if existing is not None and existing.content_hash == content_hash:
+            logger.info("Unchanged, skipping %s", url)
+            return KnowledgeIngestResult(source_url=url, skipped=True)
+
+        hybrid = extract_pages_hybrid(content, ocr)
+        text = pages_to_marked_text(hybrid.to_page_tuples())
+        first_pages = "\n\n".join(
+            p.text for p in hybrid.pages[:2] if p.text.strip()
+        )
+        filename = url.rsplit("/", 1)[-1] or url
+        # school is authoritative from config; take only the year, ignore the
+        # classifier's school + its school=unknown warning (irrelevant here).
+        year = classify(first_pages, filename, {}).year
+
+        doc_id = self.doc_repo.get_or_create_document(KnowledgeDocument(
+            school=school, document_type=document_type,
+            source_url=url, raw_text=text,
+        ))
+        total, embedded, reused = self._chunk_embed_upsert(
+            doc_id, text, school=school, topic=None, program=None, year=year,
+            document_type=document_type, source_url=url,
+        )
+        self.doc_repo.mark_ingested(doc_id, content_hash)
+        logger.info(
+            "Ingested %s: %d chunks (%d embedded, %d reused), "
+            "pages text/ocr/failed=%d/%d/%d",
+            url, total, embedded, reused,
+            hybrid.pages_text, hybrid.pages_ocr, hybrid.pages_failed,
+        )
+        return KnowledgeIngestResult(
+            source_url=url, skipped=False,
+            chunks_total=total, chunks_embedded=embedded, chunks_reused=reused,
+            pages_text=hybrid.pages_text, pages_ocr=hybrid.pages_ocr,
+            pages_ocr_failed=hybrid.pages_failed,
+            school=school, year=year, warnings=[],
+        )
+
     def run_for_local_dir(self, root, ocr=None, classify=None) -> list[KnowledgeIngestResult]:
         """Auto-discovery (D4): scan <root>/pdf_text + <root>/pdf_scanned for
         *.pdf recursively — no per-file registration anywhere."""
