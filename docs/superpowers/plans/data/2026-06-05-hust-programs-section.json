@@ -1,0 +1,788 @@
+{
+  "math_informatics": {
+    "canonical_name": "Toán - Tin",
+    "aliases": [
+      "Toán tin",
+      "Toán-Tin",
+      "Mathematics and Informatics"
+    ],
+    "field": "science",
+    "codes": [
+      "MI1"
+    ]
+  },
+  "physics": {
+    "canonical_name": "Vật lý Kỹ thuật",
+    "aliases": [
+      "Engineering Physics",
+      "VL Kỹ thuật"
+    ],
+    "field": "science",
+    "codes": [
+      "PH1"
+    ]
+  },
+  "medical_physics": {
+    "canonical_name": "Vật lý Y khoa",
+    "aliases": [
+      "Medical Physics"
+    ],
+    "field": "science",
+    "codes": [
+      "PH3"
+    ]
+  },
+  "nuclear_engineering": {
+    "canonical_name": "Kỹ thuật Hạt nhân",
+    "aliases": [
+      "Nuclear Engineering"
+    ],
+    "field": "engineering",
+    "codes": [
+      "PH2"
+    ]
+  },
+  "transportation_engineering": {
+    "canonical_name": "Kỹ thuật Xây dựng Công trình Giao thông",
+    "aliases": [
+      "Xây dựng công trình giao thông",
+      "Transportation Engineering"
+    ],
+    "field": "engineering"
+  },
+  "aerospace_engineering": {
+    "canonical_name": "Kỹ thuật Hàng không",
+    "aliases": [
+      "Aerospace Engineering",
+      "Hàng không"
+    ],
+    "field": "engineering",
+    "codes": [
+      "TE3"
+    ]
+  },
+  "automotive_engineering": {
+    "canonical_name": "Kỹ thuật Ô tô",
+    "aliases": [
+      "Automotive Engineering",
+      "Ô tô"
+    ],
+    "field": "engineering",
+    "codes": [
+      "TE1"
+    ]
+  },
+  "textile_technology": {
+    "canonical_name": "Công nghệ Dệt May",
+    "aliases": [
+      "Dệt May",
+      "Textile Technology",
+      "Công nghệ Dệt - May",
+      "Kỹ thuật Dệt - May"
+    ],
+    "field": "engineering",
+    "codes": [
+      "TX1"
+    ]
+  },
+  "printing_technology": {
+    "canonical_name": "Kỹ thuật In",
+    "aliases": [
+      "Printing Technology",
+      "In"
+    ],
+    "field": "engineering",
+    "codes": [
+      "MS5"
+    ]
+  },
+  "industrial_management": {
+    "canonical_name": "Quản lý Công nghiệp",
+    "aliases": [
+      "Industrial Management",
+      "QLCN"
+    ],
+    "field": "economics",
+    "codes": [
+      "EM2"
+    ]
+  },
+  "education_management": {
+    "canonical_name": "Quản lý Giáo dục",
+    "aliases": [
+      "Education Management"
+    ],
+    "field": "education",
+    "codes": [
+      "ED3"
+    ]
+  },
+  "education_technology": {
+    "canonical_name": "Công nghệ Giáo dục",
+    "aliases": [
+      "CN Giáo dục",
+      "Education Technology",
+      "EdTech"
+    ],
+    "field": "education",
+    "codes": [
+      "ED2"
+    ]
+  },
+  "industrial_psychology": {
+    "canonical_name": "Tâm lý học Công nghiệp và Tổ chức",
+    "aliases": [
+      "Tâm lý học",
+      "Tâm lý học công nghiệp và tổ chức",
+      "Industrial Psychology",
+      "I/O Psychology"
+    ],
+    "field": "education"
+  },
+  "english_professional": {
+    "canonical_name": "Tiếng Anh Chuyên nghiệp Quốc tế",
+    "aliases": [
+      "Tiếng Anh chuyên nghiệp quốc tế (do ĐHBK Hà Nội và ĐH Plymouth Marjon - Vương quốc Anh cấp bằng)",
+      "Professional English",
+      "Tiếng Anh chuyên nghiệp quốc tế (liên kết với ĐH Plymouth Marjon-Vương quốc Anh)"
+    ],
+    "field": "languages",
+    "codes": [
+      "FL2"
+    ]
+  },
+  "english_science_tech": {
+    "canonical_name": "Tiếng Anh Khoa học Kỹ thuật và Công nghệ",
+    "aliases": [
+      "Tiếng Anh KHKT",
+      "Tiếng Anh KHKT và Công nghệ",
+      "English for Science and Technology"
+    ],
+    "field": "languages",
+    "codes": [
+      "FL1"
+    ]
+  },
+  "korean_science_tech": {
+    "canonical_name": "Tiếng Hàn Khoa học và Công nghệ",
+    "aliases": [
+      "Tiếng Hàn KHCN",
+      "Korean for Science and Technology",
+      "Tiếng Hàn"
+    ],
+    "field": "languages"
+  },
+  "chinese_science_tech": {
+    "canonical_name": "Tiếng Trung Khoa học và Công nghệ",
+    "aliases": [
+      "Tiếng Trung KHCN",
+      "Chinese for Science and Technology",
+      "Tiếng Trung",
+      "Tiếng Trung KHKT và Công nghệ"
+    ],
+    "field": "languages",
+    "codes": [
+      "FL3"
+    ]
+  },
+  "energy_engineering": {
+    "canonical_name": "Kỹ thuật Năng lượng",
+    "aliases": [
+      "Kỹ thuật năng lượng",
+      "Energy Engineering"
+    ],
+    "field": "engineering"
+  },
+  "heat_engineering": {
+    "canonical_name": "Kỹ thuật Nhiệt",
+    "aliases": [
+      "Thermal Engineering",
+      "Nhiệt"
+    ],
+    "field": "engineering",
+    "codes": [
+      "HE1"
+    ]
+  },
+  "robotics": {
+    "canonical_name": "Kỹ thuật Robot",
+    "aliases": [
+      "Kỹ thuật robot",
+      "Robotics",
+      "Robot"
+    ],
+    "field": "engineering"
+  },
+  "embedded_systems": {
+    "canonical_name": "Hệ thống Nhúng Thông minh và IoT",
+    "aliases": [
+      "Hệ thống nhúng",
+      "Embedded Systems",
+      "Hệ thống nhúng thông minh và IoT (Chương trình tiên tiến)",
+      "Hệ thống nhúng thông minh và IoT (tăng cường tiếng Nhật)",
+      "Hệ thống nhúng thông minh và IoT (CT tiên tiến)"
+    ],
+    "field": "technology",
+    "codes": [
+      "ET-E9"
+    ]
+  },
+  "ict": {
+    "canonical_name": "Công nghệ Thông tin - Truyền thông",
+    "aliases": [
+      "ICT",
+      "Truyền thông",
+      "Information and Communication Technology"
+    ],
+    "field": "technology"
+  },
+  "pharmaceutical_chemistry": {
+    "canonical_name": "Kỹ thuật Hóa dược",
+    "aliases": [
+      "Kỹ thuật Hóa dược (Chương trình tiên tiến)",
+      "Pharmaceutical Chemistry",
+      "Kỹ thuật Hóa dược (CT tiên tiến)"
+    ],
+    "field": "science",
+    "codes": [
+      "CH-E11"
+    ]
+  },
+  "cosmetic_chemistry": {
+    "canonical_name": "Hóa học Mỹ phẩm",
+    "aliases": [
+      "Hóa học Mỹ phẩm",
+      "Hóa học mỹ phẩm",
+      "Hóa học Mỹ phẩm (mới)",
+      "Cosmetic Chemistry",
+      "Hóa học Mỹ phẩm (Chương trình tiên tiến)"
+    ],
+    "field": "science"
+  },
+  "power_renewable_energy": {
+    "canonical_name": "Hệ thống Điện và Năng lượng Tái tạo",
+    "aliases": [
+      "Hệ thống điện và năng lượng tái tạo (Chương trình tiên tiến)",
+      "Power and Renewable Energy Systems",
+      "Hệ thống điện và năng lượng tái tạo (CT tiên tiến)"
+    ],
+    "field": "engineering",
+    "codes": [
+      "EE-E18"
+    ]
+  },
+  "energy_management": {
+    "canonical_name": "Quản lý Năng lượng",
+    "aliases": [
+      "Energy Management",
+      "Kinh tế công nghiệp"
+    ],
+    "field": "engineering",
+    "codes": [
+      "EM1"
+    ]
+  },
+  "cyber_security": {
+    "canonical_name": "An toàn Không gian số",
+    "aliases": [
+      "An toàn không gian số (Chương trình tiên tiến)",
+      "An toàn không gian số - Cyber Security",
+      "An toàn không gian số - Cyber Security (CT tiên tiến)",
+      "Cyber Security",
+      "An toàn không gian mạng"
+    ],
+    "field": "technology",
+    "codes": [
+      "IT-E15"
+    ]
+  },
+  "microelectronics_nano": {
+    "canonical_name": "Kỹ thuật Vi Điện tử và Công nghệ Nano",
+    "aliases": [
+      "Chương trình Kỹ thuật vi điện tử và công nghệ Nano",
+      "Vi điện tử và Công nghệ Nano",
+      "Microelectronics and Nanotechnology"
+    ],
+    "field": "engineering",
+    "codes": [
+      "MS2"
+    ]
+  },
+  "computational_intelligent_systems": {
+    "canonical_name": "Khoa học Tính toán cho các Hệ thống Thông minh",
+    "aliases": [
+      "Khoa học tính toán cho các hệ thống thông minh",
+      "Khoa học tính toán cho các hệ thống thông minh (CTTT)",
+      "Khoa học tính toán cho các hệ thống thông minh (mới)",
+      "Computational Science for Intelligent Systems"
+    ],
+    "field": "technology"
+  },
+  "bioengineering": {
+    "canonical_name": "Kỹ thuật Sinh học",
+    "aliases": [
+      "Công nghệ sinh học",
+      "Bioengineering",
+      "Biotechnology",
+      "KT Sinh học"
+    ],
+    "field": "science",
+    "codes": [
+      "BF1"
+    ]
+  },
+  "food_technology": {
+    "canonical_name": "Kỹ thuật Thực phẩm",
+    "aliases": [
+      "Công nghệ thực phẩm",
+      "Food Technology",
+      "Food Engineering",
+      "KT Thực phẩm"
+    ],
+    "field": "science",
+    "codes": [
+      "BF2"
+    ]
+  },
+  "electrical_engineering": {
+    "canonical_name": "Kỹ thuật Điện",
+    "aliases": [
+      "Electrical Engineering",
+      "KT Điện",
+      "EE"
+    ],
+    "field": "engineering",
+    "codes": [
+      "EE1"
+    ]
+  },
+  "business_administration": {
+    "canonical_name": "Quản trị Kinh doanh",
+    "aliases": [
+      "QTKD",
+      "Business Administration",
+      "Kinh doanh"
+    ],
+    "field": "economics",
+    "codes": [
+      "EM3"
+    ]
+  },
+  "accounting": {
+    "canonical_name": "Kế toán",
+    "aliases": [
+      "Kế toán kiểm toán",
+      "Accounting",
+      "Kế toán - Kiểm toán"
+    ],
+    "field": "economics",
+    "codes": [
+      "EM4"
+    ]
+  },
+  "finance_banking": {
+    "canonical_name": "Tài chính - Ngân hàng",
+    "aliases": [
+      "Tài chính ngân hàng",
+      "Finance and Banking",
+      "TCNH",
+      "Tài chính-Ngân hàng"
+    ],
+    "field": "economics",
+    "codes": [
+      "EM5"
+    ]
+  },
+  "electronics_telecom": {
+    "canonical_name": "Kỹ thuật Điện tử - Viễn thông",
+    "aliases": [
+      "Điện tử viễn thông",
+      "Điện tử và Viễn thông",
+      "Electronics and Telecommunications",
+      "ĐTVT",
+      "ET",
+      "Kỹ thuật Điện tử-Viễn thông"
+    ],
+    "field": "engineering",
+    "codes": [
+      "ET1"
+    ]
+  },
+  "biomedical_engineering": {
+    "canonical_name": "Kỹ thuật Y sinh",
+    "aliases": [
+      "Biomedical Engineering",
+      "BME",
+      "Kỹ thuật Y sinh (mới)"
+    ],
+    "field": "science",
+    "codes": [
+      "ET2"
+    ]
+  },
+  "environmental_engineering": {
+    "canonical_name": "Kỹ thuật Môi trường",
+    "aliases": [
+      "Môi trường",
+      "Environmental Engineering",
+      "KT Môi trường"
+    ],
+    "field": "engineering",
+    "codes": [
+      "EV1"
+    ]
+  },
+  "data_science": {
+    "canonical_name": "Khoa học Dữ liệu và Trí tuệ Nhân tạo",
+    "aliases": [
+      "Khoa học dữ liệu",
+      "Data Science",
+      "KHDL",
+      "DS",
+      "AI",
+      "Khoa học dữ liệu và Trí tuệ nhân tạo (CT tiên tiến)"
+    ],
+    "field": "technology",
+    "codes": [
+      "IT-E10"
+    ]
+  },
+  "computer_science": {
+    "canonical_name": "Khoa học Máy tính",
+    "aliases": [
+      "Computer Science",
+      "CNTT",
+      "Công nghệ thông tin",
+      "KH Máy tính",
+      "CS",
+      "CNTT: Khoa học Máy tính"
+    ],
+    "field": "technology",
+    "codes": [
+      "IT1"
+    ]
+  },
+  "mechatronics": {
+    "canonical_name": "Kỹ thuật Cơ điện tử",
+    "aliases": [
+      "Cơ điện tử",
+      "Mechatronics",
+      "Mechatronics Engineering",
+      "Công nghệ kỹ thuật cơ - điện tử",
+      "Công nghệ kỹ thuật cơ điện tử"
+    ],
+    "field": "engineering",
+    "codes": [
+      "ME1"
+    ]
+  },
+  "mechanical_engineering": {
+    "canonical_name": "Kỹ thuật Cơ khí",
+    "aliases": [
+      "Cơ khí",
+      "Mechanical Engineering",
+      "KT Cơ khí",
+      "ME"
+    ],
+    "field": "engineering",
+    "codes": [
+      "ME2"
+    ]
+  },
+  "materials_science": {
+    "canonical_name": "Khoa học và Kỹ thuật Vật liệu",
+    "aliases": [
+      "Kỹ thuật Vật liệu",
+      "Materials Science",
+      "KH Vật liệu"
+    ],
+    "field": "science",
+    "codes": [
+      "MS1"
+    ]
+  },
+  "chemical_engineering": {
+    "canonical_name": "Kỹ thuật Hóa học",
+    "aliases": [
+      "Chemical Engineering",
+      "KT Hóa học",
+      "Hóa kỹ thuật",
+      "Kỹ thuật Hoá học"
+    ],
+    "field": "science",
+    "codes": [
+      "CH1"
+    ]
+  },
+  "control_automation": {
+    "canonical_name": "Kỹ thuật Điều khiển - Tự động hóa",
+    "aliases": [
+      "Điều khiển tự động hóa",
+      "Control and Automation",
+      "Tự động hóa",
+      "KT Điều khiển",
+      "Kỹ thuật điều khiển và tự động hóa",
+      "Kỹ thuật Điều khiển - Tự động hoá",
+      "Kỹ thuật điều khiển & Tự động hóa"
+    ],
+    "field": "engineering",
+    "codes": [
+      "EE2"
+    ]
+  },
+  "logistics": {
+    "canonical_name": "Logistics và Quản lý Chuỗi cung ứng",
+    "aliases": [
+      "Logistics",
+      "Supply Chain Management",
+      "Chuỗi cung ứng",
+      "Logistics và Quản lý chuỗi cung ứng (Chương trình tiên tiến)",
+      "Logistics và Quản lý chuỗi cung ứng (CT tiên tiến)"
+    ],
+    "field": "economics",
+    "codes": [
+      "EM-E14"
+    ]
+  },
+  "food_technology_advanced": {
+    "canonical_name": "Kỹ thuật Thực phẩm (CT tiên tiến)",
+    "aliases": [],
+    "field": "technology",
+    "codes": [
+      "BF-E12"
+    ]
+  },
+  "bioengineering_advanced": {
+    "canonical_name": "Kỹ thuật sinh học (CT tiên tiến)",
+    "aliases": [],
+    "field": "technology",
+    "codes": [
+      "BF-E19"
+    ]
+  },
+  "chemistry": {
+    "canonical_name": "Hoá học",
+    "aliases": [
+      "Hóa học"
+    ],
+    "field": "technology",
+    "codes": [
+      "CH2"
+    ]
+  },
+  "control_automation_advanced": {
+    "canonical_name": "Kỹ thuật Điều khiển - Tự động hoá (CT tiên tiến)",
+    "aliases": [],
+    "field": "technology",
+    "codes": [
+      "EE-E8"
+    ]
+  },
+  "industrial_informatics_pfiev": {
+    "canonical_name": "Tin học công nghiệp và Tự động hóa (Chương trình Việt - Pháp PFIEV)",
+    "aliases": [],
+    "field": "technology",
+    "codes": [
+      "EE-EP"
+    ]
+  },
+  "business_analytics": {
+    "canonical_name": "Phân tích kinh doanh (CT tiên tiến)",
+    "aliases": [],
+    "field": "technology",
+    "codes": [
+      "EM-E13"
+    ]
+  },
+  "digital_media_engineering": {
+    "canonical_name": "Truyền thông số và Kỹ thuật đa phương tiện (CT tiên tiến)",
+    "aliases": [],
+    "field": "technology",
+    "codes": [
+      "ET-E16"
+    ]
+  },
+  "electronics_telecom_advanced": {
+    "canonical_name": "Kỹ thuật Điện tử - Viễn thông (CT tiên tiến)",
+    "aliases": [],
+    "field": "technology",
+    "codes": [
+      "ET-E4"
+    ]
+  },
+  "biomedical_engineering_advanced": {
+    "canonical_name": "Kỹ thuật Y sinh (CT tiên tiến)",
+    "aliases": [],
+    "field": "technology",
+    "codes": [
+      "ET-E5"
+    ]
+  },
+  "electronics_telecom_leibniz": {
+    "canonical_name": "Điện tử - Viễn thông - hợp tác với ĐH Leibniz Hannover (Đức)",
+    "aliases": [
+      "Điện tử - Viễn thông - ĐH Leibniz Hannover (CHLB Đức)"
+    ],
+    "field": "technology",
+    "codes": [
+      "ET-LUH"
+    ]
+  },
+  "resource_environment_management": {
+    "canonical_name": "Quản lý Tài nguyên và Môi trường",
+    "aliases": [],
+    "field": "technology",
+    "codes": [
+      "EV2"
+    ]
+  },
+  "information_technology_viet_nhat": {
+    "canonical_name": "Công nghệ Thông tin Việt – Nhật (tăng cường tiếng Nhật)",
+    "aliases": [
+      "Công nghệ Thông tin (Việt – Nhật)",
+      "Công nghệ thông tin (Việt - Nhật)"
+    ],
+    "field": "technology",
+    "codes": [
+      "IT-E6"
+    ]
+  },
+  "information_technology_global_ict": {
+    "canonical_name": "Công nghệ Thông tin Global ICT (CT tiên tiến)",
+    "aliases": [
+      "Công nghệ Thông tin (Global ICT)"
+    ],
+    "field": "technology",
+    "codes": [
+      "IT-E7"
+    ]
+  },
+  "information_technology_viet_phap": {
+    "canonical_name": "Công nghệ Thông tin Việt-Pháp (tăng cường tiếng Pháp)",
+    "aliases": [
+      "Công nghệ Thông tin (Việt-Pháp)",
+      "Công nghệ thông tin (Việt - Pháp)"
+    ],
+    "field": "technology",
+    "codes": [
+      "IT-EP"
+    ]
+  },
+  "computer_engineering": {
+    "canonical_name": "CNTT: Kỹ thuật Máy tính",
+    "aliases": [],
+    "field": "technology",
+    "codes": [
+      "IT2"
+    ]
+  },
+  "mechatronics_advanced": {
+    "canonical_name": "Kỹ thuật Cơ điện tử (CT tiên tiến)",
+    "aliases": [],
+    "field": "technology",
+    "codes": [
+      "ME-E1"
+    ]
+  },
+  "mechanical_engineering_griffith": {
+    "canonical_name": "Cơ khí Chế tạo máy – hợp tác với trường ĐH Griffith (Australia)",
+    "aliases": [
+      "Cơ khí - Chế tạo máy - hợp tác với ĐH Griffith (Úc)",
+      "Cơ khí Chế tạo máy – hợp tác với trường ĐH Griffith (Úc)"
+    ],
+    "field": "technology",
+    "codes": [
+      "ME-GU"
+    ]
+  },
+  "mechatronics_leibniz": {
+    "canonical_name": "Cơ điện tử - hợp tác với ĐH Leibniz Hannover (CHLB Đức)",
+    "aliases": [
+      "Cơ điện tử - hợp tác với ĐH Leibniz Hannover (Đức)"
+    ],
+    "field": "technology",
+    "codes": [
+      "ME-LUH"
+    ]
+  },
+  "mechatronics_nagaoka": {
+    "canonical_name": "Cơ điện tử - hợp tác với ĐH Công nghệ Nagaoka (Nhật Bản)",
+    "aliases": [
+      "Cơ điện tử - hợp tác với ĐHCN Nagaoka (Nhật Bản)"
+    ],
+    "field": "technology",
+    "codes": [
+      "ME-NUT"
+    ]
+  },
+  "management_information_systems": {
+    "canonical_name": "Hệ thống Thông tin quản lý",
+    "aliases": [],
+    "field": "technology",
+    "codes": [
+      "MI2"
+    ]
+  },
+  "materials_science_advanced": {
+    "canonical_name": "Khoa học và Kỹ thuật Vật liệu (CT tiên tiến)",
+    "aliases": [
+      "KHKT Vật liệu (CT tiên tiến)"
+    ],
+    "field": "technology",
+    "codes": [
+      "MS-E3"
+    ]
+  },
+  "polymer_composite_materials": {
+    "canonical_name": "Công nghệ vật liệu Polyme và Compozit",
+    "aliases": [],
+    "field": "technology",
+    "codes": [
+      "MS3"
+    ]
+  },
+  "automotive_engineering_advanced": {
+    "canonical_name": "Kỹ thuật Ô tô (CT tiên tiến)",
+    "aliases": [],
+    "field": "technology",
+    "codes": [
+      "TE-E2"
+    ]
+  },
+  "aerospace_mechanics_pfiev": {
+    "canonical_name": "Cơ khí hàng không (Chương trình Việt - Pháp PFIEV)",
+    "aliases": [],
+    "field": "technology",
+    "codes": [
+      "TE-EP"
+    ]
+  },
+  "vehicle_engineering": {
+    "canonical_name": "Kỹ thuật Cơ khí động lực",
+    "aliases": [],
+    "field": "technology",
+    "codes": [
+      "TE2"
+    ]
+  },
+  "business_administration_troy": {
+    "canonical_name": "Quản trị Kinh doanh - Hợp tác với ĐH Troy (Hoa Kỳ)",
+    "aliases": [
+      "Quản trị Kinh doanh - ĐH Troy (Hoa Kỳ)"
+    ],
+    "field": "technology",
+    "codes": [
+      "TROY-BA"
+    ]
+  },
+  "computer_science_troy": {
+    "canonical_name": "Khoa học Máy tính - hợp tác với ĐH Troy (Hoa Kỳ)",
+    "aliases": [
+      "Khoa học Máy tính - ĐH Troy (Hoa Kỳ)"
+    ],
+    "field": "technology",
+    "codes": [
+      "TROY-IT"
+    ]
+  }
+}

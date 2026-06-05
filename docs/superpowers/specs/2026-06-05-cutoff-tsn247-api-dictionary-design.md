@@ -110,6 +110,12 @@ Lưu ý MS-E3 vs MS1: canonical `materials_science` = "Khoa học và Kỹ thu�
 MS-E3 hơn, nhưng MS1 đang resolve vào đó từ trước — giữ MS1 = `materials_science`,
 MS-E3 = `materials_science_advanced` (exact alias đầy đủ tách 2 mã sạch).
 
+Phát hiện khi generate data (2026-06-05): `_shared.electronics_telecom` chứa sẵn 3 alias
+variant đặt nhầm chỗ (2 biến thể Leibniz + 1 "Chương trình tiên tiến") — chính là nguyên nhân
+ET-LUH/ET-E4 gộp vào ngành gốc. Plan 6 gỡ các alias này khỏi `_shared` (entry riêng
+`electronics_telecom_leibniz`/`_advanced` nhận thay). Dữ liệu curated 73 entry section `hust`
+freeze tại `docs/superpowers/plans/data/2026-06-05-hust-programs-section.json`.
+
 ### 2. `map_program` — stage 0 match theo mã
 
 ```python
@@ -138,8 +144,10 @@ không truyền code → hành vi y nguyên (backward compatible).
 
 ### 4. Runner & backfill — KHÔNG sửa runner
 
-URL API đi qua `--source-url` + `--parser tuyensinh247_cutoff_api` sẵn có. Backfill = vòng
-lặp bash 11 tổ hợp có dữ liệu (2022×2, 2023×2, 2024×3, 2025×4). `_SCORE_RE` của normalize chấp nhận mark số
+URL API đi qua `--source-url` + `--parser tuyensinh247_cutoff_api` sẵn có. Backfill API = 7
+tổ hợp **2022–2024** (2022×2, 2023×2, 2024×3); **2025 đi đường HTML re-run** sau khi dictionary
+mở rộng (cùng source_url cũ nên upsert đè/bổ sung ~250 row) — tránh 1 aggregator sinh 2 row
+trùng giá trị khác source_url (HTML + API) làm rườm conflict display. `_SCORE_RE` của normalize chấp nhận mark số
 (`"29.42"`); thang điểm theo method giữ nguyên (THPT 30, còn lại 100).
 Bookkeeping: thêm entry `hust_cutoff_tsn247_api` vào `initial_sources.json`
 (`source_type: cutoff_announcement`, `active: false`, trust 3, root_url = API base).

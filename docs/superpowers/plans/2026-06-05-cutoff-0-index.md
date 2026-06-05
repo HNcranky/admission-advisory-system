@@ -18,6 +18,14 @@
 | 4 | [`...-4-conflict-explanation-e2e.md`](2026-06-05-cutoff-4-conflict-explanation-e2e.md) — `detect_cutoff_conflicts`, outcome deterministic, explanation + caveat EC-18, fix EC-17, e2e GWT | EC-16, EC-18, EC-17 | Plan 3 (runtime cần Plan 2) |
 | 5 | [`...-5-hust-parser.md`](2026-06-05-cutoff-5-hust-parser.md) — parser `tuyensinh247_cutoff_html` (trang điểm chuẩn BKA trên diemthi.tuyensinh247.com, 4 bảng phương thức, trust 3), runner `--source-url` | proof-of-automation | Plan 1 |
 
+**Đợt mở rộng (spec [`2026-06-05-cutoff-tsn247-api-dictionary-design.md`](../specs/2026-06-05-cutoff-tsn247-api-dictionary-design.md)):**
+
+| # | Plan | Nội dung | Phụ thuộc |
+|---|------|----------|-----------|
+| 6 | [`...-6-bka-dictionary-code-mapping.md`](2026-06-05-cutoff-6-bka-dictionary-code-mapping.md) — programs.json đủ 65 mã BKA (variant tách id riêng) + `map_program` stage match theo mã | Plan 5 |
+| 7 | [`...-7-tsn247-api-parser.md`](2026-06-05-cutoff-7-tsn247-api-parser.md) — parser API JSON tsn247, backfill 2022–2024 + re-run HTML 2025 | Plan 6 |
+| 8 | [`...-8-reingest-catalog-verify.md`](2026-06-05-cutoff-8-reingest-catalog-verify.md) — re-ingest canonical hust (fix variant Troy đè IT1), rebuild major catalog, verify e2e | Plan 6 (khuyến nghị sau 7) |
+
 Plan 2 và Plan 3 độc lập nhau (đều chỉ cần Plan 1). Plan 5 độc lập với 2–4, làm cuối
 vì cần network probe. Plan 1 chứa MỘT task thủ công (tra số liệu điểm chuẩn thật) — có
 thể làm song song với code các plan sau.
