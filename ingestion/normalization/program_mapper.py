@@ -58,10 +58,20 @@ def map_program(
         (program_id, canonical_name) tuple.
         program_id is None if no match found.
     """
+    programs = _load_dict(school_id)
+
+    # Stage 0: match theo MÃ tuyển sinh (codes — per-school). Ưu tiên tuyệt đối:
+    # mã là định danh chính thức, tên có thể trùng/lệch giữa các năm.
+    # Cần school_id vì mã chỉ có nghĩa trong ngữ cảnh một trường.
+    if program_code and school_id:
+        code_norm = str(program_code).strip().upper()
+        for prog_id, info in programs.items():
+            if any(code_norm == str(c).strip().upper() for c in info.get("codes", [])):
+                return (prog_id, info["canonical_name"])
+
     if not program_name:
         return (program_code, program_name)
 
-    programs = _load_dict(school_id)
     name_lower = program_name.lower().strip()
 
 
