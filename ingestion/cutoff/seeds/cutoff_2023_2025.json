@@ -59,7 +59,7 @@
     "admission_method": "thpt_score",
     "score_scale": 30,
     "cutoff_score": 28.53,
-    "subject_combinations": [],
+    "subject_combinations": ["A00", "A01"],
     "note": "ĐHBK Hà Nội không xét các tiêu chí phụ (theo bài công bố 2024)",
     "source_url": "https://ts.hust.edu.vn/tin-tuc/diem-chuan-dai-hoc-bach-khoa-ha-noi-2024-diem-thi-dgtd-cao-nhat-83-82-diem-thi-tot-nghiep-thpt-cao-nhat-28-53",
     "source_trust_level": 5
@@ -72,7 +72,7 @@
     "admission_method": "thpt_score",
     "score_scale": 30,
     "cutoff_score": 28.22,
-    "subject_combinations": [],
+    "subject_combinations": ["A00", "A01"],
     "note": "ĐHBK Hà Nội không xét các tiêu chí phụ (theo bài công bố 2024)",
     "source_url": "https://ts.hust.edu.vn/tin-tuc/diem-chuan-dai-hoc-bach-khoa-ha-noi-2024-diem-thi-dgtd-cao-nhat-83-82-diem-thi-tot-nghiep-thpt-cao-nhat-28-53",
     "source_trust_level": 5
@@ -85,7 +85,7 @@
     "admission_method": "thpt_score",
     "score_scale": 30,
     "cutoff_score": 27.90,
-    "subject_combinations": [],
+    "subject_combinations": ["A00", "A01"],
     "note": "ĐHBK Hà Nội không xét các tiêu chí phụ (theo bài công bố 2024)",
     "source_url": "https://ts.hust.edu.vn/tin-tuc/diem-chuan-dai-hoc-bach-khoa-ha-noi-2024-diem-thi-dgtd-cao-nhat-83-82-diem-thi-tot-nghiep-thpt-cao-nhat-28-53",
     "source_trust_level": 5
@@ -98,7 +98,7 @@
     "admission_method": "thpt_score",
     "score_scale": 30,
     "cutoff_score": 27.35,
-    "subject_combinations": [],
+    "subject_combinations": ["A00", "A01"],
     "note": "ĐHBK Hà Nội không xét các tiêu chí phụ (theo bài công bố 2024)",
     "source_url": "https://ts.hust.edu.vn/tin-tuc/diem-chuan-dai-hoc-bach-khoa-ha-noi-2024-diem-thi-dgtd-cao-nhat-83-82-diem-thi-tot-nghiep-thpt-cao-nhat-28-53",
     "source_trust_level": 5
@@ -111,7 +111,7 @@
     "admission_method": "thpt_score",
     "score_scale": 30,
     "cutoff_score": 29.19,
-    "subject_combinations": [],
+    "subject_combinations": ["A00", "A01", "K01"],
     "note": null,
     "source_url": "https://ts.hust.edu.vn/tin-tuc/diem-chuan-cao-nhat-dh-bach-khoa-ha-noi-2025-29-39-diem-thpt-tuong-duong-93-96-diem-xttn-va-86-97-diem-tsa",
     "source_trust_level": 5
@@ -124,7 +124,7 @@
     "admission_method": "thpt_score",
     "score_scale": 30,
     "cutoff_score": 29.39,
-    "subject_combinations": [],
+    "subject_combinations": ["A00", "A01", "K01"],
     "note": "Điểm chuẩn THPT cao nhất HUST 2025",
     "source_url": "https://ts.hust.edu.vn/tin-tuc/diem-chuan-cao-nhat-dh-bach-khoa-ha-noi-2025-29-39-diem-thpt-tuong-duong-93-96-diem-xttn-va-86-97-diem-tsa",
     "source_trust_level": 5
@@ -137,7 +137,7 @@
     "admission_method": "thpt_score",
     "score_scale": 30,
     "cutoff_score": 28.69,
-    "subject_combinations": [],
+    "subject_combinations": ["A00", "A01", "K01"],
     "note": null,
     "source_url": "https://ts.hust.edu.vn/tin-tuc/diem-chuan-cao-nhat-dh-bach-khoa-ha-noi-2025-29-39-diem-thpt-tuong-duong-93-96-diem-xttn-va-86-97-diem-tsa",
     "source_trust_level": 5
@@ -150,7 +150,7 @@
     "admission_method": "thpt_score",
     "score_scale": 30,
     "cutoff_score": 27.80,
-    "subject_combinations": [],
+    "subject_combinations": ["A00", "A01", "K01"],
     "note": null,
     "source_url": "https://ts.hust.edu.vn/tin-tuc/diem-chuan-cao-nhat-dh-bach-khoa-ha-noi-2025-29-39-diem-thpt-tuong-duong-93-96-diem-xttn-va-86-97-diem-tsa",
     "source_trust_level": 5
@@ -163,7 +163,7 @@
     "admission_method": "thpt_score",
     "score_scale": 30,
     "cutoff_score": 27.85,
-    "subject_combinations": [],
+    "subject_combinations": ["A00", "A01", "D01"],
     "note": null,
     "source_url": "https://tuyensinh.uet.vnu.edu.vn/uncategorized/thong-bao-diem-trung-tuyen-vao-truong-dh-cong-nghe-dhqghn-nam-2023-theo-phuong-thuc-thpt/",
     "source_trust_level": 5
@@ -176,7 +176,7 @@
     "admission_method": "thpt_score",
     "score_scale": 30,
     "cutoff_score": 27.25,
-    "subject_combinations": [],
+    "subject_combinations": ["A00", "A01", "D01"],
     "note": null,
     "source_url": "https://tuyensinh.uet.vnu.edu.vn/uncategorized/thong-bao-diem-trung-tuyen-vao-truong-dh-cong-nghe-dhqghn-nam-2023-theo-phuong-thuc-thpt/",
     "source_trust_level": 5
@@ -189,7 +189,7 @@
     "admission_method": "thpt_score",
     "score_scale": 30,
     "cutoff_score": 27.25,
-    "subject_combinations": [],
+    "subject_combinations": ["A00", "A01", "D01"],
     "note": null,
     "source_url": "https://tuyensinh.uet.vnu.edu.vn/uncategorized/thong-bao-diem-trung-tuyen-vao-truong-dh-cong-nghe-dhqghn-nam-2023-theo-phuong-thuc-thpt/",
     "source_trust_level": 5
@@ -202,7 +202,7 @@
     "admission_method": "thpt_score",
     "score_scale": 30,
     "cutoff_score": 27.20,
-    "subject_combinations": [],
+    "subject_combinations": ["A00", "A01", "D01"],
     "note": null,
     "source_url": "https://tuyensinh.uet.vnu.edu.vn/uncategorized/thong-bao-diem-trung-tuyen-vao-truong-dh-cong-nghe-dhqghn-nam-2023-theo-phuong-thuc-thpt/",
     "source_trust_level": 5
@@ -215,7 +215,7 @@
     "admission_method": "thpt_score",
     "score_scale": 30,
     "cutoff_score": 27.80,
-    "subject_combinations": [],
+    "subject_combinations": ["A00", "A01", "D01"],
     "note": null,
     "source_url": "https://tuyensinh.uet.vnu.edu.vn/tin-tuyen-sinh/thong-bao-diem-trung-tuyen-vao-truong-dai-hoc-cong-nghe-dhqghn-nam-2024-theo-phuong-thuc-thpt/",
     "source_trust_level": 5
@@ -228,7 +228,7 @@
     "admission_method": "thpt_score",
     "score_scale": 30,
     "cutoff_score": 26.97,
-    "subject_combinations": [],
+    "subject_combinations": ["A00", "A01", "D01"],
     "note": null,
     "source_url": "https://tuyensinh.uet.vnu.edu.vn/tin-tuyen-sinh/thong-bao-diem-trung-tuyen-vao-truong-dai-hoc-cong-nghe-dhqghn-nam-2024-theo-phuong-thuc-thpt/",
     "source_trust_level": 5
@@ -241,7 +241,7 @@
     "admission_method": "thpt_score",
     "score_scale": 30,
     "cutoff_score": 27.58,
-    "subject_combinations": [],
+    "subject_combinations": ["A00", "A01", "D01"],
     "note": null,
     "source_url": "https://tuyensinh.uet.vnu.edu.vn/tin-tuyen-sinh/thong-bao-diem-trung-tuyen-vao-truong-dai-hoc-cong-nghe-dhqghn-nam-2024-theo-phuong-thuc-thpt/",
     "source_trust_level": 5
@@ -254,7 +254,7 @@
     "admission_method": "thpt_score",
     "score_scale": 30,
     "cutoff_score": 27.12,
-    "subject_combinations": [],
+    "subject_combinations": ["A00", "A01", "D01"],
     "note": null,
     "source_url": "https://tuyensinh.uet.vnu.edu.vn/tin-tuyen-sinh/thong-bao-diem-trung-tuyen-vao-truong-dai-hoc-cong-nghe-dhqghn-nam-2024-theo-phuong-thuc-thpt/",
     "source_trust_level": 5
@@ -267,7 +267,7 @@
     "admission_method": "thpt_score",
     "score_scale": 30,
     "cutoff_score": 28.19,
-    "subject_combinations": [],
+    "subject_combinations": ["A00", "A01", "X26", "X06", "D01"],
     "note": "Điểm trúng tuyển như nhau giữa các tổ hợp xét tuyển",
     "source_url": "https://tuyensinh.uet.vnu.edu.vn/uncategorized/thong-bao-diem-trung-tuyen-dai-hoc-chinh-quy-vao-truong-dai-hoc-cong-nghe-dhqghn-nam-2025/",
     "source_trust_level": 5
@@ -280,7 +280,7 @@
     "admission_method": "thpt_score",
     "score_scale": 30,
     "cutoff_score": 27.00,
-    "subject_combinations": [],
+    "subject_combinations": ["A00", "A01", "X26", "X06", "D01"],
     "note": "Điểm trúng tuyển như nhau giữa các tổ hợp xét tuyển",
     "source_url": "https://tuyensinh.uet.vnu.edu.vn/uncategorized/thong-bao-diem-trung-tuyen-dai-hoc-chinh-quy-vao-truong-dai-hoc-cong-nghe-dhqghn-nam-2025/",
     "source_trust_level": 5
@@ -293,7 +293,7 @@
     "admission_method": "thpt_score",
     "score_scale": 30,
     "cutoff_score": 27.86,
-    "subject_combinations": [],
+    "subject_combinations": ["A00", "A01", "X26", "X06", "D01"],
     "note": "Điểm trúng tuyển như nhau giữa các tổ hợp xét tuyển",
     "source_url": "https://tuyensinh.uet.vnu.edu.vn/uncategorized/thong-bao-diem-trung-tuyen-dai-hoc-chinh-quy-vao-truong-dai-hoc-cong-nghe-dhqghn-nam-2025/",
     "source_trust_level": 5
@@ -306,7 +306,7 @@
     "admission_method": "thpt_score",
     "score_scale": 30,
     "cutoff_score": 27.75,
-    "subject_combinations": [],
+    "subject_combinations": ["A00", "A01", "X26", "X06", "D01"],
     "note": "Điểm trúng tuyển như nhau giữa các tổ hợp xét tuyển",
     "source_url": "https://tuyensinh.uet.vnu.edu.vn/uncategorized/thong-bao-diem-trung-tuyen-dai-hoc-chinh-quy-vao-truong-dai-hoc-cong-nghe-dhqghn-nam-2025/",
     "source_trust_level": 5
@@ -319,7 +319,7 @@
     "admission_method": "thpt_score",
     "score_scale": 30,
     "cutoff_score": 27.38,
-    "subject_combinations": [],
+    "subject_combinations": ["A00", "A01", "X26", "X06", "D01"],
     "note": "Ngành mở tuyển sinh từ 2025 — chưa có điểm chuẩn 2023/2024",
     "source_url": "https://tuyensinh.uet.vnu.edu.vn/uncategorized/thong-bao-diem-trung-tuyen-dai-hoc-chinh-quy-vao-truong-dai-hoc-cong-nghe-dhqghn-nam-2025/",
     "source_trust_level": 5
@@ -332,7 +332,7 @@
     "admission_method": "thpt_score",
     "score_scale": 30,
     "cutoff_score": 28.19,
-    "subject_combinations": [],
+    "subject_combinations": ["A00", "A01", "X26", "X06", "D01"],
     "note": "Nguồn thứ hai: cổng thông tin ĐHQGHN",
     "source_url": "https://vnu.edu.vn/diem-chuan-diem-trung-tuyen-dai-hoc-chinh-quy-nam-2025-post38686.html",
     "source_trust_level": 4
@@ -345,7 +345,7 @@
     "admission_method": "thpt_score",
     "score_scale": 30,
     "cutoff_score": 27.86,
-    "subject_combinations": [],
+    "subject_combinations": ["A00", "A01", "X26", "X06", "D01"],
     "note": "Nguồn thứ hai: cổng thông tin ĐHQGHN",
     "source_url": "https://vnu.edu.vn/diem-chuan-diem-trung-tuyen-dai-hoc-chinh-quy-nam-2025-post38686.html",
     "source_trust_level": 4
@@ -358,7 +358,7 @@
     "admission_method": "thpt_score",
     "score_scale": 30,
     "cutoff_score": 27.75,
-    "subject_combinations": [],
+    "subject_combinations": ["A00", "A01", "X26", "X06", "D01"],
     "note": "Nguồn thứ hai: cổng thông tin ĐHQGHN",
     "source_url": "https://vnu.edu.vn/diem-chuan-diem-trung-tuyen-dai-hoc-chinh-quy-nam-2025-post38686.html",
     "source_trust_level": 4
@@ -369,7 +369,8 @@
       "HUST 2024/2025: bảng điểm trên ts.hust.edu.vn nhúng dạng ẢNH trong bài công bố; các con số được chép tay từ ảnh và đối chiếu chéo khớp 100% với các giá trị nêu trong phần văn bản của chính bài (2025: IT-E10 29.39, IT1 29.19, EE2 28.48, MS2 28.25, ET1 28.07; 2024: IT1 28.53, IT2 28.48, IT-E10 28.22).",
       "UET 2025: nguồn thứ hai từ cổng ĐHQGHN (vnu.edu.vn post38686) cho CN1/CN8/CN12 — giá trị TRÙNG với thông báo của trường nên không tạo conflict thật; cặp conflict EC-16 vẫn dựng bằng fixture.",
       "HUST IT2 / IT-E6 / IT-E7 cố tình KHÔNG đưa vào seed: tên chứa 'CNTT'/'Công nghệ Thông tin' hiện bị map_program resolve nhầm về computer_science (substring alias 'CNTT') → sẽ đè record IT1 cùng unique key. Chỉ bổ sung sau khi programs.json có entry riêng cho các ngành này.",
-      "UET 2024: trang gốc ghi điểm bằng dấu phẩy thập phân (27,8 = 27.80)."
+      "UET 2024: trang gốc ghi điểm bằng dấu phẩy thập phân (27,8 = 27.80).",
+      "Tổ hợp môn (backfill 2026-06-05) — bảng công bố điểm chuẩn thường KHÔNG ghi tổ hợp, lấy từ tài liệu chính thức CÙNG NĂM: HUST 2023 = bảng THPT trong chính bài cite (A00; A01); HUST 2024 = Phụ lục I dự kiến chỉ tiêu 2024 (hust.edu.vn/uploads/sys/tuyen-sinh/2023_06/phu-luc-1_du-kien-chi-tieu-2024_final.pdf, cột 'Tổ hợp xét tuyển' A00, A01 — K00 là mã ĐGTD); HUST 2025 = QĐ phê duyệt TTTS 2025 (hust.edu.vn/uploads/sys/tuyen-sinh/2025_06/qd-phe-duyet-thong-tin-tuyen-sinh-nam-2025-10.06.2025_1.pdf): 'THPT (A00 (Gốc); A01; K01)' cho cả IT1/IT-E10/IT-E15/MI1; K01 = Toán, Văn + 1 trong Lý/Hóa/Sinh/Tin (tuyensinh247 tách K01 thành C01/C02/B03/X02); UET 2023 = đề án TS 2023 (tuyensinh.vnu.edu.vn/index.php/Home/viewpage/143: A00; A01; D01 Toán,Anh hệ số 2); UET 2024 = đề án TS 2024 (tuyensinh.uet.vnu.edu.vn/wp-content/images/QHI_De-an-TS-DHCQ-nam-2024.pdf tr.6: A00 A01 D01); UET 2025 = TTTS 2025 (tuyensinh.uet.vnu.edu.vn/wp-content/images/Thong-tin-tuyen-sinh-DHCQ-nam-2025-QHI.pdf tr.3: A00/A01/X26/X06/D01 'Tất cả các ngành'). Điểm thống kê 2023/2024 trong QĐ HUST 2025 khớp 100% với seed — cross-check bổ sung."
     ]
   }
 ]
