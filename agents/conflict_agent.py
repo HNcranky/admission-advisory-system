@@ -1,8 +1,8 @@
 from services import build_default_gateway
 from services.conflict.comparison_agent import compare
-from services.conflict.detection import detect_quota_conflicts
+from services.conflict.detection import detect_cutoff_conflicts, detect_quota_conflicts
 from services.conflict.evidence_agent import package_evidence
-from services.conflict.resolution_agent import resolve
+from services.conflict.resolution_agent import resolve, resolve_cutoff_conflict
 from services.conflict.resolution_inference_service import interpret_conflict_tiebreak
 from state import AgentState
 
@@ -21,18 +21,32 @@ def _mark_uncertain(state: AgentState, conflict_key: str, field_name: str) -> No
             candidate.data_uncertain_fields.append(field_name)
 
 
+def _mark_uncertain_cutoff(state: AgentState, school_id: str, program_key: str) -> None:
+    """conflict_key của cutoff chứa cutoff_year (≠ admission_year của candidate)
+    nên không match key candidate — mark theo (school, program)."""
+    for candidate in state.retrieved_programs:
+        if candidate.school_id != school_id:
+            continue
+        if (candidate.program_id or candidate.program_name) != program_key:
+            continue
+        if "cutoff_score" not in candidate.data_uncertain_fields:
+            candidate.data_uncertain_fields.append("cutoff_score")
+
+
 def conflict_agent(state: AgentState):
-    records = detect_quota_conflicts(state.retrieved_programs)
+    quota_records = detect_quota_conflicts(state.retrieved_programs)
+    cutoff_records = detect_cutoff_conflicts(state.retrieved_programs)
     outcomes = []
 
-    gateway = build_default_gateway() if records else None
+    # Gateway (LLM tiebreaker) CHỈ cho quota; cutoff không bao giờ pick-winner bằng LLM (EC-16).
+    gateway = build_default_gateway() if quota_records else None
     tiebreak = (
         (lambda record, report: interpret_conflict_tiebreak(record, report, gateway))
         if gateway is not None
         else None
     )
 
-    for record in records:
+    for record in quota_records:
         options = package_evidence(record, state.retrieved_programs)
         record.options = options
         report = compare(options)
@@ -41,7 +55,15 @@ def conflict_agent(state: AgentState):
         if outcome.status == "unresolved":
             _mark_uncertain(state, record.conflict_key, record.field_name)
 
-    state.conflict_records = records
+    for record in cutoff_records:
+        outcome = resolve_cutoff_conflict(record, state.student_profile)
+        outcomes.append(outcome)
+        if outcome.status == "unresolved":
+            _mark_uncertain_cutoff(
+                state, record.school_id, record.program_id or record.program_name
+            )
+
+    state.conflict_records = quota_records + cutoff_records
     state.resolution_outcomes = outcomes
     state.conflicts = [
         outcome.rationale
