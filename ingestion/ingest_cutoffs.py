@@ -38,6 +38,8 @@ def validate_entries(
     records: List[NormalizedCutoffRecord] = []
     errors: List[str] = []
     for i, e in enumerate(entries):
+        if "_notes" in e:
+            continue  # phần tử ghi chú curation cuối seed — không phải bản ghi
         school_id = (e.get("school_id") or "").strip()
         if school_filter and school_id != school_filter:
             continue

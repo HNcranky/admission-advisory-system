@@ -45,6 +45,15 @@ def test_validate_entries_is_atomic_and_reports_all_errors(monkeypatch):
     assert len(errors) == 5   # MỌI lỗi đều được liệt kê, không dừng ở lỗi đầu
 
 
+def test_validate_entries_skips_notes_entry(monkeypatch):
+    monkeypatch.setattr(ingest_cutoffs, "map_program", _fake_map_program)
+    records, errors = ingest_cutoffs.validate_entries(
+        [_entry(), {"_notes": ["nguồn thứ hai cho HUST chưa có"]}],
+    )
+    assert errors == []
+    assert len(records) == 1
+
+
 def test_school_filter(monkeypatch):
     monkeypatch.setattr(ingest_cutoffs, "map_program", _fake_map_program)
     records, errors = ingest_cutoffs.validate_entries(
