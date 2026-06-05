@@ -52,6 +52,7 @@ _FIELD_LABELS = {
     "quota": "chỉ tiêu tuyển sinh",
     "subject_combinations": "tổ hợp xét tuyển",
     "tuition": "học phí",
+    "cutoff_score": "điểm chuẩn",
 }
 
 CLOSING_QUESTION = (
@@ -80,6 +81,15 @@ def _program_label(candidate: CandidateProgram) -> str:
     fallback program_name (canonical) khi raw rỗng/null."""
     raw = (candidate.program_name_raw or "").strip()
     return raw or candidate.program_name
+
+
+def _cutoff_reference_line(assessment) -> str:
+    """'Điểm chuẩn tham chiếu {year}: v1 (nguồn A) / v2 (nguồn B)' — EC-16 dual display."""
+    values = " / ".join(
+        f"{_fmt_num(v['value'])} ({label_for_source(v['source_url'])})"
+        for v in assessment.latest_values
+    )
+    return f"Điểm chuẩn tham chiếu {assessment.reference_year}: {values}"
 
 
 def _candidate_conflict_key(candidate: CandidateProgram) -> str:
@@ -202,11 +212,16 @@ def _data_note(candidate: CandidateProgram, outcome_by_key: Dict[str, Resolution
 
     if outcome is not None and outcome.status == "resolved" and outcome.chosen_evidence:
         field = _field_label(outcome.field_name)
-        source = label_for_source(outcome.chosen_evidence.source_url)
+        chosen = outcome.chosen_evidence
+        all_options = [chosen] + list(outcome.rejected_evidence)
+        values = " và ".join(
+            f"{_fmt_num(o.value)} ({label_for_source(o.source_url)})" for o in all_options
+        )
         return (
-            f"**Lưu ý dữ liệu:** Các nguồn hiện ghi khác nhau về {field}. "
-            f"Hệ thống tham chiếu giá trị {outcome.resolved_value} từ {source}, "
-            "nhưng em nên kiểm tra thông báo tuyển sinh chính thức mới nhất của trường trước khi đăng ký."
+            f"**Lưu ý dữ liệu:** Các nguồn ghi khác nhau về {field}: {values}. "
+            f"Hệ thống tham chiếu giá trị {_fmt_num(outcome.resolved_value)} từ "
+            f"{label_for_source(chosen.source_url)}, nhưng em nên kiểm tra thông báo "
+            "tuyển sinh chính thức mới nhất của trường trước khi đăng ký."
         )
 
     if outcome is not None:
@@ -283,6 +298,20 @@ def build_explanation(
 
     if renderable:
         lines.append(_intro_paragraph(profile, admission_year, len(renderable)))
+        ref_years = sorted({
+            rec.cutoff_assessment.reference_year
+            for rec, _candidate in renderable
+            if rec.cutoff_assessment is not None
+        })
+        if ref_years and policy and "historical_cutoff_reference" in policy.policy_flags:
+            years_text = ", ".join(str(y) for y in ref_years)
+            target = f"năm {admission_year}" if admission_year else "sắp tới"
+            lines.append("")
+            lines.append(
+                f"Chưa có điểm chuẩn chính thức cho kỳ tuyển sinh {target}. "
+                f"Đánh giá dưới đây sử dụng dữ liệu năm {years_text} làm tham chiếu "
+                "và có thể thay đổi khi trường công bố thông tin mới."
+            )
         for idx, (recommendation, candidate) in enumerate(renderable, start=1):
             lines.append("")
             lines.append(f"### {idx}. {candidate.school_name} — {_program_label(candidate)}")
@@ -291,6 +320,8 @@ def build_explanation(
 
             bullets = [_translate(r) for r in recommendation.reasons[:3]]
             bullets += [_translate(c) for c in recommendation.cautions[:3]]
+            if recommendation.cutoff_assessment is not None and recommendation.cutoff_assessment.latest_values:
+                bullets.append(_cutoff_reference_line(recommendation.cutoff_assessment))
             if bullets:
                 lines.append("")
                 for bullet in bullets:

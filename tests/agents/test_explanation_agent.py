@@ -1,6 +1,7 @@
 from agents.explanation_agent import explanation_agent
 from agents.models import (
     CandidateProgram,
+    CutoffAssessment,
     Evidence,
     PolicyDecision,
     RankedRecommendation,
@@ -456,3 +457,82 @@ def test_no_match_without_any_criteria_falls_back_generic():
     )
 
     assert "chưa tìm thấy chương trình phù hợp trong dữ liệu hiện có" in answer
+
+
+def _candidate_with_rec(assessment=None, policy=None):
+    state = AgentState(user_query="Tu van", admission_year=2026)
+    state.student_profile = StudentProfile(
+        total_score=26.5, admission_method="thpt_score", subject_combination="A00",
+        preferred_majors=["computer_science"],
+    )
+    state.retrieved_programs = [
+        CandidateProgram(
+            candidate_id="hust:1", school_id="hust", school_name="HUST",
+            admission_year=2026, program_id="computer_science",
+            program_name="Khoa hoc May tinh", admission_method="thpt_score",
+            evidence=[Evidence(source_url="https://src", school_name="HUST",
+                               admission_year=2026, field_name="record")],
+        )
+    ]
+    state.ranked_recommendations = [
+        RankedRecommendation(candidate_id="hust:1", band="match", score=0.6,
+                             summary="fit", cutoff_assessment=assessment)
+    ]
+    state.policy_decision = policy
+    return state
+
+
+def test_cutoff_reference_line_renders_all_values():
+    assessment = CutoffAssessment(
+        score_fit="below", reference_year=2025, margin=-0.3,
+        latest_values=[
+            {"value": 26.2, "source_url": "mock://uet/program-page", "trust_level": 4},
+            {"value": 26.8, "source_url": "mock://vnu/proposal-pdf", "trust_level": 5},
+        ],
+        conflicted=True, decision_changing=True,
+    )
+    output = explanation_agent(_candidate_with_rec(assessment))
+
+    answer = output.final_answer
+    assert "Điểm chuẩn tham chiếu 2025" in answer
+    assert "26.2" in answer and "26.8" in answer           # EC-16: hiển thị CẢ HAI giá trị
+
+
+def test_global_caveat_renders_with_policy_flag():
+    assessment = CutoffAssessment(score_fit="above", reference_year=2025, margin=1.5)
+    policy = PolicyDecision(policy_flags=["historical_cutoff_reference"])
+    output = explanation_agent(_candidate_with_rec(assessment, policy))
+
+    answer = output.final_answer
+    assert "Chưa có điểm chuẩn chính thức cho kỳ tuyển sinh năm 2026" in answer
+    assert "dữ liệu năm 2025 làm tham chiếu" in answer
+
+
+def test_no_global_caveat_without_flag():
+    assessment = CutoffAssessment(score_fit="above", reference_year=2025, margin=1.5)
+    output = explanation_agent(_candidate_with_rec(assessment, PolicyDecision()))
+    assert "Chưa có điểm chuẩn chính thức" not in output.final_answer
+
+
+def test_ec17_data_note_lists_both_quota_values_with_sources():
+    chosen = EvidenceOption(evidence_id="mock://vnu/proposal-pdf|quota",
+                            source_url="mock://vnu/proposal-pdf", trust_level=3, value=150)
+    rejected = EvidenceOption(evidence_id="mock://uet/program-page|quota",
+                              source_url="mock://uet/program-page", trust_level=2, value=120)
+    state = _candidate_with_rec()
+    state.retrieved_programs[0].candidate_id = "hust:2026:computer_science:thpt_score"
+    state.ranked_recommendations[0].candidate_id = "hust:2026:computer_science:thpt_score"
+    state.resolution_outcomes = [
+        ResolutionOutcome(
+            conflict_key="hust:2026:computer_science:thpt_score", field_name="quota",
+            school_id="hust", school_name="HUST", program_name="Khoa hoc May tinh",
+            status="resolved", resolved_value=150,
+            chosen_evidence=chosen, rejected_evidence=[rejected],
+            rationale="Resolved by deterministic comparison.", decision_axes=["trust_level"],
+        )
+    ]
+    output = explanation_agent(state)
+
+    answer = output.final_answer
+    assert "120" in answer and "150" in answer             # EC-17: đủ CẢ HAI giá trị + nguồn
+    assert "tham chiếu giá trị 150" in answer
