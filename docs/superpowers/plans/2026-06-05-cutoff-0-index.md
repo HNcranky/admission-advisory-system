@@ -16,7 +16,7 @@
 | 2 | [`...-2-retrieval-attach.md`](2026-06-05-cutoff-2-retrieval-attach.md) — `fetch_cutoff_history` + attach vào candidate + integration DB test | nền runtime | Plan 1 |
 | 3 | [`...-3-assessment-reasoning-policy.md`](2026-06-05-cutoff-3-assessment-reasoning-policy.md) — `services/cutoff/assessment.py`, reasoning margin-based, 2 policy guardrails | EC-14, EC-15 (+lõi 16/18) | Plan 1 |
 | 4 | [`...-4-conflict-explanation-e2e.md`](2026-06-05-cutoff-4-conflict-explanation-e2e.md) — `detect_cutoff_conflicts`, outcome deterministic, explanation + caveat EC-18, fix EC-17, e2e GWT | EC-16, EC-18, EC-17 | Plan 3 (runtime cần Plan 2) |
-| 5 | [`...-5-hust-parser.md`](2026-06-05-cutoff-5-hust-parser.md) — probe trang điểm chuẩn HUST 2025, parser `hust_cutoff_html`, runner `--source-url` | proof-of-automation | Plan 1 |
+| 5 | [`...-5-hust-parser.md`](2026-06-05-cutoff-5-hust-parser.md) — parser `tuyensinh247_cutoff_html` (trang điểm chuẩn BKA trên diemthi.tuyensinh247.com, 4 bảng phương thức, trust 3), runner `--source-url` | proof-of-automation | Plan 1 |
 
 Plan 2 và Plan 3 độc lập nhau (đều chỉ cần Plan 1). Plan 5 độc lập với 2–4, làm cuối
 vì cần network probe. Plan 1 chứa MỘT task thủ công (tra số liệu điểm chuẩn thật) — có

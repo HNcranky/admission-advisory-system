@@ -2,6 +2,11 @@
 
 Ngày: 2026-06-05 · Trạng thái: đã duyệt hướng tiếp cận với user · Nguồn yêu cầu: `docs/edge-case.md` + audit edge-case 2026-06-05
 
+> **Cập nhật 2026-06-05 (đã duyệt với user):** đổi nguồn parser proof-of-automation từ trang
+> chính thức `ts.hust.edu.vn` sang aggregator `diemthi.tuyensinh247.com` (HTML tĩnh, bảng đồng
+> nhất 4 phương thức, template chung mọi trường). Aggregator chỉ là nguồn phụ **trust 3**;
+> seed tay từ nguồn chính thức (trust 5) vẫn là tham chiếu chính. Xem quyết định #1 và mục 4.2.3.
+
 ## 1. Bối cảnh & mục tiêu
 
 Giai đoạn 1 (spec `2026-06-04-phase1-reasoning-integrity-design.md`) đã xử lý EC-04/12/13/22/24.
@@ -26,7 +31,8 @@ cho chảy qua retrieval → conflict → reasoning → explanation, và sửa n
 - Seed curated điểm chuẩn HUST + VNU-UET, phương thức `thpt_score` thang 30, năm 2023–2025,
   mỗi con số kèm `source_url` thật + trust level; một số chương trình demo có ≥2 nguồn để EC-16 có dữ liệu thật.
 - Loader CLI `python -m ingestion.ingest_cutoffs` (validate atomic, dry-run, upsert).
-- **Một** parser trang chính thức (`hust_cutoff_html`, điểm chuẩn 2025 trên ts.hust.edu.vn) làm proof-of-automation.
+- **Một** parser aggregator (`tuyensinh247_cutoff_html`, trang điểm chuẩn BKA 2025 trên
+  diemthi.tuyensinh247.com — đủ 4 bảng phương thức, trust 3) làm proof-of-automation.
 - Retrieval attach `cutoff_history` vào `CandidateProgram`.
 - Module đánh giá thuần `services/cutoff/assessment.py` (margin/borderline/volatility/conflict semantics).
 - Reasoning: bonus theo margin thật thay bonus ngưỡng tuyệt đối khi có dữ liệu; band cap; cautions.
@@ -37,7 +43,9 @@ cho chảy qua retrieval → conflict → reasoning → explanation, và sửa n
 
 **Ngoài phạm vi (giai đoạn sau):**
 - NEU (chưa có structured ingestion đề án → không có candidate để join).
-- Cutoff thang ≠ 30 (ĐGNL/ĐGTD). **Tuyệt đối không quy đổi giữa các thang** (giữ nguyên tắc Phase 1).
+- **Assessment** cutoff thang ≠ 30 (ĐGNL/ĐGTD): parser tuyensinh247 vẫn LƯU các bảng thang 100
+  (ĐGTD/XTKH/CCQT) vào store, nhưng gate assessment chỉ dùng thang 30 (lọc theo `score_scale`).
+  **Tuyệt đối không quy đổi giữa các thang** (giữ nguyên tắc Phase 1).
 - Fallback đề án năm cũ trong retrieval (EC-18 ở phase này = reference_year cho cutoff; retrieval
   không đổi — đề án 2026 đã có trong store, thiếu năm đề án → đường EC-24 hiện có xử lý).
 - LLM-fallback extractor cho trang cutoff lạ format (chỉ 1 parser deterministic).
@@ -50,8 +58,8 @@ cho chảy qua retrieval → conflict → reasoning → explanation, và sửa n
 
 | # | Quyết định | Lựa chọn |
 |---|---|---|
-| 1 | Nguồn dữ liệu điểm chuẩn | **Seed tay curated** (mỗi số kèm source_url thật + trust) **+ 1 parser** trang chính thức HUST làm proof; không dùng aggregator |
-| 2 | Phạm vi trường/phương thức/năm | **HUST + VNU-UET · chỉ `thpt_score` thang 30 · 2023–2025** (EC-15 cần ≥3 năm) |
+| 1 | Nguồn dữ liệu điểm chuẩn | **Seed tay curated** (mỗi số kèm source_url thật + trust, từ nguồn chính thức) **+ 1 parser** aggregator tuyensinh247 (trust 3) làm proof. *Sửa 2026-06-05: ban đầu chọn parser trang chính thức ts.hust.edu.vn / "không dùng aggregator"; đổi vì trang tuyensinh247 là HTML tĩnh, bảng đồng nhất 4 phương thức, template chung mọi trường. Aggregator chỉ làm nguồn phụ trust 3 — seed chính thức vẫn là tham chiếu chính* |
+| 2 | Phạm vi trường/phương thức/năm | Seed: **HUST + VNU-UET · chỉ `thpt_score` thang 30 · 2023–2025** (EC-15 cần ≥3 năm). Parser: **HUST · cả 4 phương thức trên trang (THPT thang 30; ĐGTD/XTKH/CCQT thang 100) · chỉ năm có trên HTML tĩnh (2025)** — không reverse-engineer API năm cũ của tuyensinh247 |
 | 3 | Phạm vi EC-18 | **Chỉ reference_year cho cutoff**; không fallback năm trong retrieval |
 | 4 | Mô hình lưu trữ | **Bảng riêng `cutoff_records`** per-source. Loại phương án nhét `metadata` JSONB (re-crawl đề án sẽ wipe vì `db_writer` upsert `metadata = EXCLUDED.metadata`); loại phương án row `admission_year` quá khứ (lạm dụng ngữ nghĩa, vô hình với filter năm, loạn conflict grouping) |
 | 5 | Ngữ nghĩa conflict cutoff | **Không bao giờ LLM pick-winner.** Decision-changing → `unresolved` + nhãn bảo thủ + hiển thị đủ giá trị/nguồn; không decision-changing → `resolved` theo trust nhưng rationale/hiển thị vẫn nêu đủ giá trị |
@@ -139,10 +147,14 @@ Mỗi entry một con số điểm chuẩn:
 - **EC-16 cần conflict thật**: với ≥2 chương trình demo, seed thêm entry thứ hai cùng
   `(school, program, year, method)` từ nguồn chính thức khác (vd trang trường vs đề án PDF/cổng ĐHQG).
 - Số liệu tra tay từ trang chính thức lúc soạn seed; mỗi số phải dán đúng URL nguồn — **không bịa**.
+- Parser tuyensinh247 (4.2.3) upsert thêm row 2025 với `source_url` tuyensinh247 → cùng
+  `(school, program, 2025, thpt_score)` tự nhiên có 2 nguồn (seed chính thức trust 5 vs aggregator
+  trust 3) — EC-16 có dữ liệu đa nguồn thật không cần dàn dựng.
 
 #### 4.2.2 Loader CLI `python -m ingestion.ingest_cutoffs`
 
-- Flags: `--seed [path]` (default file trên), `--school <id>`, `--dry-run`, `--source <source_id>` (đường parser, xem 4.2.3).
+- Flags: `--seed [path]` (default file trên), `--school <id>`, `--dry-run`; đường parser:
+  `--source-url <url> --parser <profile> [--year <filter>] [--trust <n>]` (xem 4.2.3).
 - **Validate atomic trước khi ghi**: resolve `program_name_raw`/`program_code_raw` → `program_id`
   qua `map_program(..., school_id=...)` sẵn có; `admission_method ∈ METHOD_CODES`;
   `0 < cutoff_score <= score_scale`; `cutoff_year` trong [2020, ADMISSION_YEAR]; `source_url` non-empty.
@@ -152,19 +164,33 @@ Mỗi entry một con số điểm chuẩn:
   (upsert `ON CONFLICT ... DO UPDATE`, dùng `get_cursor` như các hàm hiện có).
 - Dry-run: in bảng records đã normalize + đếm, không chạm DB.
 
-#### 4.2.3 Parser proof-of-automation `hust_cutoff_html`
+#### 4.2.3 Parser proof-of-automation `tuyensinh247_cutoff_html`
 
-- `initial_sources.json` thêm source mới: `source_type: "cutoff_announcement"` (mở rộng Literal trong
-  `ingestion/registry/models.py`), `parser_profile: "hust_cutoff_html"`, trust 5 — trang công bố
-  điểm chuẩn 2025 trên `ts.hust.edu.vn`. **URL chính xác probe lúc implement** (pattern
-  `scripts/hust_preflight_inspect.py`); fixture HTML tĩnh chụp về cho test.
-- Parser deterministic theo template `hust_announcement_html_parser`: tìm bảng có header chứa
-  "Điểm chuẩn"/"Điểm trúng tuyển", map cột mã ngành/tên ngành/điểm, trả `List[ExtractedCutoffFact]`,
-  confidence 0.9. Đăng ký vào `ParserRegistry` như các parser hiện có.
-- **Runner riêng** trong `ingest_cutoffs --source hust_cutoff_2025`: fetch (`http_fetcher`) → parser →
-  normalize (resolve program/method bằng mapper hiện có, parse score) → `save_cutoff_records`.
-  **Không đụng `IngestionPipeline`** — tránh trộn hai loại fact trong một pipeline.
-- VNU-UET mọi năm + HUST 2023/2024 đi đường seed (không viết thêm parser ở phase này).
+- Nguồn: `https://diemthi.tuyensinh247.com/diem-chuan/dai-hoc-bach-khoa-ha-noi-BKA.html`
+  (đã probe 2026-06-05: HTML tĩnh không cần JS, không chặn UA; 4 bảng
+  `Tên ngành | Tổ hợp môn | Điểm chuẩn | Ghi chú`, mỗi bảng đứng sau heading `h3`
+  "Điểm chuẩn theo phương thức {X} năm {Y}". Dữ liệu năm cũ load qua JS — ngoài phạm vi;
+  lịch sử 2023–2024 vẫn đi đường seed).
+- `initial_sources.json` thêm source `hust_cutoff_tsn247_2025`: `source_type: "cutoff_announcement"`
+  (mở rộng Literal/enum trong `ingestion/registry/models.py`), `parser_profile: "tuyensinh247_cutoff_html"`,
+  `trust_level: 3` (aggregator), `is_official: false`, `active: false`.
+- Parser **generic theo template tuyensinh247** (mọi trường dùng chung layout — thêm trường sau này
+  chỉ cần thêm entry source, không sửa code): với mỗi `h3` khớp
+  `Điểm chuẩn theo phương thức (.+?) năm (20\d{2})` → parse bảng kế tiếp.
+  `admission_method_raw` = text phương thức từ heading — 4 giá trị hiện tại đã map sạch qua
+  `map_method(..., school_id)` sẵn có: `thpt_score` / `competency_test` / `combined` / `talent_admission`
+  (đã verify bằng probe, không cần thêm alias). `cutoff_year` lấy từ heading (CLI `--year` chỉ là
+  filter tùy chọn). Cột Tổ hợp môn tách `;` → `subject_combinations_raw`; Ghi chú → `note_raw`.
+  **Trang không có cột mã ngành** → `program_code=None`, resolve hoàn toàn bằng `map_program`
+  fuzzy theo tên (lệch tên → bổ sung alias `programs.json`). Row rác
+  ("Tra cứu tại: Tuyensinh247...") loại bằng điều kiện cột điểm phải là số. Confidence 0.85.
+- `score_scale` theo method đã normalize: `thpt_score` → 30, còn lại → 100; validate
+  `0 < cutoff_score <= score_scale`. Entry thang 100 chỉ nằm trong store — gate assessment (WS4)
+  lọc `score_scale == 30` nên không ảnh hưởng reasoning.
+- **Runner riêng** trong `ingest_cutoffs --source-url <url> --parser tuyensinh247_cutoff_html`:
+  fetch (`http_fetcher`) → parser → normalize (per-row skip + report — khác seed vốn atomic) →
+  `save_cutoff_records`. **Không đụng `IngestionPipeline`** — tránh trộn hai loại fact trong một pipeline.
+- VNU-UET mọi năm + HUST 2023/2024 đi đường seed (không đăng ký thêm source parser nào khác ở phase này).
 
 ### WS3 — Retrieval attach lịch sử cutoff
 
@@ -345,7 +371,9 @@ advisory run: profile → retrieve (fetch_candidates + attach cutoff_history)
    (sai method / thiếu điểm / history rỗng), 2 năm → không volatility, tie-break trust.
 2. `tests/ingestion/test_cutoff_seed_loader.py` (mới) — validate atomic (1 entry hỏng → không ghi gì),
    resolve program qua dictionary, dry-run không chạm DB, upsert idempotent (fake cursor).
-3. `tests/ingestion/test_hust_cutoff_html_parser.py` (mới) — fixture HTML tĩnh, đúng pattern parser test hiện có.
+3. `tests/ingestion/test_tuyensinh247_cutoff_parser.py` (mới) — fixture synthetic + snapshot thật
+   trang BKA: đúng method/năm theo heading, tách tổ hợp môn, bỏ row rác, filter `--year`;
+   4 method text map đúng code qua `map_method`.
 4. `tests/services/conflict/test_detection.py` (mở rộng) — group theo (school, program, year, method),
    dedupe candidate_id, 1 nguồn → không conflict.
 5. `tests/agents/test_conflict_agent.py` (mở rộng) — cutoff decision-changing → unresolved + mark uncertain;
@@ -377,9 +405,9 @@ advisory run: profile → retrieve (fetch_candidates + attach cutoff_history)
 | `ingestion/cutoff/seeds/cutoff_2023_2025.json` | MỚI — seed curated kèm nguồn |
 | `ingestion/ingest_cutoffs.py` (module CLI) | MỚI — validate atomic, dry-run, seed + source runner |
 | `ingestion/storage/db_writer.py` | += `save_cutoff_records` |
-| `ingestion/parsers/hust_cutoff_html_parser.py` | MỚI — parser deterministic |
+| `ingestion/parsers/tuyensinh247_cutoff_parser.py` | MỚI — parser deterministic tuyensinh247 (generic theo template, 4 bảng phương thức) |
 | `ingestion/registry/models.py` | source_type += `cutoff_announcement` |
-| `ingestion/registry/seeds/initial_sources.json` | += source điểm chuẩn HUST 2025 |
+| `ingestion/registry/seeds/initial_sources.json` | += source `hust_cutoff_tsn247_2025` (trust 3, `active: false`) |
 | `agents/models.py` | += `CutoffEntry`, `CutoffAssessment`; `CandidateProgram.cutoff_history`; `RankedRecommendation.cutoff_assessment` |
 | `services/retrieval_service.py` | += `fetch_cutoff_history` + attach trong `fetch_candidates` |
 | `services/cutoff/assessment.py` | MỚI — constants + `assess_cutoff` + helper classify |
