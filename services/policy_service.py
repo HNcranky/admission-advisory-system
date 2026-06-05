@@ -56,6 +56,19 @@ def evaluate_policy_guardrails(
             "(ví dụ tổ hợp); xem chi tiết trong phần giải thích."
         )
 
+    assessments = [
+        rec.cutoff_assessment for rec in recommendations if rec.cutoff_assessment is not None
+    ]
+    if assessments:
+        # EC-18: mọi đánh giá dựa trên cutoff lịch sử → explanation phải render caveat năm tham chiếu.
+        policy_flags.append("historical_cutoff_reference")
+        if any(
+            a.score_fit in {"borderline", "uncertain"} or a.decision_changing
+            for a in assessments
+        ):
+            # EC-14/15/16: chặn ngôn ngữ khẳng định trúng tuyển khi sát ngưỡng/biến động/conflict.
+            blocked_claims.append("no_admission_assertion_on_reference_cutoff")
+
     lower_query = user_query.lower()
     if "chac do" in lower_query or "chac chan do" in lower_query:
         blocked_claims.append("no_definitive_admission_answer")
