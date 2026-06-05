@@ -19,7 +19,7 @@
 - Create: `services/cutoff/assessment.py`
 - Test: `tests/services/cutoff/__init__.py` (rỗng), `tests/services/cutoff/test_assessment.py`
 
-- [ ] **Step 1: Viết test fail** — create `tests/services/cutoff/test_assessment.py`:
+- [x] **Step 1: Viết test fail** — create `tests/services/cutoff/test_assessment.py`:
 
 ```python
 from agents.models import CutoffEntry
@@ -120,12 +120,12 @@ def test_scale_none_treated_as_thang_30():
     assert a is not None and a.score_fit == "above"
 ```
 
-- [ ] **Step 2: Chạy để thấy fail**
+- [x] **Step 2: Chạy để thấy fail**
 
 Run: `python -m pytest tests/services/cutoff/test_assessment.py -q`
 Expected: FAIL — `ModuleNotFoundError: No module named 'services.cutoff'`
 
-- [ ] **Step 3: Implement** — create `services/cutoff/__init__.py` (rỗng) và `services/cutoff/assessment.py`:
+- [x] **Step 3: Implement** — create `services/cutoff/__init__.py` (rỗng) và `services/cutoff/assessment.py`:
 
 ```python
 """Đối chiếu điểm hồ sơ với điểm chuẩn lịch sử (EC-14/15/16/18) — pure, không I/O.
@@ -236,12 +236,12 @@ def assess_cutoff(
     )
 ```
 
-- [ ] **Step 4: Chạy test**
+- [x] **Step 4: Chạy test**
 
 Run: `python -m pytest tests/services/cutoff/test_assessment.py -q`
 Expected: PASS 11 test.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add services/cutoff/ tests/services/cutoff/
@@ -256,7 +256,7 @@ git commit -m "feat: pure cutoff assessment (margin, borderline, volatility, con
 - Modify: `services/reasoning_service.py`
 - Test: `tests/agents/test_reasoning_agent.py` (append)
 
-- [ ] **Step 1: Viết test fail** — append vào `tests/agents/test_reasoning_agent.py` (đã có helper `_candidate`; thêm import đầu file: `from agents.models import CutoffEntry`):
+- [x] **Step 1: Viết test fail** — append vào `tests/agents/test_reasoning_agent.py` (đã có helper `_candidate`; thêm import đầu file: `from agents.models import CutoffEntry`):
 
 ```python
 def _hist(*pairs, source="https://ts.hust.edu.vn/dc", trust=5):
@@ -378,12 +378,12 @@ def test_no_history_falls_back_to_absolute_threshold():
     assert rec.cutoff_assessment is None
 ```
 
-- [ ] **Step 2: Chạy để thấy fail**
+- [x] **Step 2: Chạy để thấy fail**
 
 Run: `python -m pytest tests/agents/test_reasoning_agent.py -q`
 Expected: 7 test mới FAIL (TypeError `cutoff_assessment` chưa gắn / band không cap); test cũ PASS.
 
-- [ ] **Step 3: Implement** — sửa `services/reasoning_service.py`:
+- [x] **Step 3: Implement** — sửa `services/reasoning_service.py`:
 
 (a) Imports — đổi dòng 4-9 thành:
 
@@ -528,12 +528,12 @@ def _apply_assessment(assessment, reasons, cautions, candidate):
                 cutoff_assessment=assessment,
 ```
 
-- [ ] **Step 4: Chạy test**
+- [x] **Step 4: Chạy test**
 
 Run: `python -m pytest tests/agents/test_reasoning_agent.py tests/services -q`
 Expected: PASS toàn bộ (7 mới + cũ; `test_uncertain_quota_candidate_is_not_safe_band` vẫn xanh — total 29, không history → fallback +0.10).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add services/reasoning_service.py tests/agents/test_reasoning_agent.py
@@ -548,7 +548,7 @@ git commit -m "feat: margin-based score fit with band caps from historical cutof
 - Modify: `services/policy_service.py`
 - Test: `tests/agents/test_policy_agent.py` (append)
 
-- [ ] **Step 1: Viết test fail** — append vào `tests/agents/test_policy_agent.py` (thêm các import sau đầu file nếu chưa có):
+- [x] **Step 1: Viết test fail** — append vào `tests/agents/test_policy_agent.py` (thêm các import sau đầu file nếu chưa có):
 
 ```python
 from agents.models import (
@@ -610,12 +610,12 @@ def test_policy_no_cutoff_flags_without_assessment():
     assert "historical_cutoff_reference" not in decision.policy_flags
 ```
 
-- [ ] **Step 2: Chạy để thấy fail**
+- [x] **Step 2: Chạy để thấy fail**
 
 Run: `python -m pytest tests/agents/test_policy_agent.py -q`
 Expected: 3 test mới FAIL (flag/claim chưa tồn tại).
 
-- [ ] **Step 3: Implement** — trong `services/policy_service.py`, thêm sau khối `if candidates and not recommendations:` (sau dòng 57):
+- [x] **Step 3: Implement** — trong `services/policy_service.py`, thêm sau khối `if candidates and not recommendations:` (sau dòng 57):
 
 ```python
     assessments = [
@@ -632,12 +632,12 @@ Expected: 3 test mới FAIL (flag/claim chưa tồn tại).
             blocked_claims.append("no_admission_assertion_on_reference_cutoff")
 ```
 
-- [ ] **Step 4: Chạy test**
+- [x] **Step 4: Chạy test**
 
 Run: `python -m pytest tests/agents/test_policy_agent.py tests/e2e/test_advisory_flow.py -q`
 Expected: PASS toàn bộ.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add services/policy_service.py tests/agents/test_policy_agent.py
