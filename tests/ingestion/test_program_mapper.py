@@ -30,10 +30,11 @@ def test_exact_only_rejects_substring_overmatch():
 
 def test_exact_only_rejects_variant_programs():
     # Chương trình hợp tác là ngành KHÁC (điểm chuẩn khác hẳn) — không được gộp vào ngành gốc.
+    # Từ plan 6 (dictionary BKA đủ 65 mã): variant có entry riêng → resolve về id riêng.
     pid, _ = map_program(
         "Khoa học máy tính - hợp tác với ĐH Troy (Hoa Kỳ)", school_id="hust", exact_only=True,
     )
-    assert pid is None
+    assert pid == "computer_science_troy"
 
 
 import ingestion.normalization.program_mapper as program_mapper
