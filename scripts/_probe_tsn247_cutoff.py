@@ -23,7 +23,7 @@ _HEADING_RE = re.compile(
 )
 
 
-def main() -> None:
+def probe_html() -> None:
     r = http_fetch(URL)
     print(f"status={r.http_status} size={len(r.raw_content)}")
 
@@ -57,6 +57,34 @@ def main() -> None:
         data = soup.encode("utf-8")
         out.write_bytes(data)
         print(f"\nĐã lưu {len(data)} bytes (gốc {len(r.raw_content)}) vào {out}")
+
+
+API_URL = ("https://diemthi.tuyensinh247.com/api/common/cutoff-score"
+           "?school_id={school}&method_id={method}&year={year}")
+
+
+def probe_api(school: str, method: str, year: str, save: str | None) -> None:
+    url = API_URL.format(school=school, method=method, year=year)
+    r = http_fetch(url)
+    import json as _json
+    payload = _json.loads(r.raw_content)
+    rows = payload.get("data") or []
+    print(f"status={r.http_status} success={payload.get('success')} rows={len(rows)}")
+    for row in rows[:5]:
+        print(f"  {row.get('code')!r} | {(row.get('name') or '')[:45]!r} | "
+              f"{row.get('block')!r} | {row.get('mark')}")
+    if save:
+        Path(save).write_bytes(r.raw_content)
+        print(f"Đã lưu {len(r.raw_content)} bytes vào {save}")
+
+
+def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == "api":
+        # python -m scripts._probe_tsn247_cutoff api <school_id> <method_id> <year> [out.json]
+        probe_api(sys.argv[2], sys.argv[3], sys.argv[4],
+                  sys.argv[5] if len(sys.argv) > 5 else None)
+        return
+    probe_html()
 
 
 if __name__ == "__main__":
