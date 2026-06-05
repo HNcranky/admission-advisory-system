@@ -18,7 +18,7 @@
 - Modify: `services/conflict/detection.py`
 - Test: `tests/services/conflict/test_detection.py` (append)
 
-- [ ] **Step 1: Viết test fail** — append (file đã import `CandidateProgram`; thêm `from agents.models import CutoffEntry` và `from services.conflict.detection import detect_cutoff_conflicts` ở đầu file nếu thiếu):
+- [x] **Step 1: Viết test fail** — append (file đã import `CandidateProgram`; thêm `from agents.models import CutoffEntry` và `from services.conflict.detection import detect_cutoff_conflicts` ở đầu file nếu thiếu):
 
 ```python
 def _cutoff_candidate(candidate_id="hust:2026:computer_science:thpt_score", history=()):
@@ -78,12 +78,12 @@ def test_detect_cutoff_conflicts_groups_per_year():
     assert len(records) == 1 and records[0].admission_year == 2025
 ```
 
-- [ ] **Step 2: Chạy để thấy fail**
+- [x] **Step 2: Chạy để thấy fail**
 
 Run: `python -m pytest tests/services/conflict/test_detection.py -q`
 Expected: FAIL — `ImportError: cannot import name 'detect_cutoff_conflicts'`
 
-- [ ] **Step 3: Implement** — append vào `services/conflict/detection.py` (import sẵn đủ):
+- [x] **Step 3: Implement** — append vào `services/conflict/detection.py` (import sẵn đủ):
 
 ```python
 def detect_cutoff_conflicts(candidates: List[CandidateProgram]) -> List[ConflictRecord]:
@@ -134,12 +134,12 @@ def detect_cutoff_conflicts(candidates: List[CandidateProgram]) -> List[Conflict
     return records
 ```
 
-- [ ] **Step 4: Chạy test**
+- [x] **Step 4: Chạy test**
 
 Run: `python -m pytest tests/services/conflict/test_detection.py -q`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add services/conflict/detection.py tests/services/conflict/test_detection.py
@@ -155,7 +155,7 @@ git commit -m "feat: detect cutoff conflicts across sources per (program, year, 
 - Modify: `agents/conflict_agent.py`
 - Test: `tests/agents/test_conflict_agent.py` (append)
 
-- [ ] **Step 1: Viết test fail** — append vào `tests/agents/test_conflict_agent.py` (thêm import: `from agents.models import CutoffEntry, StudentProfile`):
+- [x] **Step 1: Viết test fail** — append vào `tests/agents/test_conflict_agent.py` (thêm import: `from agents.models import CutoffEntry, StudentProfile`):
 
 ```python
 def _cutoff_state(total_score, values_by_source, trusts=(4, 5)):
@@ -225,12 +225,12 @@ def test_cutoff_without_profile_score_resolves_by_trust(monkeypatch):
     assert output.resolution_outcomes[0].status == "resolved"
 ```
 
-- [ ] **Step 2: Chạy để thấy fail**
+- [x] **Step 2: Chạy để thấy fail**
 
 Run: `python -m pytest tests/agents/test_conflict_agent.py -q`
 Expected: 3 test mới FAIL (cutoff records chưa được detect/resolve).
 
-- [ ] **Step 3: Implement `resolve_cutoff_conflict`** — trong `services/conflict/resolution_agent.py`, thêm import đầu file:
+- [x] **Step 3: Implement `resolve_cutoff_conflict`** — trong `services/conflict/resolution_agent.py`, thêm import đầu file:
 
 ```python
 from services.cutoff.assessment import classify_margin
@@ -302,7 +302,7 @@ def resolve_cutoff_conflict(record: ConflictRecord, profile) -> ResolutionOutcom
     )
 ```
 
-- [ ] **Step 4: Implement nhánh trong `agents/conflict_agent.py`** — thay toàn bộ file bằng:
+- [x] **Step 4: Implement nhánh trong `agents/conflict_agent.py`** — thay toàn bộ file bằng:
 
 ```python
 from services import build_default_gateway
@@ -380,12 +380,12 @@ def conflict_agent(state: AgentState):
     return state
 ```
 
-- [ ] **Step 5: Chạy test**
+- [x] **Step 5: Chạy test**
 
 Run: `python -m pytest tests/agents/test_conflict_agent.py tests/e2e/test_real_conflict_resolution.py -q`
 Expected: PASS toàn bộ (test quota cũ giữ nguyên hành vi).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add services/conflict/resolution_agent.py agents/conflict_agent.py tests/agents/test_conflict_agent.py
@@ -400,7 +400,7 @@ git commit -m "feat: deterministic cutoff conflict resolution without LLM tiebre
 - Modify: `services/explanation_service.py`
 - Test: `tests/agents/test_explanation_agent.py` (append)
 
-- [ ] **Step 1: Viết test fail** — append (thêm import: `from agents.models import CutoffAssessment`):
+- [x] **Step 1: Viết test fail** — append (thêm import: `from agents.models import CutoffAssessment`):
 
 ```python
 def _candidate_with_rec(assessment=None, policy=None):
@@ -482,12 +482,12 @@ def test_ec17_data_note_lists_both_quota_values_with_sources():
     assert "tham chiếu giá trị 150" in answer
 ```
 
-- [ ] **Step 2: Chạy để thấy fail**
+- [x] **Step 2: Chạy để thấy fail**
 
 Run: `python -m pytest tests/agents/test_explanation_agent.py -q`
 Expected: 4 test mới FAIL; test cũ PASS.
 
-- [ ] **Step 3: Implement** — sửa `services/explanation_service.py`:
+- [x] **Step 3: Implement** — sửa `services/explanation_service.py`:
 
 (a) `_FIELD_LABELS` (dòng 51-55) thêm:
 
@@ -560,12 +560,12 @@ chúng đã nằm trong `reasons`/`cautions` từ reasoning (Plan 3), tránh l�
         )
 ```
 
-- [ ] **Step 4: Chạy test**
+- [x] **Step 4: Chạy test**
 
 Run: `python -m pytest tests/agents/test_explanation_agent.py tests/services -q`
 Expected: PASS toàn bộ (test resolved-note cũ vẫn xanh — fixture cũ không có rejected_evidence nên chỉ liệt kê 1 giá trị).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add services/explanation_service.py tests/agents/test_explanation_agent.py
@@ -579,7 +579,7 @@ git commit -m "feat: cutoff reference display, EC-18 caveat, full-values data no
 **Files:**
 - Test: `tests/e2e/test_advisory_flow.py` (append)
 
-- [ ] **Step 1: Viết 4 test** — append (thêm import: `from agents.models import CutoffEntry`):
+- [x] **Step 1: Viết 4 test** — append (thêm import: `from agents.models import CutoffEntry`):
 
 ```python
 def _cutoff_profile(total_score):
@@ -673,17 +673,17 @@ EC-16 conflict đi nhánh deterministic nên KHÔNG cần monkeypatch policy gat
 degrade graceful theo pattern hiện có; nếu test EC-16 flake vì gateway, monkeypatch
 `policy_agent_module.build_default_gateway` trả fake như `test_advisory_flow_surfaces_uncertainty_for_policy_ambiguity`).
 
-- [ ] **Step 2: Chạy**
+- [x] **Step 2: Chạy**
 
 Run: `python -m pytest tests/e2e/test_advisory_flow.py -q`
 Expected: PASS 4 test mới + 4 test cũ.
 
-- [ ] **Step 3: Chạy toàn suite**
+- [x] **Step 3: Chạy toàn suite**
 
 Run: `python -m pytest -q`
 Expected: PASS toàn bộ (DB-less: integration tự skip).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tests/e2e/test_advisory_flow.py
