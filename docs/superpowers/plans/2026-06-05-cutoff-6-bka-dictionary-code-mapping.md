@@ -30,7 +30,7 @@
 - Modify: `ingestion/normalization/program_mapper.py` (hàm `map_program`)
 - Test: `tests/ingestion/test_program_mapper.py` (append)
 
-- [ ] **Step 1: Viết test fail** — append vào `tests/ingestion/test_program_mapper.py`:
+- [x] **Step 1: Viết test fail** — append vào `tests/ingestion/test_program_mapper.py`:
 
 ```python
 import ingestion.normalization.program_mapper as program_mapper
@@ -89,12 +89,12 @@ def test_no_school_id_disables_code_stage(monkeypatch):
     assert pid == "IT1"                # fallback (program_code, program_name) như cũ
 ```
 
-- [ ] **Step 2: Chạy để thấy fail**
+- [x] **Step 2: Chạy để thấy fail**
 
 Run: `python -m pytest tests/ingestion/test_program_mapper.py -q`
 Expected: 5 test mới FAIL (stage code chưa tồn tại — `map_program` trả theo tên/fallback).
 
-- [ ] **Step 3: Implement** — sửa `ingestion/normalization/program_mapper.py::map_program`.
+- [x] **Step 3: Implement** — sửa `ingestion/normalization/program_mapper.py::map_program`.
 Thay đoạn đầu hàm (từ `if not program_name:` đến `name_lower = ...`) thành:
 
 ```python
@@ -117,12 +117,12 @@ Thay đoạn đầu hàm (từ `if not program_name:` đến `name_lower = ...`)
 
 (`_load_dict` được gọi sớm hơn trước — có cache module nên không tốn thêm IO.)
 
-- [ ] **Step 4: Chạy test**
+- [x] **Step 4: Chạy test**
 
 Run: `python -m pytest tests/ingestion/test_program_mapper.py tests/ingestion/test_cutoff_seed_loader.py -q`
 Expected: PASS toàn bộ (test cũ không đổi hành vi — caller không truyền code giữ nguyên).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add ingestion/normalization/program_mapper.py tests/ingestion/test_program_mapper.py
@@ -138,7 +138,7 @@ git commit -m "feat: program code matching stage in map_program (codes field, pe
 - Data: `docs/superpowers/plans/data/2026-06-05-hust-programs-section.json` (đã commit sẵn — KHÔNG sửa)
 - Test: `tests/ingestion/test_bka_dictionary.py` (mới)
 
-- [ ] **Step 1: Viết test fail** — create `tests/ingestion/test_bka_dictionary.py`:
+- [x] **Step 1: Viết test fail** — create `tests/ingestion/test_bka_dictionary.py`:
 
 ```python
 """Integrity dictionary BKA: 65 mã hiện hành resolve theo code, không trùng chéo.
@@ -233,13 +233,13 @@ def test_variant_entries_do_not_pollute_profile_extraction():
     assert "computer_science_troy" not in majors
 ```
 
-- [ ] **Step 2: Chạy để thấy fail**
+- [x] **Step 2: Chạy để thấy fail**
 
 Run: `python -m pytest tests/ingestion/test_bka_dictionary.py -q`
 Expected: FAIL hàng loạt (mã mới chưa có trong dictionary). LƯU Ý: nếu fail vì
 `map_program` chưa có stage code → quay lại Task 1.
 
-- [ ] **Step 3: Apply data** — thay section `hust` bằng artifact đã freeze + gỡ 3 alias variant
+- [x] **Step 3: Apply data** — thay section `hust` bằng artifact đã freeze + gỡ 3 alias variant
 khỏi `_shared.electronics_telecom`:
 
 ```bash
@@ -273,20 +273,20 @@ EOF
 (Script này reformat toàn file theo `indent=2` — kiểm tra `git diff --stat` để chắc các scope
 khác chỉ đổi format, không đổi nội dung.)
 
-- [ ] **Step 4: Chạy test**
+- [x] **Step 4: Chạy test**
 
 Run: `python -m pytest tests/ingestion/test_bka_dictionary.py tests/ingestion/ -q`
 Expected: PASS toàn bộ — gồm cả test cũ của seed loader/parser (dictionary mở rộng không phá
 exact-match cũ; nếu `test_parses_real_fixture_snapshot` hay seed test fail → alias bị đổi sai,
 xem lại Step 3).
 
-- [ ] **Step 5: Sanity scale toàn cục** — chạy nhanh xem coverage parser HTML 2025 tăng:
+- [x] **Step 5: Sanity scale toàn cục** — chạy nhanh xem coverage parser HTML 2025 tăng:
 
 Run: `python -m ingestion.ingest_cutoffs --source-url https://diemthi.tuyensinh247.com/diem-chuan/dai-hoc-bach-khoa-ha-noi-BKA.html --dry-run 2>/dev/null | tail -3`
 Expected: số record vọt từ ~120 lên ~250+ (65 ngành × 4 bảng, trừ row trùng tổ hợp);
 SKIP list ngắn hẳn (chỉ còn row rác). KHÔNG ghi DB ở bước này (--dry-run).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add ingestion/normalization/dictionaries/programs.json tests/ingestion/test_bka_dictionary.py
@@ -297,5 +297,5 @@ git commit -m "feat: full BKA dictionary coverage (65 admission codes, variant p
 
 ### Task 3: Khép plan — toàn suite
 
-- [ ] **Step 1:** `python -m pytest -q` → toàn xanh (không cần DB).
-- [ ] **Step 2:** Tick checkbox plan này + cập nhật bảng index `2026-06-05-cutoff-0-index.md` (dòng plan 6 → xong) + commit docs.
+- [x] **Step 1:** `python -m pytest -q` → toàn xanh (không cần DB).
+- [x] **Step 2:** Tick checkbox plan này + cập nhật bảng index `2026-06-05-cutoff-0-index.md` (dòng plan 6 → xong) + commit docs.

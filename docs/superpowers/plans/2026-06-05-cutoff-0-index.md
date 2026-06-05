@@ -22,7 +22,7 @@
 
 | # | Plan | Nội dung | Phụ thuộc |
 |---|------|----------|-----------|
-| 6 | [`...-6-bka-dictionary-code-mapping.md`](2026-06-05-cutoff-6-bka-dictionary-code-mapping.md) — programs.json đủ 65 mã BKA (variant tách id riêng) + `map_program` stage match theo mã | Plan 5 |
+| 6 | [`...-6-bka-dictionary-code-mapping.md`](2026-06-05-cutoff-6-bka-dictionary-code-mapping.md) — programs.json đủ 65 mã BKA (variant tách id riêng) + `map_program` stage match theo mã — **✅ xong 2026-06-05** | Plan 5 |
 | 7 | [`...-7-tsn247-api-parser.md`](2026-06-05-cutoff-7-tsn247-api-parser.md) — parser API JSON tsn247, backfill 2022–2024 + re-run HTML 2025 | Plan 6 |
 | 8 | [`...-8-reingest-catalog-verify.md`](2026-06-05-cutoff-8-reingest-catalog-verify.md) — re-ingest canonical hust (fix variant Troy đè IT1), rebuild major catalog, verify e2e | Plan 6 (khuyến nghị sau 7) |
 
