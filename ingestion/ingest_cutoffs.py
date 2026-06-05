@@ -20,6 +20,7 @@ from ingestion.fetchers.http_fetcher import http_fetch
 from ingestion.models.pipeline_models import ExtractedCutoffFact, NormalizedCutoffRecord
 from ingestion.normalization.method_mapper import map_method
 from ingestion.normalization.program_mapper import map_program
+from ingestion.parsers.tuyensinh247_cutoff_api_parser import Tuyensinh247CutoffApiParser
 from ingestion.parsers.tuyensinh247_cutoff_parser import Tuyensinh247CutoffParser
 from ingestion.storage.db_writer import save_cutoff_records
 from services.profile.admission_methods import METHOD_CODES
@@ -105,6 +106,7 @@ def validate_entries(
 
 CUTOFF_PARSERS = {
     Tuyensinh247CutoffParser.parser_profile: Tuyensinh247CutoffParser(),
+    Tuyensinh247CutoffApiParser.parser_profile: Tuyensinh247CutoffApiParser(),
 }
 
 # Thang điểm theo method canonical: THPT thang 30; ĐGTD/XTKH/CCQT trên tuyensinh247 thang 100.

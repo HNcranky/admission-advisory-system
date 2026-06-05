@@ -68,5 +68,19 @@
     "update_frequency_hint": "yearly",
     "is_official": false,
     "active": false
+  },
+  {
+    "source_id": "hust_cutoff_tsn247_api",
+    "school_id": "hust",
+    "school_name": "Đại học Bách khoa Hà Nội",
+    "source_type": "cutoff_announcement",
+    "root_url": "https://diemthi.tuyensinh247.com/api/common/cutoff-score?school_id=302",
+    "trust_level": 3,
+    "priority": 5,
+    "fetch_strategy": "http",
+    "parser_profile": "tuyensinh247_cutoff_api",
+    "update_frequency_hint": "yearly",
+    "is_official": false,
+    "active": false
   }
 ]

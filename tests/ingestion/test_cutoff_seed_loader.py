@@ -183,6 +183,35 @@ def test_main_source_url_runs_fetch_parse_save(monkeypatch):
     assert saved[0][0].source_trust_level == 3
 
 
+def test_cutoff_parsers_registry_has_both_tsn247_parsers():
+    assert set(ingest_cutoffs.CUTOFF_PARSERS) >= {
+        "tuyensinh247_cutoff_html", "tuyensinh247_cutoff_api",
+    }
+
+
+def test_main_source_url_api_parser_choice(monkeypatch):
+    monkeypatch.setattr(ingest_cutoffs, "map_program", _fake_map_program)
+
+    class _FakeFetch:
+        raw_content = b'{"success": true, "data": []}'
+        http_status = 200
+
+    monkeypatch.setattr(ingest_cutoffs, "http_fetch", lambda url, **kw: _FakeFetch())
+    monkeypatch.setattr(
+        type(ingest_cutoffs.CUTOFF_PARSERS["tuyensinh247_cutoff_api"]), "parse",
+        lambda self, content, source_url, cutoff_year=None, **kw: [_fact()],
+    )
+    saved = []
+    monkeypatch.setattr(ingest_cutoffs, "save_cutoff_records", lambda rs: saved.append(rs) or len(rs))
+
+    code = ingest_cutoffs._main([
+        "--source-url", "https://diemthi.tuyensinh247.com/api/common/cutoff-score?school_id=302&method_id=1&year=2024",
+        "--parser", "tuyensinh247_cutoff_api",
+    ])
+    assert code == 0
+    assert len(saved[0]) == 1
+
+
 def test_main_source_url_exit_1_when_nothing_saved(monkeypatch):
     class _FakeFetch:
         raw_content = b"<html>no table</html>"
