@@ -1,5 +1,5 @@
 from agents.reasoning_agent import reasoning_agent
-from agents.models import CandidateProgram, Evidence, StudentProfile
+from agents.models import CandidateProgram, CutoffEntry, Evidence, StudentProfile
 from state import AgentState
 
 
@@ -181,3 +181,122 @@ def test_score_bonus_skipped_with_caution_when_method_unknown():
     rec = output.ranked_recommendations[0]
     assert rec.score == 0.75                             # không +0.10 vì method unknown
     assert any("chưa rõ phương thức" in c for c in rec.cautions)
+
+
+def _hist(*pairs, source="https://ts.hust.edu.vn/dc", trust=5):
+    return [
+        CutoffEntry(cutoff_year=y, admission_method="thpt_score", cutoff_score=s,
+                    score_scale=30.0, source_url=source, trust_level=trust)
+        for (y, s) in pairs
+    ]
+
+
+def _profile_27():
+    return StudentProfile(
+        total_score=27.0, subject_combination="A00", admission_method="thpt_score",
+        preferred_majors=["computer_science"], preferred_schools=["hust"],
+    )
+
+
+def test_margin_bonus_replaces_absolute_threshold():
+    """Có cutoff: margin 1.5 → +0.10 với reason nêu năm tham chiếu (không dùng heuristic 26/24)."""
+    state = AgentState(user_query="test")
+    state.student_profile = _profile_27()
+    state.retrieved_programs = [_candidate(cutoff_history=_hist((2025, 25.5)))]
+
+    output = reasoning_agent(state)
+
+    rec = output.ranked_recommendations[0]
+    assert rec.score == 1.0                               # 0.40+0.35+0.15+0.10
+    assert any("tham chiếu 2025" in r for r in rec.reasons)
+    assert rec.cutoff_assessment is not None and rec.cutoff_assessment.score_fit == "above"
+
+
+def test_small_positive_margin_gets_half_bonus():
+    state = AgentState(user_query="test")
+    state.student_profile = _profile_27()
+    state.retrieved_programs = [_candidate(cutoff_history=_hist((2025, 26.5)))]  # margin +0.5
+
+    output = reasoning_agent(state)
+
+    assert output.ranked_recommendations[0].score == 0.95  # +0.05
+
+
+def test_ec14_borderline_caps_band_at_match_with_caution():
+    state = AgentState(user_query="test")
+    state.student_profile = StudentProfile(
+        total_score=26.25, subject_combination="A01", admission_method="thpt_score",
+        preferred_majors=["computer_science"], preferred_schools=["hust"],
+    )
+    state.retrieved_programs = [
+        _candidate(subject_combinations=["A00", "A01"], cutoff_history=_hist((2025, 26.20)))
+    ]
+
+    output = reasoning_agent(state)
+
+    rec = output.ranked_recommendations[0]
+    assert rec.band == "match"                            # 0.90 → "safe" nếu không cap
+    assert any("sát ngưỡng tham chiếu 2025" in c.lower() for c in rec.cautions)
+    assert rec.cutoff_assessment.score_fit == "borderline"
+
+
+def test_below_reference_caps_band_at_reach():
+    state = AgentState(user_query="test")
+    state.student_profile = _profile_27()
+    state.retrieved_programs = [_candidate(cutoff_history=_hist((2025, 28.0)))]  # margin −1.0
+
+    output = reasoning_agent(state)
+
+    rec = output.ranked_recommendations[0]
+    assert rec.band == "reach"
+    assert any("thấp hơn mức tham chiếu 2025" in c.lower() for c in rec.cautions)
+
+
+def test_ec15_volatile_history_caps_match_with_range_caution():
+    state = AgentState(user_query="test")
+    state.student_profile = StudentProfile(
+        total_score=26.4, subject_combination="A00", admission_method="thpt_score",
+        preferred_majors=["computer_science"], preferred_schools=["hust"],
+    )
+    state.retrieved_programs = [
+        _candidate(cutoff_history=_hist((2023, 24.8), (2024, 26.7), (2025, 25.9)))
+    ]
+
+    output = reasoning_agent(state)
+
+    rec = output.ranked_recommendations[0]
+    assert rec.band == "match"
+    assert any("dao động 24.8–26.7" in c for c in rec.cautions)
+    assert rec.cutoff_assessment.score_fit == "uncertain"
+
+
+def test_ec16_decision_changing_marks_uncertain_and_dual_caution():
+    state = AgentState(user_query="test")
+    state.student_profile = StudentProfile(
+        total_score=26.5, subject_combination="A00", admission_method="thpt_score",
+        preferred_majors=["computer_science"], preferred_schools=["hust"],
+    )
+    history = _hist((2025, 26.2), trust=4) + _hist((2025, 26.8), source="https://dhqg/dc", trust=5)
+    state.retrieved_programs = [_candidate(cutoff_history=history)]
+
+    output = reasoning_agent(state)
+
+    rec = output.ranked_recommendations[0]
+    candidate = output.retrieved_programs[0]
+    assert "cutoff_score" in candidate.data_uncertain_fields
+    assert rec.band == "reach"                            # nhãn bảo thủ below → cap reach
+    assert any("các nguồn ghi khác nhau về điểm chuẩn" in c.lower() for c in rec.cautions)
+    # caution một-nguồn ("thấp hơn mức tham chiếu") bị THAY bằng dual note:
+    assert not any("thấp hơn mức tham chiếu" in c.lower() for c in rec.cautions)
+
+
+def test_no_history_falls_back_to_absolute_threshold():
+    state = AgentState(user_query="test")
+    state.student_profile = _profile_27()
+    state.retrieved_programs = [_candidate()]
+
+    output = reasoning_agent(state)
+
+    rec = output.ranked_recommendations[0]
+    assert rec.score == 1.0                               # heuristic cũ: 27 >= 26 → +0.10
+    assert rec.cutoff_assessment is None
