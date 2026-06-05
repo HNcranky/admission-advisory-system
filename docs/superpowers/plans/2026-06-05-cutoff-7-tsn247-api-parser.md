@@ -1,6 +1,6 @@
 # Cutoff Plan 7 — Parser API tuyensinh247 + backfill 2022–2024 + re-run HTML 2025
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Parser `tuyensinh247_cutoff_api` (JSON) chạy qua runner `--source-url` sẵn có, backfill điểm chuẩn BKA 2022–2024 và re-run HTML 2025 với dictionary mới → cutoff_records đủ 4 năm × các phương thức (trust 3) cạnh seed trust 5.
 
@@ -28,7 +28,7 @@
 - Create: `tests/fixtures/tsn247_bka_api_thpt_2024.json`
 - Create: `tests/fixtures/tsn247_bka_api_dgtd_2022.json` (case hậu tố "y")
 
-- [ ] **Step 1: Thêm chế độ API vào probe script** — sửa `scripts/_probe_tsn247_cutoff.py`:
+- [x] **Step 1: Thêm chế độ API vào probe script** — sửa `scripts/_probe_tsn247_cutoff.py`:
 (a) đổi tên hàm `main()` hiện có thành `probe_html()` (KHÔNG sửa thân hàm);
 (b) thêm 2 hàm mới trước `if __name__`:
 
@@ -63,7 +63,7 @@ def main() -> None:
 
 (`if __name__ == "__main__": main()` cuối file giữ nguyên.)
 
-- [ ] **Step 2: Snapshot 2 fixture**
+- [x] **Step 2: Snapshot 2 fixture**
 
 ```bash
 python -m scripts._probe_tsn247_cutoff api 302 1 2024 tests/fixtures/tsn247_bka_api_thpt_2024.json
@@ -81,7 +81,7 @@ Nếu cấu trúc đổi (success≠true / thiếu field) → DỪNG, báo lại
 - Create: `ingestion/parsers/tuyensinh247_cutoff_api_parser.py`
 - Test: `tests/ingestion/test_tuyensinh247_cutoff_api_parser.py`
 
-- [ ] **Step 1: Viết test fail** — create `tests/ingestion/test_tuyensinh247_cutoff_api_parser.py`:
+- [x] **Step 1: Viết test fail** — create `tests/ingestion/test_tuyensinh247_cutoff_api_parser.py`:
 
 ```python
 import json
@@ -162,12 +162,12 @@ def test_real_fixture_dgtd_2022_strips_y_suffix():
                or len(f.program_code) <= 1 for f in facts)
 ```
 
-- [ ] **Step 2: Chạy để thấy fail**
+- [x] **Step 2: Chạy để thấy fail**
 
 Run: `python -m pytest tests/ingestion/test_tuyensinh247_cutoff_api_parser.py -q`
 Expected: FAIL — `ModuleNotFoundError`.
 
-- [ ] **Step 3: Implement** — create `ingestion/parsers/tuyensinh247_cutoff_api_parser.py`:
+- [x] **Step 3: Implement** — create `ingestion/parsers/tuyensinh247_cutoff_api_parser.py`:
 
 ```python
 """Tuyensinh247 cutoff API parser (JSON) — Giai đoạn 2, plan 7.
@@ -275,12 +275,12 @@ class Tuyensinh247CutoffApiParser:
         return facts
 ```
 
-- [ ] **Step 4: Chạy test**
+- [x] **Step 4: Chạy test**
 
 Run: `python -m pytest tests/ingestion/test_tuyensinh247_cutoff_api_parser.py -q`
 Expected: PASS (chỉnh ngưỡng `>= 60`/`>= 50` nếu snapshot thật lệch nhẹ — ghi số thật vào test).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add ingestion/parsers/tuyensinh247_cutoff_api_parser.py \
@@ -300,7 +300,7 @@ git commit -m "feat: tuyensinh247 cutoff API parser (JSON, admission codes, 2022
 - Modify: `ingestion/registry/seeds/initial_sources.json` (entry API)
 - Test: `tests/ingestion/test_cutoff_seed_loader.py` (append)
 
-- [ ] **Step 1: Viết test fail** — append vào `tests/ingestion/test_cutoff_seed_loader.py`:
+- [x] **Step 1: Viết test fail** — append vào `tests/ingestion/test_cutoff_seed_loader.py`:
 
 ```python
 def test_cutoff_parsers_registry_has_both_tsn247_parsers():
@@ -332,12 +332,12 @@ def test_main_source_url_api_parser_choice(monkeypatch):
     assert len(saved[0]) == 1
 ```
 
-- [ ] **Step 2: Chạy để thấy fail**
+- [x] **Step 2: Chạy để thấy fail**
 
 Run: `python -m pytest tests/ingestion/test_cutoff_seed_loader.py -q`
 Expected: FAIL — `KeyError: 'tuyensinh247_cutoff_api'`.
 
-- [ ] **Step 3: Implement** — sửa `ingestion/ingest_cutoffs.py`:
+- [x] **Step 3: Implement** — sửa `ingestion/ingest_cutoffs.py`:
 
 (a) thêm import (cạnh import parser HTML):
 
@@ -375,12 +375,12 @@ CUTOFF_PARSERS = {
 
 (`active: false` cùng lý do plan 5: trả ExtractedCutoffFact, không cho IngestionPipeline nhặt.)
 
-- [ ] **Step 4: Chạy test**
+- [x] **Step 4: Chạy test**
 
 Run: `python -m pytest tests/ingestion/ -q`
 Expected: PASS.
 
-- [ ] **Step 5: Backfill thật (DB up: `docker start advisory-db`)** — 7 lệnh 2022–2024:
+- [x] **Step 5: Backfill thật (DB up: `docker start advisory-db`)** — 7 lệnh 2022–2024:
 
 ```bash
 set -a; source .env; set +a
@@ -396,7 +396,7 @@ done
 Expected: mỗi lệnh "Đã upsert N/N bản ghi" — N ≈ 55–64; SKIP chỉ còn mã/tên không thuộc 65 mã
 hiện hành (mã cổ 2022 đã đổi số — fallback tên không trúng); in từng dòng SKIP để soát.
 
-- [ ] **Step 6: Re-run HTML 2025 với dictionary mới** (row SKIP cũ giờ resolve):
+- [x] **Step 6: Re-run HTML 2025 với dictionary mới** (row SKIP cũ giờ resolve):
 
 ```bash
 python -m ingestion.ingest_cutoffs \
@@ -405,7 +405,7 @@ python -m ingestion.ingest_cutoffs \
 
 Expected: upsert ~250+ bản ghi (trước: 120) — cùng source_url nên đè/bổ sung, không nhân đôi.
 
-- [ ] **Step 7: Verify DB**
+- [x] **Step 7: Verify DB**
 
 ```bash
 docker exec advisory-db psql -U postgres -d admission -c "
@@ -420,7 +420,7 @@ WHERE program_id='computer_science_troy' ORDER BY 1;"
 Expected: đủ nhóm (2022×2, 2023×2, 2024×3, 2025×4); `computer_science_troy` có row riêng
 (2022: 25.15 THPT...), KHÔNG đè `computer_science`.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add ingestion/ingest_cutoffs.py ingestion/registry/seeds/initial_sources.json \
@@ -432,5 +432,21 @@ git commit -m "feat: register tsn247 API cutoff parser and backfill 2022-2024 + 
 
 ### Task 4: Khép plan
 
-- [ ] **Step 1:** `python -m pytest -q` → toàn xanh; DB up: `python -m pytest tests/integration tests/e2e -q` → xanh.
-- [ ] **Step 2:** Tick checkbox plan này + cập nhật index plan + commit docs.
+- [x] **Step 1:** `python -m pytest -q` → toàn xanh; DB up: `python -m pytest tests/integration tests/e2e -q` → xanh.
+- [x] **Step 2:** Tick checkbox plan này + cập nhật index plan + commit docs.
+
+---
+
+## Kết quả thực thi 2026-06-05
+
+- **Lệch so với probe:** hậu tố mã 2022 theo method — `y`/`Y` (THPT, m1) **và `x` (ĐGTD, m6)**;
+  parser strip cả `xXyY` (2023+ mã sạch, không mã BKA thật nào kết thúc x/y — đã verify fixture).
+- **Backfill:** 2022 (55+60), 2023 (63+61), 2024 (64+64+60) — **0 SKIP mapping** (stage-code
+  plan 6 resolve hết, kể cả mã cổ 2022). Re-run HTML 2025: 260/260 upsert (65 skip toàn
+  `trùng — giữ row đầu`, trang lặp bảng THPT).
+- **Tồn đọng:** 4 row 2024 XTKH (m10) bị skip vì điểm > 100 (DS-AI 104.58, Cyber 102.6,
+  Global ICT 102.67, CNTT-KHMT 103.89) — điểm combined BKA có cộng điểm thưởng nên vượt
+  thang 100, nhưng normalize chặn `combined` ở (0, 100]. Cần quyết định nới ngưỡng
+  (vd ≤ 110) nếu muốn đủ 64/64 cho 2024 m10.
+- **Verify DB:** đủ 11 nhóm năm×method (2022×2, 2023×2, 2024×3, 2025×4);
+  `computer_science_troy` 11 row riêng (2022 THPT 25.15), không đè `computer_science`.
