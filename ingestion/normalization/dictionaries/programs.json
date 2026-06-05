@@ -898,7 +898,8 @@
       "canonical_name": "Công nghệ Thông tin Việt – Nhật (tăng cường tiếng Nhật)",
       "aliases": [
         "Công nghệ Thông tin (Việt – Nhật)",
-        "Công nghệ thông tin (Việt - Nhật)"
+        "Công nghệ thông tin (Việt - Nhật)",
+        "Công nghệ thông tin Việt Nhật"
       ],
       "field": "technology",
       "codes": [
@@ -908,7 +909,8 @@
     "information_technology_global_ict": {
       "canonical_name": "Công nghệ Thông tin Global ICT (CT tiên tiến)",
       "aliases": [
-        "Công nghệ Thông tin (Global ICT)"
+        "Công nghệ Thông tin (Global ICT)",
+        "Công nghệ thông tin Global ICT"
       ],
       "field": "technology",
       "codes": [
@@ -1026,7 +1028,9 @@
     "business_administration_troy": {
       "canonical_name": "Quản trị Kinh doanh - Hợp tác với ĐH Troy (Hoa Kỳ)",
       "aliases": [
-        "Quản trị Kinh doanh - ĐH Troy (Hoa Kỳ)"
+        "Quản trị Kinh doanh - ĐH Troy (Hoa Kỳ)",
+        "Quản trị kinh doanh hợp tác ĐH Troy",
+        "Quản trị kinh doanh ĐH Troy"
       ],
       "field": "technology",
       "codes": [
@@ -1036,7 +1040,9 @@
     "computer_science_troy": {
       "canonical_name": "Khoa học Máy tính - hợp tác với ĐH Troy (Hoa Kỳ)",
       "aliases": [
-        "Khoa học Máy tính - ĐH Troy (Hoa Kỳ)"
+        "Khoa học Máy tính - ĐH Troy (Hoa Kỳ)",
+        "Khoa học máy tính hợp tác ĐH Troy",
+        "Khoa học máy tính ĐH Troy"
       ],
       "field": "technology",
       "codes": [

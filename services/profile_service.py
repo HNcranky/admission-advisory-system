@@ -103,21 +103,34 @@ def extract_subject_combination(query: str):
 
 
 def _contains_alias(query: str, alias: str) -> bool:
+    # Lookaround thay vì substring thuần: "hoa hoc" KHÔNG được match bên trong
+    # "k|hoa hoc may tinh". \b không dùng được vì alias có thể kết thúc bằng
+    # ký tự non-word như ")" — vd "... dh troy (hoa ky)".
     if not alias:
         return False
-    if len(alias) <= 2:
-        return bool(re.search(rf"\b{re.escape(alias)}\b", query))
-    return alias in query
+    return bool(
+        re.search(rf"(?<![a-z0-9]){re.escape(alias)}(?![a-z0-9])", query)
+    )
 
 
 def extract_preferred_majors(query: str) -> List[str]:
     alias_map = load_program_aliases()
-    preferred: List[str] = []
+    # Longest-match: ghi nhận alias dài nhất khớp cho từng program, rồi loại
+    # program mà alias khớp của nó nằm TRONG alias khớp của program khác —
+    # "khoa hoc may tinh" phải nhường "khoa hoc may tinh hop tac dh troy".
+    matched: Dict[str, str] = {}
     for program_id, payload in alias_map.items():
-        aliases = payload["aliases"]
-        if any(_contains_alias(query, alias) for alias in aliases):
-            preferred.append(program_id)
-    return preferred
+        hits = [a for a in payload["aliases"] if _contains_alias(query, a)]
+        if hits:
+            matched[program_id] = max(hits, key=len)
+    return [
+        program_id
+        for program_id, alias in matched.items()
+        if not any(
+            other_id != program_id and len(other) > len(alias) and alias in other
+            for other_id, other in matched.items()
+        )
+    ]
 
 
 def extract_preferred_schools(query: str) -> List[str]:
