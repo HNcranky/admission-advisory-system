@@ -47,6 +47,8 @@ docker compose up -d --wait db        # pgvector/pgvector:pg16 on localhost:5432
 .\.venv\Scripts\python.exe -m uvicorn web.app:app --reload
 
 # Tests (testpaths is limited to tests/; integration/e2e need the Docker DB up)
+# pytest runs against the auto-created `admission_test` database — it never
+# touches dev data in `admission` (tests/conftest.py::_isolate_test_db).
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 

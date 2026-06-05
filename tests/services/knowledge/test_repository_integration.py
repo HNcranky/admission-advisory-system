@@ -15,6 +15,10 @@ def _vec(*head):
 
 @pytest.fixture
 def knowledge_repo():
+    # Defense in depth: never TRUNCATE outside the isolated test database.
+    assert DB_CONFIG["database"].endswith("_test"), (
+        f"refusing to truncate {DB_CONFIG['database']!r}"
+    )
     try:
         conn = psycopg2.connect(**DB_CONFIG, connect_timeout=2)
     except psycopg2.OperationalError:
