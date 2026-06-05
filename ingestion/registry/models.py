@@ -15,6 +15,7 @@ class SourceType(str, Enum):
     FACEBOOK_PAGE = "facebook_page"
     PROGRAM_PAGE = "program_page"
     PROGRAM_LISTING = "program_listing"
+    CUTOFF_ANNOUNCEMENT = "cutoff_announcement"
 
 
 class FetchStrategy(str, Enum):

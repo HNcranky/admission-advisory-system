@@ -16,8 +16,11 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 from ingestion.config.settings import ADMISSION_YEAR
-from ingestion.models.pipeline_models import NormalizedCutoffRecord
+from ingestion.fetchers.http_fetcher import http_fetch
+from ingestion.models.pipeline_models import ExtractedCutoffFact, NormalizedCutoffRecord
+from ingestion.normalization.method_mapper import map_method
 from ingestion.normalization.program_mapper import map_program
+from ingestion.parsers.tuyensinh247_cutoff_parser import Tuyensinh247CutoffParser
 from ingestion.storage.db_writer import save_cutoff_records
 from services.profile.admission_methods import METHOD_CODES
 
@@ -100,16 +103,123 @@ def validate_entries(
     return records, []
 
 
+CUTOFF_PARSERS = {
+    Tuyensinh247CutoffParser.parser_profile: Tuyensinh247CutoffParser(),
+}
+
+# Thang điểm theo method canonical: THPT thang 30; ĐGTD/XTKH/CCQT trên tuyensinh247 thang 100.
+_SCALE_BY_METHOD = {"thpt_score": 30.0}
+_DEFAULT_SCALE = 100.0
+
+_SCHOOL_NAMES = {"hust": "Đại học Bách khoa Hà Nội"}
+
+
+def normalize_cutoff_facts(
+    facts: List[ExtractedCutoffFact],
+) -> Tuple[List[NormalizedCutoffRecord], List[str]]:
+    """Đường parser: per-row skip + báo cáo (khác seed: seed phải atomic-sạch).
+
+    Row không resolve được ngành/method/điểm rác → skip kèm lý do; caller in summary.
+    Resolve ngành EXACT-ONLY: trang aggregator liệt kê mọi variant ("KHMT - hợp tác
+    ĐH Troy"...), substring/fuzzy sẽ gộp variant vào ngành gốc rồi đè điểm thật
+    (key DB không phân biệt tên raw). Coverage điều khiển bằng alias programs.json.
+    """
+    records: List[NormalizedCutoffRecord] = []
+    skipped: List[str] = []
+    seen_keys: dict = {}  # (school, year, program, method) → tên raw row đầu (giữ row đầu)
+    for f in facts:
+        school_id = f.source_reference.school_id
+        program_id, canonical = map_program(
+            f.program_name, f.program_code, school_id=school_id, exact_only=True,
+        )
+        if not program_id or program_id == f.program_code:
+            skipped.append(f"{f.program_name!r}: không resolve được ngành")
+            continue
+        method = map_method(f.admission_method_raw, school_id=school_id) if f.admission_method_raw else None
+        if method not in METHOD_CODES:
+            skipped.append(f"{f.program_name!r}: phương thức {f.admission_method_raw!r} không map được")
+            continue
+        try:
+            score = float((f.cutoff_score_raw or "").replace(",", "."))
+        except ValueError:
+            skipped.append(f"{f.program_name!r}: điểm {f.cutoff_score_raw!r} không phải số")
+            continue
+        scale = _SCALE_BY_METHOD.get(method, _DEFAULT_SCALE)
+        if not (0 < score <= scale):
+            skipped.append(f"{f.program_name!r}: điểm {score} ngoài (0, {scale:g}] của {method}")
+            continue
+        key = (school_id, f.cutoff_year, program_id, method)
+        if key in seen_keys:
+            skipped.append(
+                f"{f.program_name!r}: trùng ({program_id}, {method}, {f.cutoff_year}) "
+                f"với row {seen_keys[key]!r} — giữ row đầu"
+            )
+            continue
+        seen_keys[key] = f.program_name
+
+        records.append(
+            NormalizedCutoffRecord(
+                school_id=school_id,
+                program_id=program_id,
+                program_name_canonical=canonical,
+                program_name_raw=f.program_name,
+                cutoff_year=f.cutoff_year,
+                admission_method=method,
+                score_scale=scale,
+                cutoff_score=score,
+                subject_combinations=f.subject_combinations_raw or [],
+                note=f.note_raw,
+                source_url=f.source_reference.source_url,
+                source_trust_level=f.source_reference.trust_level,
+                confidence_score=f.confidence_score,
+            )
+        )
+    return records, skipped
+
+
 def _main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Nạp điểm chuẩn lịch sử curated vào cutoff_records")
     parser.add_argument("--seed", nargs="?", const=str(DEFAULT_SEED), default=None,
                         help="đường dẫn seed JSON (mặc định: seed commit sẵn)")
     parser.add_argument("--school", default=None, help="chỉ nạp một trường (hust|vnu_uet)")
     parser.add_argument("--dry-run", action="store_true", help="chỉ validate + in, không ghi DB")
+    parser.add_argument("--source-url", default=None, help="URL trang điểm chuẩn (đường parser)")
+    parser.add_argument("--parser", default="tuyensinh247_cutoff_html", choices=sorted(CUTOFF_PARSERS),
+                        help="parser profile cho --source-url")
+    parser.add_argument("--year", type=int, default=None,
+                        help="filter cutoff_year (đường parser; mặc định lấy mọi năm parser đọc được từ heading)")
+    parser.add_argument("--trust", type=int, default=3,
+                        help="trust level nguồn (đường parser; mặc định 3 — aggregator)")
     args = parser.parse_args(argv)
 
+    if args.source_url:
+        fetch = http_fetch(args.source_url)
+        if not fetch or fetch.http_status >= 400:
+            print(f"LỖI fetch {args.source_url}: HTTP {getattr(fetch, 'http_status', '?')}")
+            return 1
+        cutoff_parser = CUTOFF_PARSERS[args.parser]
+        facts = cutoff_parser.parse(
+            fetch.raw_content, args.source_url, cutoff_year=args.year,
+            school_id=args.school or "hust",
+            school_name=_SCHOOL_NAMES.get(args.school or "hust", args.school or "hust"),
+            trust_level=args.trust,
+        )
+        records, skipped = normalize_cutoff_facts(facts)
+        for reason in skipped:
+            print(f"  SKIP {reason}")
+        if not records:
+            print("Không có bản ghi hợp lệ nào từ nguồn — kiểm tra parser/dictionary.")
+            return 1
+        if args.dry_run:
+            for r in records:
+                print(f"  {r.school_id} {r.cutoff_year} {r.admission_method} {r.program_id} = {r.cutoff_score}")
+            return 0
+        saved = save_cutoff_records(records)
+        print(f"Đã upsert {saved}/{len(records)} bản ghi (skip {len(skipped)} row).")
+        return 0 if saved == len(records) else 2
+
     if not args.seed:
-        parser.error("cần --seed (đường parser --source-url bổ sung ở plan 5)")
+        parser.error("cần --seed hoặc --source-url")
 
     entries = load_seed(Path(args.seed))
     records, errors = validate_entries(entries, school_filter=args.school)
