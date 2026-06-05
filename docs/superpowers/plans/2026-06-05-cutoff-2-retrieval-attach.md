@@ -18,7 +18,7 @@
 - Modify: `services/retrieval_service.py`
 - Test: `tests/services/test_retrieval_service.py` (append)
 
-- [ ] **Step 1: Viết test fail** — append vào `tests/services/test_retrieval_service.py` (file đã có `_FakeCursor`; thêm import nếu thiếu: `from decimal import Decimal`):
+- [x] **Step 1: Viết test fail** — append vào `tests/services/test_retrieval_service.py` (file đã có `_FakeCursor`; thêm import nếu thiếu: `from decimal import Decimal`):
 
 ```python
 def test_fetch_cutoff_history_maps_rows_and_decimal(monkeypatch):
@@ -69,12 +69,12 @@ def test_fetch_cutoff_history_degrades_to_empty_on_db_error(monkeypatch):
     assert retrieval_service.fetch_cutoff_history({("hust", "computer_science")}) == {}
 ```
 
-- [ ] **Step 2: Chạy để thấy fail**
+- [x] **Step 2: Chạy để thấy fail**
 
 Run: `python -m pytest tests/services/test_retrieval_service.py -q`
 Expected: FAIL — `AttributeError: ... no attribute 'fetch_cutoff_history'`
 
-- [ ] **Step 3: Implement** — trong `services/retrieval_service.py`: thêm `CutoffEntry` vào import dòng 5 (`from agents.models import CandidateProgram, CutoffEntry, Evidence, StudentProfile`), thêm `Set, Tuple` đã có sẵn `Tuple` trong import typing (dòng 3 → đổi thành `from typing import Any, Dict, List, Optional, Set, Tuple`), rồi thêm hàm sau `build_retrieval_filters`:
+- [x] **Step 3: Implement** — trong `services/retrieval_service.py`: thêm `CutoffEntry` vào import dòng 5 (`from agents.models import CandidateProgram, CutoffEntry, Evidence, StudentProfile`), thêm `Set, Tuple` đã có sẵn `Tuple` trong import typing (dòng 3 → đổi thành `from typing import Any, Dict, List, Optional, Set, Tuple`), rồi thêm hàm sau `build_retrieval_filters`:
 
 ```python
 def fetch_cutoff_history(
@@ -122,12 +122,12 @@ def fetch_cutoff_history(
     return history
 ```
 
-- [ ] **Step 4: Chạy test**
+- [x] **Step 4: Chạy test**
 
 Run: `python -m pytest tests/services/test_retrieval_service.py -q`
 Expected: PASS (3 test mới + test cũ giữ xanh).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add services/retrieval_service.py tests/services/test_retrieval_service.py
@@ -142,7 +142,7 @@ git commit -m "feat: batch fetch_cutoff_history with graceful degradation"
 - Modify: `services/retrieval_service.py` (cuối `fetch_candidates`, trước `return candidates` ở dòng ~164)
 - Test: `tests/services/test_retrieval_service.py` (append)
 
-- [ ] **Step 1: Viết test fail** — append:
+- [x] **Step 1: Viết test fail** — append:
 
 ```python
 def test_fetch_candidates_attaches_cutoff_history(monkeypatch):
@@ -176,12 +176,12 @@ def test_fetch_candidates_attaches_cutoff_history(monkeypatch):
     assert candidates[0].cutoff_history == [entry]
 ```
 
-- [ ] **Step 2: Chạy để thấy fail**
+- [x] **Step 2: Chạy để thấy fail**
 
 Run: `python -m pytest tests/services/test_retrieval_service.py::test_fetch_candidates_attaches_cutoff_history -q`
 Expected: FAIL — `assert [] == [entry]` (chưa attach).
 
-- [ ] **Step 3: Implement** — trong `fetch_candidates`, thay `return candidates` (dòng cuối hàm) bằng:
+- [x] **Step 3: Implement** — trong `fetch_candidates`, thay `return candidates` (dòng cuối hàm) bằng:
 
 ```python
     cutoff_map = fetch_cutoff_history(
@@ -201,12 +201,12 @@ NHƯNG query cutoff (execute thứ hai) sẽ GHI ĐÈ `fake_cursor.executed_sql`
 assert trên `executed_sql`/`executed_params` sau khi gọi `fetch_candidates`, thêm vào test đó:
 `monkeypatch.setattr(retrieval_service, "fetch_cutoff_history", lambda pairs: {})`.
 
-- [ ] **Step 4: Chạy test toàn module + e2e mock-path không vỡ**
+- [x] **Step 4: Chạy test toàn module + e2e mock-path không vỡ**
 
 Run: `python -m pytest tests/services/test_retrieval_service.py tests/services/test_mock_retrieval.py tests/e2e/test_advisory_flow.py -q`
 Expected: PASS toàn bộ (mock path return sớm trước attach; e2e monkeypatch `fetch_candidates` nguyên hàm).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add services/retrieval_service.py tests/services/test_retrieval_service.py
@@ -220,7 +220,7 @@ git commit -m "feat: attach cutoff_history to candidates in fetch_candidates"
 **Files:**
 - Create: `tests/integration/test_cutoff_records_e2e.py`
 
-- [ ] **Step 1: Viết test** (dùng fixture `db_available` sẵn có trong `tests/integration/conftest.py` — tự skip khi DB không chạy):
+- [x] **Step 1: Viết test** (dùng fixture `db_available` sẵn có trong `tests/integration/conftest.py` — tự skip khi DB không chạy):
 
 ```python
 """Round-trip: migration 016 → save_cutoff_records → fetch_cutoff_history.
@@ -272,12 +272,12 @@ def test_cutoff_roundtrip_upsert_and_fetch(db_available):
         _cleanup()
 ```
 
-- [ ] **Step 2: Chạy (DB-less phải skip sạch; có DB phải pass)**
+- [x] **Step 2: Chạy (DB-less phải skip sạch; có DB phải pass)**
 
 Run: `python -m pytest tests/integration/test_cutoff_records_e2e.py -q`
 Expected: SKIP với message remediation khi DB tắt; PASS khi `docker compose up -d db && python -m db.setup_db` đã chạy.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add tests/integration/test_cutoff_records_e2e.py
