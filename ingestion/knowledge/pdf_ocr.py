@@ -6,6 +6,7 @@ gateway. See docs/superpowers/specs/2026-06-04-scanned-pdf-knowledge-ocr-design.
 """
 import io
 import logging
+from collections import Counter
 from dataclasses import dataclass
 from typing import Callable
 
@@ -29,6 +30,27 @@ OCR_USER_PROMPT = (
     "Bảng → bảng markdown. Giữ nguyên số liệu, không suy diễn; "
     "đoạn không đọc được đánh dấu `[không đọc được]`. Không thêm lời dẫn."
 )
+
+# Guard chống repetition loop: bảng merged-cell có thể khiến model kẹt sinh dấu
+# '-' vô hạn (1 trang NEU từng trả về ~1M ký tự '-'). Một trang giấy thật không
+# thể vượt OCR_PAGE_MAX_CHARS; output mà một ký tự chiếm áp đảo cũng là rác.
+OCR_PAGE_MAX_CHARS = 20_000
+OCR_DOMINANT_CHAR_RATIO = 0.8
+OCR_DOMINANT_MIN_CHARS = 2_000
+# Retry với nhiệt độ > 0 để decode có nhiễu, thoát khỏi vòng lặp greedy.
+OCR_RETRY_TEMPERATURE = 0.3
+
+
+def is_degenerate_ocr(text: str) -> bool:
+    """True nếu output OCR là sản phẩm của repetition loop, không phải nội dung trang."""
+    if len(text) > OCR_PAGE_MAX_CHARS:
+        return True
+    compact = "".join(text.split())
+    if len(compact) >= OCR_DOMINANT_MIN_CHARS:
+        dominant = Counter(compact).most_common(1)[0][1]
+        if dominant / len(compact) > OCR_DOMINANT_CHAR_RATIO:
+            return True
+    return False
 
 
 class HybridExtractionError(RuntimeError):
@@ -118,15 +140,26 @@ def build_gateway_ocr(gateway=None) -> Callable[[bytes], str]:
     gw = gateway if gateway is not None else build_default_gateway()
 
     def _ocr(png_bytes: bytes) -> str:
-        result = gw.run(InferenceRequest(
-            agent_name="knowledge_ocr",
-            task_type="page_ocr",
-            system_prompt=OCR_SYSTEM_PROMPT,
-            user_prompt=OCR_USER_PROMPT,
-            output_mode="free_text",
-            temperature=0.0,
-            media=[("image/png", png_bytes)],
-        ))
-        return result.content
+        for temperature in (0.0, OCR_RETRY_TEMPERATURE):
+            result = gw.run(InferenceRequest(
+                agent_name="knowledge_ocr",
+                task_type="page_ocr",
+                system_prompt=OCR_SYSTEM_PROMPT,
+                user_prompt=OCR_USER_PROMPT,
+                output_mode="free_text",
+                temperature=temperature,
+                media=[("image/png", png_bytes)],
+            ))
+            text = result.content
+            if not is_degenerate_ocr(text):
+                return text
+            logger.warning(
+                "Degenerate OCR output (%d chars) at temperature %.1f%s",
+                len(text), temperature,
+                ", retrying" if temperature == 0.0 else "",
+            )
+        # Cả 2 lần đều rác → để extract_pages_hybrid đánh dấu trang failed
+        # (các trang còn lại của tài liệu vẫn được ingest bình thường).
+        raise InferenceError("OCR output degenerate after retry (repetition loop)")
 
     return _ocr
