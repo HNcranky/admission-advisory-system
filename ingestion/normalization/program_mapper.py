@@ -40,6 +40,7 @@ def map_program(
     program_name: Optional[str],
     program_code: Optional[str] = None,
     school_id: str = "",
+    exact_only: bool = False,
 ) -> Tuple[Optional[str], Optional[str]]:
     """
     Map raw program name/code to canonical (program_id, canonical_name).
@@ -48,6 +49,10 @@ def map_program(
         program_name: Raw program name
         program_code: Raw program code (e.g. "IT1")
         school_id: School identifier for school-specific lookup
+        exact_only: Only allow exact canonical/alias matches — skip substring
+            and fuzzy stages. Dùng cho đường parser cutoff: trang aggregator
+            liệt kê mọi variant ("KHMT - hợp tác ĐH Troy"...), substring/fuzzy
+            sẽ gộp nhầm variant vào ngành gốc và đè điểm chuẩn thật.
 
     Returns:
         (program_id, canonical_name) tuple.
@@ -59,7 +64,7 @@ def map_program(
     programs = _load_dict(school_id)
     name_lower = program_name.lower().strip()
 
-                                                                  
+
     for prog_id, info in programs.items():
         canonical = info["canonical_name"]
         aliases = info.get("aliases", [])
@@ -71,7 +76,11 @@ def map_program(
             if name_lower == alias.lower():
                 return (prog_id, canonical)
 
-                                                                  
+    if exact_only:
+        logger.debug(f"No exact match for program: '{program_name}'")
+        return (program_code, program_name)
+
+
     for prog_id, info in programs.items():
         canonical = info["canonical_name"]
         aliases = info.get("aliases", [])

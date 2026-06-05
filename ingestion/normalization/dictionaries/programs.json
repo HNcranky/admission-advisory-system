@@ -2,7 +2,7 @@
   "_shared": {
     "computer_science": {
       "canonical_name": "Khoa học Máy tính",
-      "aliases": ["Khoa học máy tính", "Computer Science", "CNTT", "Công nghệ thông tin", "KH Máy tính", "CS"],
+      "aliases": ["Khoa học máy tính", "Computer Science", "CNTT", "Công nghệ thông tin", "KH Máy tính", "CS", "CNTT: Khoa học Máy tính"],
       "field": "technology"
     },
     "software_engineering": {
@@ -12,7 +12,7 @@
     },
     "data_science": {
       "canonical_name": "Khoa học Dữ liệu và Trí tuệ Nhân tạo",
-      "aliases": ["Khoa học dữ liệu", "Data Science", "KHDL", "DS", "Khoa học Dữ liệu và Trí tuệ nhân tạo", "AI"],
+      "aliases": ["Khoa học dữ liệu", "Data Science", "KHDL", "DS", "Khoa học Dữ liệu và Trí tuệ nhân tạo", "AI", "Khoa học dữ liệu và Trí tuệ nhân tạo (CT tiên tiến)"],
       "field": "technology"
     },
     "information_systems": {
