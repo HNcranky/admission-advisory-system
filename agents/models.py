@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -26,6 +26,34 @@ class Evidence(BaseModel):
     trust_level: Optional[int] = None
 
 
+class CutoffEntry(BaseModel):
+    """Một dòng điểm chuẩn lịch sử của (trường, chương trình) từ một nguồn."""
+    cutoff_year: int
+    admission_method: str          # mã canonical: 'thpt_score'...
+    cutoff_score: float
+    score_scale: Optional[float] = None
+    source_url: str
+    trust_level: Optional[int] = None
+    note: Optional[str] = None
+
+
+class CutoffAssessment(BaseModel):
+    """Kết quả đối chiếu điểm hồ sơ với điểm chuẩn lịch sử (EC-14/15/16/18).
+
+    Đặt ở agents.models (không phải services/cutoff) để tránh vòng import:
+    services/cutoff/assessment.py import CutoffEntry từ đây."""
+    score_fit: Literal["above", "borderline", "below", "uncertain"]
+    reference_year: int
+    margin: float
+    latest_values: List[Dict[str, Any]] = Field(default_factory=list)  # [{value, source_url, trust_level}]
+    conflicted: bool = False
+    decision_changing: bool = False
+    volatile: bool = False
+    volatility_min: Optional[float] = None
+    volatility_max: Optional[float] = None
+    years_used: List[int] = Field(default_factory=list)
+
+
 class CandidateProgram(BaseModel):
     candidate_id: str
     school_id: str
@@ -41,6 +69,7 @@ class CandidateProgram(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict)
     evidence: List[Evidence] = Field(default_factory=list)
     data_uncertain_fields: List[str] = Field(default_factory=list)
+    cutoff_history: List[CutoffEntry] = Field(default_factory=list)
 
 
 class EligibilityCheck(BaseModel):
@@ -58,6 +87,7 @@ class RankedRecommendation(BaseModel):
     summary: str
     reasons: List[str] = Field(default_factory=list)
     cautions: List[str] = Field(default_factory=list)
+    cutoff_assessment: Optional[CutoffAssessment] = None
 
 
 class PolicyDecision(BaseModel):

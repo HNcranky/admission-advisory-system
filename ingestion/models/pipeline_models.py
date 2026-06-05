@@ -180,5 +180,41 @@ class NormalizedAdmissionRecord(BaseModel):
     confidence_score: float = 0.5
     normalized_at: datetime = Field(default_factory=datetime.now)
 
-                                 
+
     extracted_fact_id: Optional[int] = None
+
+
+class ExtractedCutoffFact(BaseModel):
+    """Một dòng điểm chuẩn thô trích từ trang/PDF công bố (chưa normalize)."""
+    school_name: str
+    cutoff_year: int
+    program_name: Optional[str] = None
+    program_code: Optional[str] = None
+    admission_method_raw: Optional[str] = None
+    subject_combinations_raw: Optional[List[str]] = None
+    cutoff_score_raw: str
+    note_raw: Optional[str] = None
+    source_reference: SourceReference
+    confidence_score: float = Field(default=0.5, ge=0.0, le=1.0)
+    extraction_method: str = "unknown"
+
+
+class NormalizedCutoffRecord(BaseModel):
+    """Bản ghi điểm chuẩn chuẩn hoá — lưu vào cutoff_records.
+
+    admission_method là MÃ canonical (vd 'thpt_score'), KHÁC convention
+    display-name của canonical_admission_records."""
+    school_id: str
+    program_id: Optional[str] = None
+    program_name_canonical: Optional[str] = None
+    program_name_raw: Optional[str] = None
+    cutoff_year: int
+    admission_method: str
+    score_scale: Optional[float] = 30.0
+    cutoff_score: float
+    subject_combinations: List[str] = Field(default_factory=list)
+    note: Optional[str] = None
+    source_url: str
+    source_trust_level: int = 3
+    confidence_score: float = 0.9
+    ingested_at: datetime = Field(default_factory=datetime.now)
