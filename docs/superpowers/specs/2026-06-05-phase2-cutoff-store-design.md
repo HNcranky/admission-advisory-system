@@ -353,7 +353,7 @@ advisory run: profile → retrieve (fetch_candidates + attach cutoff_history)
    (fake gateway phải không được invoke).
 6. `tests/agents/test_reasoning_agent.py` (mở rộng) — có history: bonus margin thay bonus tuyệt đối,
    band cap đúng từng score_fit, caution đúng template; không history: test cũ giữ xanh nguyên trạng.
-7. `tests/services/test_policy_service.py` (mở rộng) — 2 flag/claim mới đúng điều kiện kích hoạt.
+7. `tests/agents/test_policy_agent.py` (mở rộng) — 2 flag/claim mới đúng điều kiện kích hoạt.
 8. `tests/agents/test_explanation_agent.py` (mở rộng) — dòng tham chiếu, dual display EC-16,
    `_data_note` đủ giá trị EC-17, caveat EC-18, nhãn EC-14/15.
 9. `tests/integration/test_cutoff_records_e2e.py` (mới, Docker DB) — migration 016 + loader thật +
