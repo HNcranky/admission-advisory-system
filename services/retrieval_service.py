@@ -206,6 +206,15 @@ def fetch_candidates(filters: Dict[str, Any], limit: int = 100) -> List[Candidat
                     evidence=[evidence],
                 )
             )
+
+    cutoff_map = fetch_cutoff_history(
+        {(c.school_id, c.program_id) for c in candidates if c.program_id}
+    )
+    for candidate in candidates:
+        if candidate.program_id:
+            candidate.cutoff_history = cutoff_map.get(
+                (candidate.school_id, candidate.program_id), []
+            )
     return candidates
 
 
