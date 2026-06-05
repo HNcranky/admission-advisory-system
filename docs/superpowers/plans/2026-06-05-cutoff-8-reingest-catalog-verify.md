@@ -21,7 +21,7 @@
 
 ### Task 1: Re-ingest canonical hust
 
-- [ ] **Step 1: Snapshot trạng thái TRƯỚC** (để đối chiếu):
+- [x] **Step 1: Snapshot trạng thái TRƯỚC** (để đối chiếu):
 
 ```bash
 docker start advisory-db 2>/dev/null; set -a; source .env; set +a
@@ -38,19 +38,19 @@ ORDER BY 1;" | tee /tmp/canonical_hust_before.txt
 Expected (trước fix): các row Troy/Việt-Nhật/Global ICT mang `program_id` ngành gốc
 (`computer_science`...).
 
-- [ ] **Step 2: Xoá canonical hust** (loại row mồ côi id sai — upsert không tự dọn):
+- [x] **Step 2: Xoá canonical hust** (loại row mồ côi id sai — upsert không tự dọn):
 
 ```bash
 docker exec advisory-db psql -U postgres -d admission -c "
 DELETE FROM canonical_admission_records WHERE school_id='hust';"
 ```
 
-- [ ] **Step 3: Re-ingest**
+- [x] **Step 3: Re-ingest**
 
 Run: `python -m ingestion.main --school hust`
 Expected: pipeline chạy hết, lưu ~130+ records (trước: 112 — variant hết đè nhau nên TĂNG).
 
-- [ ] **Step 4: Verify SAU**
+- [x] **Step 4: Verify SAU**
 
 ```bash
 docker exec advisory-db psql -U postgres -d admission -c "
@@ -77,13 +77,13 @@ Expected:
 
 ### Task 2: Rebuild major catalog (pgvector)
 
-- [ ] **Step 1: Build**
+- [x] **Step 1: Build**
 
 Run: `python -m services.profile.build_major_catalog`
 Expected: `program catalog: total=<~70+> embedded=<số entry mới/đổi> reused=<phần còn lại>` —
 embedded > 0 (có ngành mới).
 
-- [ ] **Step 2: Verify nhanh**
+- [x] **Step 2: Verify nhanh**
 
 ```bash
 docker exec advisory-db psql -U postgres -d admission -c "
@@ -98,11 +98,11 @@ Expected: đủ 4 row.
 
 ### Task 3: Verify end-to-end
 
-- [ ] **Step 1: Toàn suite**
+- [x] **Step 1: Toàn suite**
 
 Run: `python -m pytest -q` → toàn xanh; `python -m pytest tests/integration tests/e2e -q` → xanh.
 
-- [ ] **Step 2: Smoke UI** — `python -m uvicorn --factory web.app:build_app --port 8765`
+- [x] **Step 2: Smoke UI** — `python -m uvicorn --factory web.app:build_app --port 8765`
 (LƯU Ý: app dùng factory — `web.app:app` trong CLAUDE.md đã cũ). Kịch bản KHMT lặp lại từ
 smoke plan 5: "Em được 29.1 điểm thi THPT khối A00 năm 2026, muốn vào ngành Khoa học máy tính
 của Bách khoa Hà Nội" qua `POST /api/sessions` + `POST .../messages` + poll.
@@ -112,20 +112,44 @@ Expected:
   KHÔNG còn hiện "Khoa học Máy tính - ĐH Troy" như trước plan 6;
 - Caveat năm tham chiếu vẫn hiện; 2 nguồn cutoff (seed + tsn247) vẫn cạnh nhau.
 
-- [ ] **Step 3: Smoke variant** — kịch bản mới: "Em 24 điểm khối A00 năm 2026, em quan tâm
+- [x] **Step 3: Smoke variant** — kịch bản mới: "Em 24 điểm khối A00 năm 2026, em quan tâm
 chương trình Khoa học máy tính hợp tác ĐH Troy của Bách khoa". Expected: candidate
 `computer_science_troy` xuất hiện với cutoff lịch sử riêng (2022: 21.3–25.15 tuỳ năm có dữ
 liệu plan 7), nhãn đánh giá hợp lý, không lẫn điểm 29.x của IT1.
 
-- [ ] **Step 4: Dừng uvicorn** sau smoke.
+- [x] **Step 4: Dừng uvicorn** sau smoke.
 
 ---
 
 ### Task 4: Khép phase
 
-- [ ] **Step 1:** Tick checkbox 3 plan 6/7/8 + cập nhật bảng index
+- [x] **Step 1:** Tick checkbox 3 plan 6/7/8 + cập nhật bảng index
 `2026-06-05-cutoff-0-index.md` (3 dòng mới → xong).
-- [ ] **Step 2:** Cập nhật memory `edge-case-conformance`: dictionary BKA 65 mã, đường API
+- [x] **Step 2:** Cập nhật memory `edge-case-conformance`: dictionary BKA 65 mã, đường API
 tsn247 2022–2025, canonical hust sạch variant — kèm gotcha "mã đổi số giữa các năm, codes map
 = mã 2025".
-- [ ] **Step 3:** Commit docs/memory. Giữ branch như user chỉ định.
+- [x] **Step 3:** Commit docs/memory. Giữ branch như user chỉ định.
+
+---
+
+## Ghi chú thực thi (2026-06-05)
+
+**Kết quả:** total 136 / 68 program_id (trước: 112/38 thời fuzzy). Catalog
+`total=83 embedded=42 reused=41`. Full suite 841 passed; integration/e2e 25 passed.
+Smoke 1: #1 = HUST KHMT, cutoff 29.19, 2 nguồn (HUST + tsn247) cạnh nhau, caveat ✅.
+Smoke variant: `computer_science_troy` cutoff riêng 21–25.15 (2025: 21.3), không lẫn 29.x ✅.
+BA-Troy không có trong nguồn 2026 nên không xuất hiện — không phải lỗi dictionary.
+
+**2 bug code lộ ra khi smoke (đã DỪNG báo user, user chọn fix ngay — TDD):**
+1. `services/profile_service.py::_contains_alias` match substring thuần → `"hoa hoc"`
+   (Hóa học) match bên trong `"k|hoa hoc may tinh"`, mọi câu KHMT bị gán thêm tag
+   `chemistry` → candidate #1 sai (Hóa học). Fix: lookaround word-boundary
+   `(?<![a-z0-9])…(?![a-z0-9])` (không dùng `\b` vì alias kết thúc bằng `)`).
+2. Câu tự nhiên "KHMT hợp tác ĐH Troy" không resolve về variant (alias dictionary chỉ
+   có dạng cứng có `- … (Hoa Kỳ)`). Fix: thêm alias mềm cho 4 variant trong
+   `programs.json` + `extract_preferred_majors` áp longest-match (alias khớp nằm trong
+   alias khớp dài hơn của program khác thì nhường).
+
+**Gotcha vận hành:** `tests/integration/conftest.py::clean_db` TRUNCATE
+`canonical_admission_records` trên chính DB dev → chạy pytest SAU re-ingest sẽ xoá data.
+Thứ tự đúng: pytest trước, re-ingest hust sau (phiên này phải re-ingest 3 lần vì vậy).
