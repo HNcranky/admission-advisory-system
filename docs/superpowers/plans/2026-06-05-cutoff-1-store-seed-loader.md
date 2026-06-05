@@ -15,7 +15,7 @@
 **Files:**
 - Create: `db/migrations/016_cutoff_records.sql`
 
-- [ ] **Step 1: Viết migration**
+- [x] **Step 1: Viết migration**
 
 ```sql
 -- Điểm chuẩn lịch sử per-source (Giai đoạn 2 — EC-14/15/16/18).
@@ -49,12 +49,12 @@ CREATE INDEX IF NOT EXISTS idx_cutoff_school_year
     ON cutoff_records (school_id, cutoff_year);
 ```
 
-- [ ] **Step 2: Chạy migration với Docker DB (nếu DB đang chạy; nếu không, integration test ở Plan 2 sẽ phủ)**
+- [x] **Step 2: Chạy migration với Docker DB (nếu DB đang chạy; nếu không, integration test ở Plan 2 sẽ phủ)**
 
 Run: `docker compose up -d --wait db && python -m db.setup_db`
 Expected: log liệt kê `016_cutoff_records.sql` được apply, không lỗi. (`db/setup_db.py:63` chạy `sorted(migrations_dir.glob("*.sql"))` nên 016 tự được nhặt.)
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add db/migrations/016_cutoff_records.sql
@@ -70,7 +70,7 @@ git commit -m "feat: cutoff_records table for historical benchmark scores (migra
 - Modify: `ingestion/models/pipeline_models.py` (thêm 2 class cuối file)
 - Test: `tests/test_state.py` (chạy lại để chắc model cũ không vỡ — không sửa)
 
-- [ ] **Step 1: Viết test cho model mới**
+- [x] **Step 1: Viết test cho model mới**
 
 Create `tests/agents/test_cutoff_models.py`:
 
@@ -103,12 +103,12 @@ def test_ranked_recommendation_accepts_assessment():
     assert r.cutoff_assessment.latest_values == []
 ```
 
-- [ ] **Step 2: Chạy test để thấy fail**
+- [x] **Step 2: Chạy test để thấy fail**
 
 Run: `python -m pytest tests/agents/test_cutoff_models.py -q`
 Expected: FAIL — `ImportError: cannot import name 'CutoffEntry'`
 
-- [ ] **Step 3: Sửa `agents/models.py`**
+- [x] **Step 3: Sửa `agents/models.py`**
 
 Đổi dòng 1 thành:
 
@@ -159,7 +159,7 @@ Trong `RankedRecommendation`, thêm sau dòng `cautions`:
     cutoff_assessment: Optional[CutoffAssessment] = None
 ```
 
-- [ ] **Step 4: Sửa `ingestion/models/pipeline_models.py`** — thêm cuối file:
+- [x] **Step 4: Sửa `ingestion/models/pipeline_models.py`** — thêm cuối file:
 
 ```python
 class ExtractedCutoffFact(BaseModel):
@@ -198,12 +198,12 @@ class NormalizedCutoffRecord(BaseModel):
     ingested_at: datetime = Field(default_factory=datetime.now)
 ```
 
-- [ ] **Step 5: Chạy test**
+- [x] **Step 5: Chạy test**
 
 Run: `python -m pytest tests/agents/test_cutoff_models.py tests/test_state.py tests/ingestion/test_pydantic_config_migration.py -q`
 Expected: PASS toàn bộ.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add agents/models.py ingestion/models/pipeline_models.py tests/agents/test_cutoff_models.py
@@ -218,7 +218,7 @@ git commit -m "feat: cutoff entry/assessment models and cutoff_history on candid
 - Modify: `ingestion/storage/db_writer.py` (thêm import + hàm mới cuối file)
 - Test: `tests/ingestion/test_db_writer.py` (append)
 
-- [ ] **Step 1: Viết test fail** — append vào `tests/ingestion/test_db_writer.py` (file đã có `_TrackingCursor` + pattern monkeypatch `db_writer.get_cursor`; tái dùng đúng class đó):
+- [x] **Step 1: Viết test fail** — append vào `tests/ingestion/test_db_writer.py` (file đã có `_TrackingCursor` + pattern monkeypatch `db_writer.get_cursor`; tái dùng đúng class đó):
 
 ```python
 from ingestion.models.pipeline_models import NormalizedCutoffRecord
@@ -264,12 +264,12 @@ def test_save_cutoff_records_swallows_db_error_returns_zero(monkeypatch):
     assert db_writer.save_cutoff_records([_make_cutoff("https://x")]) == 0
 ```
 
-- [ ] **Step 2: Chạy để thấy fail**
+- [x] **Step 2: Chạy để thấy fail**
 
 Run: `python -m pytest tests/ingestion/test_db_writer.py -q`
 Expected: FAIL — `AttributeError: module ... has no attribute 'save_cutoff_records'`
 
-- [ ] **Step 3: Implement** — trong `ingestion/storage/db_writer.py`: thêm `NormalizedCutoffRecord` vào import từ `pipeline_models`, thêm hàm cuối file:
+- [x] **Step 3: Implement** — trong `ingestion/storage/db_writer.py`: thêm `NormalizedCutoffRecord` vào import từ `pipeline_models`, thêm hàm cuối file:
 
 ```python
 def save_cutoff_records(records: List[NormalizedCutoffRecord]) -> int:
@@ -326,12 +326,12 @@ def save_cutoff_records(records: List[NormalizedCutoffRecord]) -> int:
     return count
 ```
 
-- [ ] **Step 4: Chạy test**
+- [x] **Step 4: Chạy test**
 
 Run: `python -m pytest tests/ingestion/test_db_writer.py -q`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add ingestion/storage/db_writer.py tests/ingestion/test_db_writer.py
@@ -347,7 +347,7 @@ git commit -m "feat: save_cutoff_records upsert writer"
 - Create: `ingestion/cutoff/__init__.py` (rỗng), `ingestion/cutoff/seeds/` (Task 5 đặt seed vào đây)
 - Test: `tests/ingestion/test_cutoff_seed_loader.py`
 
-- [ ] **Step 1: Viết test fail** — create `tests/ingestion/test_cutoff_seed_loader.py`:
+- [x] **Step 1: Viết test fail** — create `tests/ingestion/test_cutoff_seed_loader.py`:
 
 ```python
 import json
@@ -449,12 +449,12 @@ def test_main_exit_2_when_db_write_short(monkeypatch, tmp_path):
     assert ingest_cutoffs._main(["--seed", str(seed)]) == 2
 ```
 
-- [ ] **Step 2: Chạy để thấy fail**
+- [x] **Step 2: Chạy để thấy fail**
 
 Run: `python -m pytest tests/ingestion/test_cutoff_seed_loader.py -q`
 Expected: FAIL — `ModuleNotFoundError: No module named 'ingestion.ingest_cutoffs'`
 
-- [ ] **Step 3: Implement** — create `ingestion/cutoff/__init__.py` (file rỗng) và `ingestion/ingest_cutoffs.py`:
+- [x] **Step 3: Implement** — create `ingestion/cutoff/__init__.py` (file rỗng) và `ingestion/ingest_cutoffs.py`:
 
 ```python
 """CLI: nạp điểm chuẩn lịch sử curated vào cutoff_records (Giai đoạn 2).
@@ -596,12 +596,12 @@ if __name__ == "__main__":
     sys.exit(_main())
 ```
 
-- [ ] **Step 4: Chạy test**
+- [x] **Step 4: Chạy test**
 
 Run: `python -m pytest tests/ingestion/test_cutoff_seed_loader.py -q`
 Expected: PASS 7 test.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add ingestion/ingest_cutoffs.py ingestion/cutoff/__init__.py tests/ingestion/test_cutoff_seed_loader.py
@@ -618,11 +618,11 @@ git commit -m "feat: ingest_cutoffs CLI with atomic seed validation"
 > Task này là CURATION DỮ LIỆU THẬT, không phải code. Tuyệt đối KHÔNG bịa số.
 > Mỗi con số phải chép từ trang chính thức và dán đúng URL trang đó vào `source_url`.
 
-- [ ] **Step 1: Tra số liệu** — dùng WebFetch/WebSearch hoặc trình duyệt:
+- [x] **Step 1: Tra số liệu** — dùng WebFetch/WebSearch hoặc trình duyệt:
   - HUST: trang công bố điểm chuẩn các năm trên `ts.hust.edu.vn` (tìm "điểm chuẩn 2025 site:ts.hust.edu.vn", tương tự 2024/2023). Phương thức "Xét điểm thi TN THPT" (thang 30).
   - VNU-UET: `tuyensinh.uet.vnu.edu.vn` (thông báo điểm trúng tuyển từng năm).
   - Nguồn THỨ HAI cho EC-16: cổng ĐHQGHN (`tuyensinh.vnu.edu.vn`) công bố điểm chuẩn các trường thành viên — dùng cho các chương trình VNU-UET; với HUST có thể dùng đề án/thông báo PDF đính kèm nếu có. **Nếu không tìm được nguồn chính thức thứ hai cho một (chương trình, năm), KHÔNG bịa cặp conflict — EC-16 vẫn được test bằng fixture (Plan 3/4), và ghi chú vào cuối seed file bằng key `"_notes"`.**
-- [ ] **Step 2: Soạn seed** — phủ tối thiểu: 2 trường × 3 năm (2023/2024/2025) × ≥4 chương trình/trường thuộc nhóm CNTT (ưu tiên: computer_science, data_science, information_technology, artificial_intelligence — khớp kịch bản demo); thêm entry nguồn-thứ-hai cho ≥2 (chương trình, năm 2025) nếu Step 1 tìm được. Format mỗi entry (đúng schema validate ở Task 4):
+- [x] **Step 2: Soạn seed** — phủ tối thiểu: 2 trường × 3 năm (2023/2024/2025) × ≥4 chương trình/trường thuộc nhóm CNTT (ưu tiên: computer_science, data_science, information_technology, artificial_intelligence — khớp kịch bản demo); thêm entry nguồn-thứ-hai cho ≥2 (chương trình, năm 2025) nếu Step 1 tìm được. Format mỗi entry (đúng schema validate ở Task 4):
 
 ```json
 [
@@ -643,17 +643,17 @@ git commit -m "feat: ingest_cutoffs CLI with atomic seed validation"
 ```
 
   (Giá trị `cutoff_score: 0.0` ở trên là minh hoạ schema — file thật phải là số chép từ nguồn; loader sẽ từ chối 0.0 vì ngoài khoảng (0, 30].)
-- [ ] **Step 3: Validate dry-run**
+- [x] **Step 3: Validate dry-run**
 
 Run: `python -m ingestion.ingest_cutoffs --seed --dry-run`
 Expected: `Validate OK: N bản ghi` và bảng liệt kê. Nếu lỗi resolve ngành → bổ sung alias vào `ingestion/normalization/dictionaries/programs.json` (commit kèm) rồi chạy lại.
 
-- [ ] **Step 4: Nạp thật (cần Docker DB + migration 016)**
+- [x] **Step 4: Nạp thật (cần Docker DB + migration 016)**
 
 Run: `docker compose up -d --wait db && python -m db.setup_db && python -m ingestion.ingest_cutoffs --seed`
 Expected: `Đã upsert N bản ghi`. Chạy lại lần 2 → vẫn N (idempotent).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add ingestion/cutoff/seeds/cutoff_2023_2025.json ingestion/normalization/dictionaries/programs.json
