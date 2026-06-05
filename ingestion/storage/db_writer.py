@@ -20,6 +20,7 @@ from ingestion.models.pipeline_models import (
     ParsedContent,
     ExtractedAdmissionFact,
     NormalizedAdmissionRecord,
+    NormalizedCutoffRecord,
 )
 
 logger = logging.getLogger(__name__)
@@ -243,3 +244,57 @@ def load_and_save_from_json(json_path: str) -> int:
 
     logger.info(f"Loaded {len(records)} records from {json_path}")
     return save_canonical_records(records)
+
+
+def save_cutoff_records(records: List[NormalizedCutoffRecord]) -> int:
+    """Upsert điểm chuẩn lịch sử vào cutoff_records (per-source, mirror migration 016).
+
+    Trả số record đã ghi; lỗi DB → log + trả 0 (caller CLI so count để exit code).
+    """
+    count = 0
+    try:
+        with get_cursor() as cur:
+            for record in records:
+                combos_json = (
+                    json.dumps(record.subject_combinations, ensure_ascii=False)
+                    if record.subject_combinations else None
+                )
+                cur.execute("""
+                    INSERT INTO cutoff_records
+                        (school_id, program_id, program_name_canonical, program_name_raw,
+                         cutoff_year, admission_method, score_scale, cutoff_score,
+                         subject_combinations, note, source_url,
+                         source_trust_level, confidence_score)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (school_id, cutoff_year, program_id, admission_method, source_url)
+                    DO UPDATE SET
+                        program_name_canonical = EXCLUDED.program_name_canonical,
+                        program_name_raw = EXCLUDED.program_name_raw,
+                        score_scale = EXCLUDED.score_scale,
+                        cutoff_score = EXCLUDED.cutoff_score,
+                        subject_combinations = EXCLUDED.subject_combinations,
+                        note = EXCLUDED.note,
+                        source_trust_level = EXCLUDED.source_trust_level,
+                        confidence_score = EXCLUDED.confidence_score,
+                        ingested_at = NOW()
+                """, (
+                    record.school_id,
+                    record.program_id,
+                    record.program_name_canonical,
+                    record.program_name_raw,
+                    record.cutoff_year,
+                    record.admission_method,
+                    record.score_scale,
+                    record.cutoff_score,
+                    combos_json,
+                    record.note,
+                    record.source_url,
+                    record.source_trust_level,
+                    record.confidence_score,
+                ))
+                count += 1
+        logger.info(f"Saved {count} cutoff records (upsert)")
+    except Exception as e:
+        logger.error(f"Failed to save cutoff records: {e}")
+        return 0
+    return count
