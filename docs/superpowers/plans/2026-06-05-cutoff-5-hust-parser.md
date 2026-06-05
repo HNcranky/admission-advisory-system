@@ -36,6 +36,16 @@ expect `ExtractedAdmissionFact`, trộn fact type sẽ vỡ normalizer. Source v
   bằng `map_program` fuzzy theo tên.
 - Dữ liệu năm cũ (nút "Xem thêm … năm 2024") load qua JS — NGOÀI phạm vi; 2023–2024 đi đường seed.
 
+> **Deviation khi triển khai (2026-06-05, đã duyệt với user):** chạy thật cho thấy
+> `map_program` fuzzy/substring over-match nặng trên trang aggregator (alias `'CS'` match
+> "Logisti**cs**…", variant "KHMT - hợp tác ĐH Troy" chứa nguyên tên gốc → đè điểm IT1 thật
+> qua upsert key). Fix: (1) `map_program(..., exact_only=True)` cho đường parser — chỉ exact
+> canonical/alias, coverage điều khiển bằng alias `programs.json` (thêm 2 alias nhóm demo);
+> (2) dedup giữ-row-đầu trong `normalize_cutoff_facts` cho row trùng key (2 nhóm tổ hợp).
+> Kết quả thật: 120 records / 205 SKIP có chủ đích. Lưu ý: đường ingestion CHÍNH
+> (canonical_admission_records) vẫn dùng fuzzy → variant Troy vẫn gán `computer_science`
+> ở đó (pre-existing, ứng viên plan sau).
+
 ---
 
 ### Task 1: Snapshot fixture trang thật
@@ -43,14 +53,14 @@ expect `ExtractedAdmissionFact`, trộn fact type sẽ vỡ normalizer. Source v
 **Files:**
 - Create: `tests/fixtures/tsn247_bka_cutoff_2025.html`
 
-- [ ] **Step 1: Fetch + verify cấu trúc** — viết nhanh `scripts/_probe_tsn247_cutoff.py` theo pattern
+- [x] **Step 1: Fetch + verify cấu trúc** — viết nhanh `scripts/_probe_tsn247_cutoff.py` theo pattern
   `scripts/hust_preflight_inspect.py`: fetch
   `https://diemthi.tuyensinh247.com/diem-chuan/dai-hoc-bach-khoa-ha-noi-BKA.html`
   (lưu ý `ADVISORY_FETCH_VERIFY_SSL` mặc định off), in: số `h3` khớp regex
   `điểm chuẩn theo phương thức\s*(.+?)\s*năm\s*(20\d{2})` (case-insensitive, trên
   `get_text(" ", strip=True)`), số bảng, header + 3 row đầu mỗi bảng. Expected: 4 heading 2025,
   4 bảng header `Tên ngành | Tổ hợp môn | Điểm chuẩn | Ghi chú`. Nếu cấu trúc đã đổi → dừng, báo lại.
-- [ ] **Step 2: Snapshot fixture** — lưu HTML trang thật vào
+- [x] **Step 2: Snapshot fixture** — lưu HTML trang thật vào
   `tests/fixtures/tsn247_bka_cutoff_2025.html`. Có thể cắt `<script>`/`<style>`/phần ngoài nội dung
   cho nhẹ file, GIỮ NGUYÊN 4 heading `h3` + 4 bảng (~100KB nguyên trang là chấp nhận được).
 
@@ -65,7 +75,7 @@ expect `ExtractedAdmissionFact`, trộn fact type sẽ vỡ normalizer. Source v
 (KHÔNG sửa `base_parser.py` — parser này cố ý nằm ngoài `ParserRegistry` của pipeline
 chính vì trả `ExtractedCutoffFact`; đăng ký qua `CUTOFF_PARSERS` trong `ingest_cutoffs` ở Task 3.)
 
-- [ ] **Step 1: Viết test fail** — create `tests/ingestion/test_tuyensinh247_cutoff_parser.py`.
+- [x] **Step 1: Viết test fail** — create `tests/ingestion/test_tuyensinh247_cutoff_parser.py`.
   Test 1–3 dùng fixture synthetic (deterministic, commit kèm test); test 4 dùng fixture thật từ Task 1:
 
 ```python
@@ -138,12 +148,12 @@ def test_parses_real_fixture_snapshot():
     assert any("máy tính" in (f.program_name or "").lower() for f in facts)
 ```
 
-- [ ] **Step 2: Chạy để thấy fail**
+- [x] **Step 2: Chạy để thấy fail**
 
 Run: `python -m pytest tests/ingestion/test_tuyensinh247_cutoff_parser.py -q`
 Expected: FAIL — `ModuleNotFoundError`.
 
-- [ ] **Step 3: Implement** — create `ingestion/parsers/tuyensinh247_cutoff_parser.py`:
+- [x] **Step 3: Implement** — create `ingestion/parsers/tuyensinh247_cutoff_parser.py`:
 
 ```python
 """Tuyensinh247 cutoff (điểm chuẩn) HTML parser — Giai đoạn 2.
@@ -287,12 +297,12 @@ class Tuyensinh247CutoffParser:
 (Nhắc lại: KHÔNG sửa `base_parser.py::_auto_discover` — parser này cố ý nằm NGOÀI
 ParserRegistry của pipeline chính; xem docstring trong code.)
 
-- [ ] **Step 4: Chạy test**
+- [x] **Step 4: Chạy test**
 
 Run: `python -m pytest tests/ingestion/test_tuyensinh247_cutoff_parser.py -q`
 Expected: PASS (test fixture thật pass sau khi chỉnh ngưỡng assert theo snapshot ở Task 1).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add ingestion/parsers/tuyensinh247_cutoff_parser.py tests/ingestion/test_tuyensinh247_cutoff_parser.py tests/fixtures/tsn247_bka_cutoff_2025.html
@@ -309,7 +319,7 @@ git commit -m "feat: deterministic tuyensinh247 cutoff HTML parser (4 method tab
 - Modify: `ingestion/registry/seeds/initial_sources.json`
 - Test: `tests/ingestion/test_cutoff_seed_loader.py` (append)
 
-- [ ] **Step 1: Viết test fail** — append vào `tests/ingestion/test_cutoff_seed_loader.py`:
+- [x] **Step 1: Viết test fail** — append vào `tests/ingestion/test_cutoff_seed_loader.py`:
 
 ```python
 from ingestion.models.pipeline_models import ExtractedCutoffFact, SourceReference
@@ -396,12 +406,12 @@ def test_main_source_url_exit_1_when_nothing_saved(monkeypatch):
 
 (Patch `parse` qua class attr — `type(...CUTOFF_PARSERS[...])` — vì value trong dict là instance.)
 
-- [ ] **Step 2: Chạy để thấy fail**
+- [x] **Step 2: Chạy để thấy fail**
 
 Run: `python -m pytest tests/ingestion/test_cutoff_seed_loader.py -q`
 Expected: FAIL — `normalize_cutoff_facts`/`CUTOFF_PARSERS`/`http_fetch` chưa tồn tại.
 
-- [ ] **Step 3: Implement runner** — sửa `ingestion/ingest_cutoffs.py`:
+- [x] **Step 3: Implement runner** — sửa `ingestion/ingest_cutoffs.py`:
 
 (a) Thêm imports:
 
@@ -551,7 +561,7 @@ và `ingestion/registry/seeds/initial_sources.json` thêm entry:
 `is_official: false` + `trust_level: 3`: aggregator — nguồn phụ, seed chính thức trust 5 vẫn thắng
 khi conflict non-decision-changing.)
 
-- [ ] **Step 4: Chạy test + chạy thật**
+- [x] **Step 4: Chạy test + chạy thật**
 
 Run: `python -m pytest tests/ingestion/ -q`
 Expected: PASS.
@@ -564,7 +574,7 @@ chỉ cần nhóm demo: Khoa học máy tính / Kỹ thuật máy tính / Khoa h
 Sau đó chạy không `--dry-run` → upsert; row 2025 tuyensinh247 nằm CẠNH row 2025 seed chính thức
 (khác `source_url` → 2 row, nền dữ liệu thật cho EC-16).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add ingestion/ingest_cutoffs.py ingestion/registry/models.py ingestion/registry/seeds/initial_sources.json tests/ingestion/test_cutoff_seed_loader.py
@@ -575,7 +585,7 @@ git commit -m "feat: cutoff source runner (fetch/parse/normalize/save) and tsn24
 
 ### Task 4: Khép phase — toàn suite + smoke
 
-- [ ] **Step 1:** `python -m pytest -q` → toàn xanh.
-- [ ] **Step 2:** Docker DB up: `python -m pytest tests/integration tests/e2e -q` → xanh.
-- [ ] **Step 3:** Smoke web UI (`python -m uvicorn web.app:app --reload`) với 4 kịch bản EC-14/15/16/18 (điểm 26.25 / hồ sơ chạm chương trình biến động / chương trình có 2 nguồn — sau Task 3 nguồn thứ hai là tuyensinh247 thật / bất kỳ) — kiểm tra caveat năm tham chiếu xuất hiện.
-- [ ] **Step 4:** Cập nhật memory `edge-case-conformance` (EC-14/15/16/17/18 → ĐẠT) + cập nhật bảng trạng thái trong index plan.
+- [x] **Step 1:** `python -m pytest -q` → toàn xanh.
+- [x] **Step 2:** Docker DB up: `python -m pytest tests/integration tests/e2e -q` → xanh.
+- [x] **Step 3:** Smoke web UI (`python -m uvicorn web.app:app --reload`) với 4 kịch bản EC-14/15/16/18 (điểm 26.25 / hồ sơ chạm chương trình biến động / chương trình có 2 nguồn — sau Task 3 nguồn thứ hai là tuyensinh247 thật / bất kỳ) — kiểm tra caveat năm tham chiếu xuất hiện.
+- [x] **Step 4:** Cập nhật memory `edge-case-conformance` (EC-14/15/16/17/18 → ĐẠT) + cập nhật bảng trạng thái trong index plan.
