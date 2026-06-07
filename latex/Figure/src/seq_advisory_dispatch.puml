@@ -1,0 +1,40 @@
+@startuml seq_advisory_dispatch
+skinparam shadowing false
+skinparam defaultFontName Arial
+
+actor Student as user
+participant "Browser\n(chat UI)" as ui
+participant "chat_api\n(FastAPI route)" as api
+participant "Conversation\nService" as conv
+participant "IntentRouter" as router
+participant "ChatSession\nRepository" as repo
+participant "RunDispatcher\n(ThreadPoolExecutor)" as disp
+participant "advisory_runner\n→ LangGraph graph" as runner
+database "PostgreSQL" as db
+
+user -> ui : type message
+ui -> api : POST /api/sessions/{token}/messages
+api -> conv : handle_user_message(token, content)
+conv -> router : classify(message, profile_state)
+router --> conv : IntentResult(route=ADVISORY_FLOW)
+conv --> api : ConversationTurnResult\n(should_start_run=true)
+api -> repo : create_run(token, profile_state)
+repo -> db : INSERT chat_advisory_runs (queued)
+api -> disp : submit(token, run_id, message,\nprofile_state)
+api --> ui : 200 (ack, run queued)
+
+disp -> repo : mark_run_running(run_id)
+disp -> runner : run_advisory_for_session(...)
+runner -> runner : graph.invoke(AgentState)\nprofile → retrieve → conflict\n→ reason → policy → explain
+runner -> db : per-stage trace events\n(advisory_trace_events)
+runner --> disp : result(final_answer)
+disp -> repo : complete_run(run_id, result)
+disp -> repo : append_message(assistant,\nfinal_answer)
+disp -> repo : update_session_status(completed)
+
+loop until run completes
+  ui -> api : GET /api/sessions/{token}\n+ GET .../trace
+  api --> ui : messages + stage ladder
+end
+ui --> user : render answer + trace
+@enduml

@@ -241,3 +241,6 @@ data/knowledge/
 latex/main-blx.bib
 latex/main.pdf
 
+# Local diagram toolchain (PlantUML jar, ~22 MB)
+tools/plantuml.jar
+

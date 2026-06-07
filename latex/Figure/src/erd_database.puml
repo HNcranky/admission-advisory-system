@@ -1,0 +1,141 @@
+@startuml erd_database
+!pragma layout smetana
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam linetype ortho
+hide circle
+
+package "Ingestion working store" {
+  entity source_registry {
+    * source_id : TEXT <<PK>>
+    --
+    school_id, school_name
+    source_type, root_url
+    trust_level, priority
+    fetch_strategy, parser_profile
+    is_official, active
+  }
+  entity discovered_resources {
+    * id : SERIAL <<PK>>
+    --
+    url <<unique>>
+    source_id <<FK>>
+    predicted_type, status
+    content_hash
+  }
+  entity raw_documents {
+    * id : SERIAL <<PK>>
+    --
+    url, source_id <<FK>>
+    content_type, http_status
+    raw_content : BYTEA
+    parsed_text, parsed_structure
+  }
+  entity extracted_facts {
+    * id : SERIAL <<PK>>
+    --
+    raw_document_id <<FK>>
+    school_name, admission_year
+    program_name, program_code
+    admission_method_raw
+    quota_raw, tuition_raw
+    confidence_score
+  }
+}
+
+package "Canonical store" {
+  entity canonical_admission_records {
+    * id : SERIAL <<PK>>
+    --
+    extracted_fact_id <<FK>>
+    school_id, admission_year
+    program_id, program_name_canonical
+    admission_method
+    subject_combinations : JSONB
+    quota, tuition, metadata : JSONB
+    source_url, source_trust_level
+    <<unique per source>>
+  }
+  entity cutoff_records {
+    * id : SERIAL <<PK>>
+    --
+    school_id, program_id
+    cutoff_year, admission_method
+    cutoff_score, score_scale
+    subject_combinations : JSONB
+    source_url <<unique per source>>
+  }
+}
+
+package "Chat & tracing" {
+  entity chat_sessions {
+    * id : SERIAL <<PK>>
+    --
+    session_token <<unique>>
+    status
+    profile_state_json : JSONB
+    flow_state_json : JSONB
+  }
+  entity chat_messages {
+    * id : SERIAL <<PK>>
+    --
+    session_id <<FK>>
+    role, kind, content
+  }
+  entity chat_advisory_runs {
+    * id : SERIAL <<PK>>
+    --
+    session_id <<FK>>
+    status, profile_snapshot_json
+    result_json, final_answer
+  }
+  entity advisory_trace_events {
+    * id : SERIAL <<PK>>
+    --
+    run_id <<FK>>
+    stage, status, sequence
+    duration_ms, output_json
+  }
+  entity advisory_runs {
+    * id : SERIAL <<PK>>
+    --
+    user_query, profile_json
+    retrieval_json, reasoning_json
+    policy_json, final_answer
+  }
+}
+
+package "Knowledge corpus (pgvector)" {
+  entity knowledge_documents {
+    * id : SERIAL <<PK>>
+    --
+    school, document_type
+    source_url <<unique>>
+    content_hash, raw_text
+  }
+  entity knowledge_chunks {
+    * id : SERIAL <<PK>>
+    --
+    knowledge_document_id <<FK>>
+    school, topic, chunk_text
+    embedding : vector(768) <<HNSW>>
+    content_hash, span_start/end
+  }
+  entity program_catalog_embeddings {
+    * program_id : TEXT <<PK>>
+    --
+    canonical_name, aliases_text
+    embed_input, content_hash
+    embedding : vector(768) <<HNSW>>
+  }
+}
+
+source_registry ||--o{ discovered_resources
+source_registry ||--o{ raw_documents
+raw_documents ||--o{ extracted_facts
+extracted_facts ||--o{ canonical_admission_records
+chat_sessions ||--o{ chat_messages
+chat_sessions ||--o{ chat_advisory_runs
+chat_advisory_runs ||--o{ advisory_trace_events
+knowledge_documents ||--o{ knowledge_chunks
+@enduml

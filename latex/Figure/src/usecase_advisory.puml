@@ -1,0 +1,26 @@
+@startuml usecase_advisory
+!pragma layout smetana
+left to right direction
+skinparam actorStyle awesome
+skinparam shadowing false
+skinparam defaultFontName Arial
+
+actor "Student" as student
+
+rectangle "Advisory consultation" {
+  usecase "Request program\nadvice" as UC1
+  usecase "Provide profile slot\n(score, combination,\nmajors, schools)" as UC2
+  usecase "Answer pending\nslot question" as UC3
+  usecase "Correct a previously\ngiven slot value" as UC4
+  usecase "Receive ranked\nrecommendations\nwith conflict notes" as UC5
+  usecase "Reset profile and\nstart over" as UC6
+}
+
+student --> UC1
+student --> UC5
+student --> UC6
+UC1 ..> UC2 : <<include>>
+UC2 <.. UC3 : <<extend>>
+UC2 <.. UC4 : <<extend>>
+UC1 ..> UC5 : <<include>>
+@enduml

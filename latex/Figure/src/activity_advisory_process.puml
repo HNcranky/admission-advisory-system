@@ -1,0 +1,68 @@
+@startuml activity_advisory_process
+!pragma layout smetana
+skinparam shadowing false
+skinparam defaultFontName Arial
+
+start
+:User message arrives
+(POST /api/sessions/{token}/messages);
+:Extract profile delta from message;
+if (Reset requested?) then (yes)
+  :Clear profile, confirm reset;
+  stop
+else (no)
+endif
+if (Rejected a previous suggestion?) then (yes)
+  :Acknowledge, drop rejected value;
+  stop
+else (no)
+endif
+if (Answer to pending slot question?) then (yes)
+  :Merge slot value into profile;
+else (no)
+  if (Correction of an earlier slot?) then (yes)
+    :Apply correction,
+    re-run advisory pipeline;
+    stop
+  else (no)
+  endif
+  :Classify intent (LLM router,
+  deterministic keyword fallback);
+  switch (route?)
+  case (KNOWLEDGE_QA)
+    :RAG answer with citations;
+    stop
+  case (HYBRID)
+    :Fan out knowledge lookups
+    + advisory run, synthesize;
+    stop
+  case (other routes)
+    :Deterministic reply or
+    clarifying question
+    (CONVERSATIONAL, OUT_OF_SCOPE,
+    CLARIFICATION);
+    stop
+  case (ADVISORY_FLOW)
+  endswitch
+endif
+if (Required slots missing?) then (yes)
+  :Ask next slot question;
+  stop
+else (no)
+endif
+:Create run, dispatch to
+background executor;
+partition "LangGraph advisory pipeline" {
+  :profile;
+  :retrieve;
+  :conflict;
+  :reason;
+  :policy;
+  :explain;
+}
+:Persist final answer,
+mark session completed;
+:UI polls and renders answer
++ stage trace;
+stop
+@enduml

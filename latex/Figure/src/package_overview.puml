@@ -1,0 +1,58 @@
+@startuml package_overview
+!pragma layout smetana
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam packageStyle rectangle
+skinparam ranksep 40
+skinparam nodesep 30
+
+package "web" as web {
+  package "routes" as routes {}
+  package "templates / static" as tmpl {}
+}
+
+package "services" as services {
+  package "chat" as chat {}
+  package "knowledge" as knowledge {}
+  package "tracing" as tracing {}
+  package "inference" as inference {}
+  package "conflict" as conflict {}
+  package "cutoff" as cutoff {}
+  package "profile" as profile {}
+}
+
+package "advisory pipeline" as pipeline {
+  package "graph.py + state.py" as graphpkg {}
+  package "agents" as agents {}
+}
+
+package "ingestion" as ingestion {
+  package "fetchers / parsers / extractors" as fpe {}
+  package "normalization" as norm {}
+  package "pipeline + storage.db_writer" as ingpipe {}
+  package "knowledge corpus" as ingknow {}
+}
+
+package "PostgreSQL 16 + pgvector" as db {}
+
+routes --> chat
+chat --> knowledge
+chat --> inference
+chat --> profile
+chat --> graphpkg
+graphpkg --> agents
+agents --> conflict
+agents --> cutoff
+agents --> inference
+knowledge --> inference
+conflict --> inference
+chat --> tracing
+tracing --> db
+chat --> db
+knowledge --> db
+agents --> db
+ingpipe --> db
+fpe --> ingpipe
+norm --> ingpipe
+ingknow --> db
+@enduml
