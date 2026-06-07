@@ -1,26 +1,85 @@
 \documentclass[../main.tex]{subfiles}
 \begin{document}
 
-% Target length: >= 5 pages. One section per contribution, each with
-% (i) problem, (ii) solution, (iii) results. No repetition of earlier
-% chapters - they cross-reference here.
+% Target length: >= 5 pages.
 
-% TODO: Overview paragraph.
+Chapter~\ref{chapter:Experiment} presented the system as a whole.
+This chapter isolates its three principal contributions and examines each in the form problem, solution, and result.
+The contributions are the conflict-aware consolidation of contradictory source data (Section~\ref{section:5.1}), the resilient inference gateway that keeps the assistant available under model failures (Section~\ref{section:5.2}), and the end-to-end ingestion of heterogeneous official sources including scanned documents (Section~\ref{section:5.3}).
+Each addresses a gap identified in Chapter~\ref{chapter:Related_works} that existing admission tools leave open.
 
 \section{Conflict-aware data consolidation}
-% TODO: problem: contradictory quota/cutoff data across sources;
-% solution: conflict detection + LLM tiebreaker (services/conflict/);
-% results.
+\label{section:5.1}
+
+\textbf{Problem.}
+Official admission data is not only fragmented but internally inconsistent: two authoritative publications for the same program can state different quotas, and two sources can record different historical cutoff scores for the same program and year.
+As established in Chapter~\ref{chapter:Related_works}, every existing channel resolves such disagreement silently --- it picks one value or shows none --- which hides exactly the uncertainty a student needs to know about before committing an application.
+Consolidating these sources therefore cannot mean overwriting one value with another; the disagreement must survive into the recommendation.
+
+\textbf{Solution.}
+Conflict awareness is built in three layers.
+At the storage layer, as described in Section~\ref{section:4.2}, the canonical tables are unique per source, so contradictory publications coexist as distinct rows rather than overwriting one another.
+At the detection layer, the conflict service groups candidate records by program, year, and method and flags a conflict whenever the grouped rows carry two or more distinct values; quota and cutoff conflicts are detected separately because they have different keys and different resolution rules.
+At the resolution layer, the two kinds of conflict are treated deliberately differently.
+A quota conflict is first put through a deterministic comparison over trust level and source confidence; only if that comparison is not decisive is a single, tightly constrained \gls{LLM} tie-breaker consulted, and even then the model's choice is accepted only when it returns high confidence and selects a known source.
+A cutoff conflict is never resolved by picking a winner with a model.
+Instead, the system checks whether the disagreement is \textit{decision-changing} for this particular student --- that is, whether the competing cutoff values would place the student's score into different fit categories.
+If it is, the conflict is left unresolved, the affected field is marked uncertain, and the explanation presents every competing value; if it is not, the system references the most trusted value while still stating all of them.
+
+\textbf{Result.}
+The pipeline surfaces conflicts instead of hiding them.
+When a program's sources disagree in a way that matters, the recommendation marks the field as uncertain, lists the differing values, and advises the student to verify against the latest official announcement, which is the behavior required by edge case EC-16 and the conflict-disclosure use case of Chapter~\ref{chapter:Related_works}.
+The conservative division of labor --- deterministic comparison first, a constrained model only for non-decisive quota cases, and never for decision-changing cutoffs --- keeps the model away from the decisions where an over-confident guess could mislead a student, while still consolidating the cases that can be settled objectively.
+The conflict-handling edge cases (EC-16 and EC-17) are among the 17 satisfied cases reported in Section~\ref{section:4.4}.
 
 \section{Resilient LLM inference gateway}
-% TODO: problem: LLM outages/malformed outputs; solution: gateway with
-% retry, structure-failure fallback, deterministic keyword fallback
-% (services/inference/); results.
+\label{section:5.2}
+
+\textbf{Problem.}
+The assistant depends on a hosted \gls{LLM} reached over the network, and that dependency fails in two distinct ways.
+The first is a \textit{hard failure}: the \gls{API} is unreachable, unauthenticated, or rate-limited, which is common because the inference quota is finite and shared across every reasoning step.
+The second is a \textit{soft failure}: the call succeeds but the body cannot be used --- the model wraps its \gls{JSON} in prose, emits malformed syntax, or returns a value outside the expected set.
+A naive implementation that treats every \gls{LLM} call as reliable would let either failure crash a consultation, violating the graceful-degradation requirement NFR-01.
+The two failure kinds also call for opposite responses: retrying a rate-limited endpoint is pointless, whereas retrying a malformed structured response can succeed.
+
+\textbf{Solution.}
+All model access is funneled through a single gateway (Section~\ref{section:4.1}) that makes the two failure modes first-class.
+A hard failure is raised as an \texttt{InferenceError}; a soft failure is reported on the result as a \texttt{failure\_type} of \texttt{STRUCTURE\_FAILURE} rather than as an exception.
+The gateway treats them differently: on a hard error it stops retrying the same model immediately and moves to the configured fallback model, because retrying an unreachable endpoint wastes time; on a structure failure it retries within the per-agent retry budget and then falls back to the secondary model.
+If no fallback is configured, the gateway re-raises the hard error so that the call site can degrade, and every call site is written to do exactly that --- wrapping the call and substituting deterministic output on failure.
+The clearest instance of this discipline is intent classification.
+When the gateway is unavailable or returns an unusable response, the router falls back to a deterministic keyword classifier that mirrors the prompt's own priority rules: it checks knowledge-topic keywords before advisory phrases, so a factual question is never misrouted into a full advisory run while the model is unavailable, and unrecognized messages become a clarification request rather than a silent re-run.
+This deterministic fallback was introduced in commit \texttt{c2ef582}.
+
+\textbf{Result.}
+The assistant remains usable through model outages.
+Intent routing continues to function without any model call, knowledge answering degrades to an honest ``no data'' reply rather than a fabricated one, and structured-output hiccups are absorbed by retry and fallback instead of surfacing as crashes.
+Concentrating this logic in one gateway means every reasoning step in the system --- routing, conflict tie-breaking, knowledge answering, and \gls{OCR} --- inherits the same resilience without re-implementing it, and the per-stage telemetry records when a fallback or a structure failure occurred, so an outage is visible to operators rather than silent.
 
 \section{End-to-end ingestion of heterogeneous official sources}
-% TODO: problem: per-school formats, scanned PDFs; solution: configurable
-% fetcher/parser/extractor pipeline with degenerate-OCR retry; results.
+\label{section:5.3}
 
-% TODO: Chapter summary paragraph.
+\textbf{Problem.}
+The data that makes the assistant useful lives in sources that share no common format: each university structures its admission pages differently, proposal documents are published as \gls{PDF}s, and some of those \gls{PDF}s are scanned images with no text layer at all.
+A pipeline that assumes uniform, machine-readable input cannot ingest this material, yet without it the canonical store and the knowledge corpus would be empty.
+Scanned documents are the hardest case, because recovering their text requires \gls{OCR}, and model-based \gls{OCR} introduces a failure mode of its own.
+
+\textbf{Solution.}
+Ingestion is a configurable, staged pipeline (Section~\ref{section:4.1}): per-source configuration selects the fetch strategy, the document router predicts each document's type, and a matching parser and extractor turn it into raw facts that are then normalized against per-school dictionaries into canonical records.
+Because the per-source configuration and dictionaries are data rather than code, adding a school is largely a matter of configuration.
+Scanned \gls{PDF}s are handled by a hybrid per-page extractor (Section~\ref{section:3.4}): a page with a usable text layer is read directly, and only image-only pages are rendered and sent to the multimodal gateway for transcription, keeping cost proportional to the number of scanned pages.
+The distinctive part is the safeguard against model \gls{OCR} repetition loops, introduced in commit \texttt{b41dd9f}.
+When transcribing a page with merged table cells, the model can lock into emitting one character endlessly --- one NEU page produced on the order of a million dash characters.
+The extractor classifies an output as \textit{degenerate} when it exceeds an absolute per-page character ceiling, or when a single character dominates more than a set fraction of the non-whitespace output above a minimum length.
+A degenerate page is retried once at a raised decoding temperature to break the greedy loop; if it is still degenerate the page is marked failed and the remaining pages of the document are ingested normally, so one bad page cannot discard a whole document, while a document that yields no text at all is deliberately left un-ingested rather than recorded as empty.
+
+\textbf{Result.}
+The pipeline ingests both structured and unstructured official sources end to end.
+The canonical store holds 136 admission records and 699 cutoff records for HUST and 20 admission records and 16 cutoff records for VNU-UET, and the knowledge corpus holds 18 documents and 406 chunks drawn from HUST, NEU, VNU-UET, and national \gls{MOET} regulations, as reported in Section~\ref{section:4.3}.
+The degenerate-output safeguard is what makes the scanned subset of that corpus ingestible: without it, a single repetition-loop page would either bloat the store with megabytes of junk or abort the document; with it, the bad page is isolated and the rest of the document is preserved.
+
+This chapter examined the system's three contributions in depth: conflict-aware consolidation that preserves and discloses contradictory source data, a resilient inference gateway that distinguishes hard from soft model failures and keeps the assistant available through both, and an end-to-end ingestion pipeline that handles heterogeneous and scanned official sources with an explicit safeguard against model \gls{OCR} failure.
+Together these address the three gaps --- unreconciled data, unreliable model dependence, and inaccessible source formats --- that Chapter~\ref{chapter:Related_works} identified in existing admission tools.
+Chapter~\ref{chapter:conclusion} concludes the thesis and sets out the remaining work.
 
 \end{document}

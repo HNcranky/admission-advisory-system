@@ -81,13 +81,13 @@ Rule: each technology must map to a Chapter 2 requirement + name alternatives.
 
 ## Chapter 5 — Solution and contribution (≥ 5 pages)
 Each: problem → solution → results. Cross-referenced from Chapters 2/4.
-- [ ] 5.1 Conflict-aware data consolidation: contradictory quota/cutoff data
+- [~] 5.1 Conflict-aware data consolidation: contradictory quota/cutoff data
       across sources; `services/conflict/` detection + LLM tiebreaker;
       conflict surfacing in advisory answers.
-- [ ] 5.2 Resilient LLM inference gateway: API failures vs STRUCTURE_FAILURE,
+- [~] 5.2 Resilient LLM inference gateway: API failures vs STRUCTURE_FAILURE,
       retry/fallback in `services/inference/gateway.py`, deterministic keyword
       fallback for intent classification (commit c2ef582).
-- [ ] 5.3 End-to-end heterogeneous ingestion: per-school configs, OCR with
+- [~] 5.3 End-to-end heterogeneous ingestion: per-school configs, OCR with
       degenerate-output detection and retry (commit b41dd9f), normalization
       into the canonical store.
 
