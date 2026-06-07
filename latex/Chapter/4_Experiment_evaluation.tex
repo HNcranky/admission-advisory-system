@@ -117,7 +117,7 @@ Otherwise it asks the model to answer strictly from the retrieved passages and r
     \label{fig:seq-knowledge}
 \end{figure}
 
-A design convention shared by every repository supports the testability requirement (NFR-05): each repository takes an injectable connection factory and performs its work inside a \texttt{\_cursor} context manager that guarantees commit on success, rollback on exception, and connection cleanup in all cases.
+A design convention shared by every repository supports the testability requirement (NFR-05): each repository takes an injectable connection factory and performs its work over the PostgreSQL driver psycopg~\cite{psycopg} inside a \texttt{\_cursor} context manager that guarantees commit on success, rollback on exception, and connection cleanup in all cases.
 This both prevents leaked connections and lets tests substitute a connection factory bound to the isolated test database.
 
 \subsection{Database design}
@@ -157,7 +157,7 @@ Table~\ref{table:libraries} lists the principal libraries and their versions, ta
         \hline
         langgraph & 1.1.10 & Advisory pipeline state graph \\
         \hline
-        langchain & 1.2.17 & \gls{LLM} orchestration primitives \\
+        langchain~\cite{langchain} & 1.2.17 & \gls{LLM} orchestration primitives \\
         \hline
         google-genai & 1.75.0 & Gemini \gls{API} client \\
         \hline
@@ -235,7 +235,7 @@ A completed consultation presents ranked program recommendations in the conversa
 \section{Testing}
 \label{section:4.4}
 
-The system is verified by an automated test suite of 856 tests across 149 test files, spanning unit tests of individual services, integration tests that exercise real \gls{SQL} paths, and end-to-end tests of the advisory and ingestion flows.
+The system is verified by an automated test suite of 856 tests across 149 test files, built with the pytest framework~\cite{pytest} and spanning unit tests of individual services, integration tests that exercise real \gls{SQL} paths, and end-to-end tests of the advisory and ingestion flows.
 
 The defining feature of the test strategy is \textit{database isolation}.
 A fixture in \texttt{tests/conftest.py} (\texttt{\_isolate\_test\_db}) redirects the entire suite to an automatically created \texttt{admission\_test} database, so integration and end-to-end tests can create, mutate, and drop data without ever touching the development database.
@@ -273,7 +273,7 @@ This cluster is carried forward as the principal item of future work in Section~
 \section{Deployment}
 \label{section:4.5}
 
-The system is deployed with Docker Compose.
+The system is deployed with Docker Compose~\cite{docker}.
 A single service definition runs the database from the \texttt{pgvector/pgvector:pg16} image, which provides PostgreSQL~16 with the pgvector extension preinstalled, exposed on the standard port with a persistent named volume and a health check.
 Bringing up the database and waiting for its health check is a single command, after which a setup script (\texttt{db/setup\_db.py}) creates the \texttt{admission} database, applies the sixteen migrations in order, verifies the expected tables, and seeds the source registry.
 The web application is then served by Uvicorn.

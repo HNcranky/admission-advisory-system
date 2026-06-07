@@ -15,6 +15,7 @@ Each addresses a gap identified in Chapter~\ref{chapter:Related_works} that exis
 Official admission data is not only fragmented but internally inconsistent: two authoritative publications for the same program can state different quotas, and two sources can record different historical cutoff scores for the same program and year.
 As established in Chapter~\ref{chapter:Related_works}, every existing channel resolves such disagreement silently --- it picks one value or shows none --- which hides exactly the uncertainty a student needs to know about before committing an application.
 Consolidating these sources therefore cannot mean overwriting one value with another; the disagreement must survive into the recommendation.
+The general problem of combining records that describe the same entity but disagree on attribute values is studied as \textit{data fusion}~\cite{bleiholder2009fusion}, which frames the available strategies as resolving, ignoring, or deferring a conflict; the design below applies the deferring strategy where a conflict cannot be settled objectively.
 
 \textbf{Solution.}
 Conflict awareness is built in three layers.
