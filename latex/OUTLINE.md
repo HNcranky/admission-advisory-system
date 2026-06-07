@@ -24,17 +24,17 @@ Every claim/number below marked (verify) must be re-measured before writing.
 ## Chapter 2 — Requirement survey and analysis (9-11 pages)
 Sources: `docs/happy-path.md`, `docs/edge-case.md`,
 `docs/admission-advisory-conversational-architecture.md`.
-- [ ] 2.1 Status survey: existing advisory products; comparison table.
-- [ ] 2.2.1 General use case diagram: actors = student (anonymous chat),
+- [~] 2.1 Status survey: existing advisory products; comparison table.
+- [~] 2.2.1 General use case diagram: actors = student (anonymous chat),
       operator (ingestion CLI, debug/trace panel).
-- [ ] 2.2.2 Detailed use case diagrams: advisory conversation; knowledge Q&A;
+- [~] 2.2.2 Detailed use case diagrams: advisory conversation; knowledge Q&A;
       data ingestion.
-- [ ] 2.2.3 Business process: profile collection → retrieval → conflict
+- [~] 2.2.3 Business process: profile collection → retrieval → conflict
       check → reasoning → policy → explanation (mirrors `graph.py`).
-- [ ] 2.3 Functional description: 4-7 key use cases with flows and pre/post
+- [~] 2.3 Functional description: 4-7 key use cases with flows and pre/post
       conditions (advisory consultation, free-form Q&A, profile update,
       school data refresh).
-- [ ] 2.4 Non-functional: LLM-outage graceful degradation, data freshness,
+- [~] 2.4 Non-functional: LLM-outage graceful degradation, data freshness,
       anonymous sessions, latency, test isolation.
 
 ## Chapter 3 — Theoretical background and technologies (≤ 10 pages)
