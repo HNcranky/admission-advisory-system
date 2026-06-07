@@ -16,7 +16,7 @@ Every claim/number below marked (verify) must be re-measured before writing.
       conflict awareness, no personalization. Objectives: end-to-end system =
       ingestion of official sources + canonical conflict-aware store +
       LLM-agent advisory chat. Scope: configured schools (see
-      `ingestion/configs/`), Vietnamese-language user dialogue.
+      `ingestion/config/`), Vietnamese-language user dialogue.
 - [ ] 1.3 Tentative solution: LangGraph advisory pipeline + RAG over pgvector +
       resilient Gemini gateway; contributions preview (→ Chapter 5).
 - [ ] 1.4 Thesis organization: prose description of Chapters 2-6.
@@ -65,13 +65,14 @@ Rule: each technology must map to a Chapter 2 requirement + name alternatives.
       (`services/chat/` background executor) and knowledge Q&A
       (`services/knowledge/qa_service.py`).
 - [ ] 4.2.3 Database design: E-R of canonical store; migrations
-      `db/migrations/001-013`; pgvector tables; repository pattern with
+      `db/migrations/001-016`; pgvector tables; repository pattern with
       injectable `connection_factory` + `_cursor` context manager.
 - [ ] 4.3.1 Libraries/tools table: versions from `requirements.txt` /
       `pyproject.toml` (verify).
 - [ ] 4.3.2 Achievement: LOC, package/test counts, ingested schools
-      HUST/NEU/UET + MOET documents (verify counts: hust 136 programs,
-      cutoffs 715, catalog 83 — re-measure before writing).
+      HUST/NEU/UET + MOET documents — all measured values in `latex/FACTS.md`
+      (2026-06-08: hust 136 programs, cutoffs 715 total, catalog 81,
+      knowledge docs 18 / chunks 406, 28,055 Python LOC, 856 tests).
 - [ ] 4.3.3 Screenshots of main flows.
 - [ ] 4.4 Testing: pytest suite on isolated `admission_test` DB
       (`tests/conftest.py::_isolate_test_db`); edge-case compliance matrix

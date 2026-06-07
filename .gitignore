@@ -238,5 +238,6 @@ data/knowledge/
 *.synctex.gz
 *.toc
 *.bcf
+latex/main-blx.bib
 latex/main.pdf
 
