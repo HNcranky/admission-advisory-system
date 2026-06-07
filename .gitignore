@@ -220,3 +220,23 @@ __marimo__/
 # Local knowledge corpus (official PDFs, not committed)
 data/knowledge/
 
+# LaTeX build artifacts (thesis lives in latex/, compiled externally)
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.glo
+*.gls
+*.glsdefs
+*.ist
+*.lof
+*.log
+*.lot
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+*.bcf
+latex/main.pdf
+
