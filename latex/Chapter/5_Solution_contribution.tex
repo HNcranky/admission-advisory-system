@@ -1,0 +1,26 @@
+\documentclass[../main.tex]{subfiles}
+\begin{document}
+
+% Target length: >= 5 pages. One section per contribution, each with
+% (i) problem, (ii) solution, (iii) results. No repetition of earlier
+% chapters - they cross-reference here.
+
+% TODO: Overview paragraph.
+
+\section{Conflict-aware data consolidation}
+% TODO: problem: contradictory quota/cutoff data across sources;
+% solution: conflict detection + LLM tiebreaker (services/conflict/);
+% results.
+
+\section{Resilient LLM inference gateway}
+% TODO: problem: LLM outages/malformed outputs; solution: gateway with
+% retry, structure-failure fallback, deterministic keyword fallback
+% (services/inference/); results.
+
+\section{End-to-end ingestion of heterogeneous official sources}
+% TODO: problem: per-school formats, scanned PDFs; solution: configurable
+% fetcher/parser/extractor pipeline with degenerate-OCR retry; results.
+
+% TODO: Chapter summary paragraph.
+
+\end{document}

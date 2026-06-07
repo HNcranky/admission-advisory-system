@@ -1,0 +1,51 @@
+\documentclass[../main.tex]{subfiles}
+\begin{document}
+
+% TODO: Overview paragraph.
+
+\section{Architecture design}
+\subsection{Software architecture selection}
+% TODO: layered service-oriented monolith; why not microservices.
+
+\subsection{Overall design}
+% TODO: UML package diagram: web / services (chat, inference, knowledge,
+% conflict, tracing) / agents / ingestion / db.
+
+\subsection{Detailed package design}
+% TODO: per-package class diagrams (agents pipeline, services/inference,
+% ingestion pipeline).
+
+\section{Detailed design}
+\subsection{User interface design}
+% TODO: chat UI design, debug/trace panel.
+
+\subsection{Layer design}
+% TODO: key classes (inference gateway, chat dispatchers, repositories) +
+% sequence diagrams for 2-3 key use cases.
+
+\subsection{Database design}
+% TODO: E-R diagram; canonical store (schools, programs, quotas, methods,
+% cutoffs); pgvector knowledge tables; migrations 001-013.
+
+\section{Application building}
+\subsection{Libraries and tools}
+% TODO: table of tools with versions (Python, FastAPI, LangGraph, psycopg,
+% pgvector, pytest, Docker).
+
+\subsection{Achievement}
+% TODO: statistics: LOC, packages, test counts, ingested schools/documents.
+% All numbers must be measured, not estimated.
+
+\subsection{Illustration of main functions}
+% TODO: screenshots of main advisory flows.
+
+\section{Testing}
+% TODO: test strategy (unit/integration/e2e, isolated test DB), edge-case
+% compliance evaluation, results analysis.
+
+\section{Deployment}
+% TODO: Docker Compose deployment, configuration, observed behavior.
+
+% TODO: Chapter summary paragraph.
+
+\end{document}
