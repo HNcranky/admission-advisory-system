@@ -1,6 +1,76 @@
 \documentclass[../main.tex]{subfiles}
 \begin{document}
 
-% TODO: full use case descriptions that did not fit in Section 2.3.
+This appendix collects extended use-case descriptions that elaborate the summary specifications of Section~\ref{section:2.3}.
+They specify the turn-level obligations of the advisory consultation (UC-01) that the main text states only in outline.
+Each scenario is given as a precondition, a user action, and the required system behavior, following the acceptance scenarios that the system is evaluated against.
+
+\section*{A.1 Profile collection scenarios}
+
+\textbf{UC-01.1 --- Short answer to the pending question.}
+\textit{Precondition:} the system has asked for one specific slot, for example the admission year.
+\textit{User action:} the student replies with a bare value such as ``2026''.
+\textit{Required behavior:} the value is parsed deterministically and written to the pending slot without invoking the general intent router or re-extracting the whole profile; the system then asks for the next missing critical slot.
+
+\textbf{UC-01.2 --- Off-slot but valid information.}
+\textit{Precondition:} the system has asked for the subject combination.
+\textit{User action:} the student answers a different but valid slot, for example naming a preferred major.
+\textit{Required behavior:} the provided value is stored, and the still-unanswered pending slot is asked again rather than treated as answered.
+
+\textbf{UC-01.3 --- Multiple slots in one message.}
+\textit{Precondition:} the system has asked for the subject combination.
+\textit{User action:} the student replies ``Em thi A01, với muốn học ở Hà Nội thôi''.
+\textit{Required behavior:} both the subject combination and the location preference are extracted and written in the same turn, regardless of which slot was pending.
+
+\textbf{UC-01.4 --- Invalid data.}
+\textit{Precondition:} the system has asked for the total score.
+\textit{User action:} the student supplies a value outside the valid range for the admission method.
+\textit{Required behavior:} the value is rejected with an explanation of the valid range, and the slot remains unfilled.
+
+\section*{A.2 Profile modification scenarios}
+
+\textbf{UC-01.5 --- Score correction after a recommendation.}
+\textit{Precondition:} the system has produced a ranked recommendation using a score of 27.0.
+\textit{User action:} the student corrects the score to 25.75.
+\textit{Required behavior:} the old value is replaced, the previous ranking is not treated as still valid, the advisory pipeline is re-run on the new score, and the reply explains that the ordering changed because the input changed.
+
+\textbf{UC-01.6 --- Adding a major without replacing existing ones.}
+\textit{Precondition:} the profile already lists one preferred major.
+\textit{User action:} the student names an additional major.
+\textit{Required behavior:} the new major is appended to the preferred-majors list; the existing major is retained.
+
+\textbf{UC-01.7 --- Relaxing a constraint.}
+\textit{Precondition:} the location preference is set to a single city.
+\textit{User action:} the student widens it, for example ``miền Bắc cũng được''.
+\textit{Required behavior:} the location preference is updated and the candidate search space is widened accordingly.
+
+\section*{A.3 Intent and grounding scenarios}
+
+\textbf{UC-01.8 --- Inferred interest versus chosen major.}
+\textit{Precondition:} none.
+\textit{User action:} the student says ``thích lập trình với AI''.
+\textit{Required behavior:} only inferred interest tags are recorded; no major is treated as confirmed until the student names one explicitly, at which point it is recorded as an explicit preferred major.
+
+\textbf{UC-02.1 --- Grounded factual answer.}
+\textit{Precondition:} the knowledge corpus contains documents for the queried school and topic.
+\textit{User action:} the student asks a factual question such as ``Học phí UET bao nhiêu?''.
+\textit{Required behavior:} the answer is generated only from retrieved passages and is accompanied by citations to their source documents.
+
+\textbf{UC-02.2 --- Insufficient evidence.}
+\textit{Precondition:} no sufficiently relevant passage exists for the question.
+\textit{User action:} the student asks a factual question outside the corpus.
+\textit{Required behavior:} the system replies that it has no data for the question instead of fabricating an answer.
+
+\section*{A.4 Conflict and safety scenarios}
+
+\textbf{UC-01.9 --- Conflicting source data.}
+\textit{Precondition:} two sources record different quotas (or cutoff scores) for the same recommended program.
+\textit{User action:} the program is included in a recommendation.
+\textit{Required behavior:} the recommendation discloses the conflict, names the differing values, and advises the student to verify against the latest official announcement.
+
+\textbf{UC-01.10 --- No fully matching program.}
+\textit{Precondition:} no candidate satisfies all of the student's constraints.
+\textit{User action:} the student requests recommendations.
+\textit{Required behavior:} the system states which criteria could not be satisfied and suggests which constraint to relax, rather than returning an empty or misleadingly confident result.
 
 \end{document}

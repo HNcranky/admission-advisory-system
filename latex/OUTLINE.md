@@ -4,22 +4,22 @@ Status legend: `[ ]` not started · `[~]` drafted · `[x]` final.
 Every claim/number below marked (verify) must be re-measured before writing.
 
 ## Front matter
-- [ ] Acknowledgments — 100-150 words.
-- [ ] Abstract — 200-350 words; problem → approach → solution → contributions.
+- [~] Acknowledgments — 100-150 words.
+- [~] Abstract — 200-350 words; problem → approach → solution → contributions.
 
 ## Chapter 1 — Introduction (3-6 pages)
-- [ ] 1.1 Motivation: Vietnamese admission landscape: per-school admission
+- [~] 1.1 Motivation: Vietnamese admission landscape: per-school admission
       pages, proposal PDFs, ministry (MOET) documents; data is fragmented,
       frequently revised, and sources contradict each other. No solution here.
-- [ ] 1.2 Objectives and scope: survey existing channels (school websites,
+- [~] 1.2 Objectives and scope: survey existing channels (school websites,
       hotline counseling, generic chatbots); limitations: stale data, no
       conflict awareness, no personalization. Objectives: end-to-end system =
       ingestion of official sources + canonical conflict-aware store +
       LLM-agent advisory chat. Scope: configured schools (see
       `ingestion/config/`), Vietnamese-language user dialogue.
-- [ ] 1.3 Tentative solution: LangGraph advisory pipeline + RAG over pgvector +
+- [~] 1.3 Tentative solution: LangGraph advisory pipeline + RAG over pgvector +
       resilient Gemini gateway; contributions preview (→ Chapter 5).
-- [ ] 1.4 Thesis organization: prose description of Chapters 2-6.
+- [~] 1.4 Thesis organization: prose description of Chapters 2-6.
 
 ## Chapter 2 — Requirement survey and analysis (9-11 pages)
 Sources: `docs/happy-path.md`, `docs/edge-case.md`,
@@ -92,13 +92,13 @@ Each: problem → solution → results. Cross-referenced from Chapters 2/4.
       into the canonical store.
 
 ## Chapter 6 — Conclusion and future work
-- [ ] 6.1 Conclusion: achieved vs not; comparison with existing products.
-- [ ] 6.2 Future work: structured preferences (remaining edge cases
+- [~] 6.1 Conclusion: achieved vs not; comparison with existing products.
+- [~] 6.2 Future work: structured preferences (remaining edge cases
       EC-07/08/11/19/20/25), location/budget-aware retrieval and reasoning,
       more schools, production hardening.
 
 ## Appendix A — Use case descriptions
-- [ ] Full specifications overflowing from §2.3.
+- [~] Full specifications overflowing from §2.3.
 
 ## Reference collection backlog
 - Academic: RAG (Lewis et al. 2020), LLM agents survey, conflict resolution /

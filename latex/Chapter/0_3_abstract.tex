@@ -5,9 +5,19 @@
     \Large{\textbf{ABSTRACT}}\\
 \end{center}
 \vspace{1cm}
-% TODO: abstract, 200-350 words, single prose paragraph(s), no bullets:
-% (i) problem, (ii) chosen approach and why, (iii) solution overview,
-% (iv) main contributions and final results.
+
+Information about university admission in Vietnam is fragmented across each university's own pages, proposal documents published as \gls{PDF} files, and separate ministry regulations.
+It is also unstable and internally inconsistent: documents are revised through the admission season, and independent sources state different quotas and cutoff scores for the same program.
+Existing channels handle this poorly --- official pages are authoritative but unreconciled, aggregator portals strip provenance, and general-purpose chatbots fabricate specific figures --- and none reconciles contradictory data or combines grounded answers with gradual personalization.
+
+This thesis presents an end-to-end system that addresses these problems for the Vietnamese admission context.
+The system ingests official sources through a configurable pipeline, normalizes them into a canonical store that preserves contradictory values per source rather than overwriting them, and serves a Vietnamese-language advisory chat over that store.
+The advisory consultation is orchestrated as a fixed, traceable pipeline that collects a student profile over several turns and withholds recommendations until the critical information is present; factual questions are answered by retrieval-augmented generation that cites ingested documents and declines honestly when the corpus is insufficient.
+A hosted large language model was chosen so the work could focus on engineering reliability around the model rather than training one, and every model call passes through a single gateway that distinguishes hard \gls{API} failures from malformed-output failures and degrades gracefully through retries, fallbacks, and deterministic alternatives.
+
+The thesis makes three contributions: conflict-aware consolidation that surfaces rather than hides contradictory source data, a resilient inference gateway that keeps the assistant available through model failures, and end-to-end ingestion of heterogeneous and scanned sources with a safeguard against model transcription failures.
+The implemented system comprises about 28{,}000 lines of Python verified by 856 automated tests, over a canonical store and knowledge corpus built from real official sources of HUST, NEU, VNU-UET, and the Ministry of Education and Training.
+
 \begin{flushright}
 \begin{tabular}{@{}c@{}}
 Student\\
