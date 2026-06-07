@@ -50,34 +50,34 @@ Rule: each technology must map to a Chapter 2 requirement + name alternatives.
 - [~] 3.5 Web stack: FastAPI (cite), Jinja2, background ThreadPoolExecutor.
 
 ## Chapter 4 — Design, implementation, and evaluation
-- [ ] 4.1.1 Architecture selection: layered service-oriented monolith.
-- [ ] 4.1.2 Overall design: package diagram from real packages: `web/`,
+- [~] 4.1.1 Architecture selection: layered service-oriented monolith.
+- [~] 4.1.2 Overall design: package diagram from real packages: `web/`,
       `services/{chat,inference,knowledge,conflict,tracing}`, `agents/`,
       `ingestion/`, `db/`.
-- [ ] 4.1.3 Detailed package design: advisory graph
+- [~] 4.1.3 Detailed package design: advisory graph
       (`graph.py`, `state.py::AgentState`, `agents/*`); inference gateway
       (`services/inference/gateway.py`, `registry.py`,
       `providers/gemini_provider.py`); ingestion
       (`ingestion/pipeline/ingestion_pipeline.py`, fetchers/parsers/
       extractors/normalization, `storage/db_writer.py`).
-- [ ] 4.2.1 UI design: chat UI, debug/trace panel (`services/tracing/`).
-- [ ] 4.2.2 Layer design: sequence diagrams for advisory run dispatch
+- [~] 4.2.1 UI design: chat UI, debug/trace panel (`services/tracing/`).
+- [~] 4.2.2 Layer design: sequence diagrams for advisory run dispatch
       (`services/chat/` background executor) and knowledge Q&A
       (`services/knowledge/qa_service.py`).
-- [ ] 4.2.3 Database design: E-R of canonical store; migrations
+- [~] 4.2.3 Database design: E-R of canonical store; migrations
       `db/migrations/001-016`; pgvector tables; repository pattern with
       injectable `connection_factory` + `_cursor` context manager.
-- [ ] 4.3.1 Libraries/tools table: versions from `requirements.txt` /
+- [~] 4.3.1 Libraries/tools table: versions from `requirements.txt` /
       `pyproject.toml` (verify).
-- [ ] 4.3.2 Achievement: LOC, package/test counts, ingested schools
+- [~] 4.3.2 Achievement: LOC, package/test counts, ingested schools
       HUST/NEU/UET + MOET documents — all measured values in `latex/FACTS.md`
       (2026-06-08: hust 136 programs, cutoffs 715 total, catalog 81,
       knowledge docs 18 / chunks 406, 28,055 Python LOC, 856 tests).
-- [ ] 4.3.3 Screenshots of main flows.
-- [ ] 4.4 Testing: pytest suite on isolated `admission_test` DB
+- [~] 4.3.3 Screenshots of main flows.
+- [~] 4.4 Testing: pytest suite on isolated `admission_test` DB
       (`tests/conftest.py::_isolate_test_db`); edge-case compliance matrix
       result 17/25 passing (verify against `docs/edge-case.md` run).
-- [ ] 4.5 Deployment: Docker Compose (pgvector/pgvector:pg16), uvicorn.
+- [~] 4.5 Deployment: Docker Compose (pgvector/pgvector:pg16), uvicorn.
 
 ## Chapter 5 — Solution and contribution (≥ 5 pages)
 Each: problem → solution → results. Cross-referenced from Chapters 2/4.
