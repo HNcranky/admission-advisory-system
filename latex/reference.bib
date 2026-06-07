@@ -1,6 +1,80 @@
 % IEEE style via biblatex (backend=bibtex). Official publications only —
 % no lecture slides, no Wikipedia, no ordinary web pages (school rule).
 
+% ---------- Academic ----------
+
+@inproceedings{vaswani2017attention,
+  author    = {Vaswani, Ashish and Shazeer, Noam and Parmar, Niki and
+               Uszkoreit, Jakob and Jones, Llion and Gomez, Aidan N. and
+               Kaiser, {\L}ukasz and Polosukhin, Illia},
+  title     = {Attention Is All You Need},
+  booktitle = {Advances in Neural Information Processing Systems},
+  volume    = {30},
+  pages     = {5998--6008},
+  year      = {2017}
+}
+
+@inproceedings{brown2020fewshot,
+  author    = {Brown, Tom B. and Mann, Benjamin and Ryder, Nick and
+               Subbiah, Melanie and Kaplan, Jared and Dhariwal, Prafulla and
+               Neelakantan, Arvind and Shyam, Pranav and Sastry, Girish and
+               Askell, Amanda and others},
+  title     = {Language Models are Few-Shot Learners},
+  booktitle = {Advances in Neural Information Processing Systems},
+  volume    = {33},
+  pages     = {1877--1901},
+  year      = {2020}
+}
+
+@inproceedings{lewis2020rag,
+  author    = {Lewis, Patrick and Perez, Ethan and Piktus, Aleksandra and
+               Petroni, Fabio and Karpukhin, Vladimir and Goyal, Naman and
+               K{\"u}ttler, Heinrich and Lewis, Mike and Yih, Wen-tau and
+               Rockt{\"a}schel, Tim and Riedel, Sebastian and Kiela, Douwe},
+  title     = {Retrieval-Augmented Generation for Knowledge-Intensive
+               {NLP} Tasks},
+  booktitle = {Advances in Neural Information Processing Systems},
+  volume    = {33},
+  pages     = {9459--9474},
+  year      = {2020}
+}
+
+@article{bleiholder2009fusion,
+  author  = {Bleiholder, Jens and Naumann, Felix},
+  title   = {Data Fusion},
+  journal = {ACM Computing Surveys},
+  volume  = {41},
+  number  = {1},
+  pages   = {1:1--1:41},
+  year    = {2009},
+  doi     = {10.1145/1456650.1456651}
+}
+
+@article{wang2024agentsurvey,
+  author  = {Wang, Lei and Ma, Chen and Feng, Xueyang and Zhang, Zeyu and
+             Yang, Hao and Zhang, Jingsen and Chen, Zhiyuan and Tang, Jiakai
+             and Chen, Xu and Lin, Yankai and Zhao, Wayne Xin and Wei, Zhewei
+             and Wen, Ji-Rong},
+  title   = {A Survey on Large Language Model Based Autonomous Agents},
+  journal = {Frontiers of Computer Science},
+  volume  = {18},
+  number  = {6},
+  pages   = {186345},
+  year    = {2024},
+  doi     = {10.1007/s11704-024-40231-1}
+}
+
+@misc{geminiteam2023,
+  author        = {{Gemini Team, Google}},
+  title         = {Gemini: A Family of Highly Capable Multimodal Models},
+  year          = {2023},
+  eprint        = {2312.11805},
+  archiveprefix = {arXiv},
+  primaryclass  = {cs.CL}
+}
+
+% ---------- Official documentation ----------
+
 @misc{langgraph,
   author  = {{LangChain, Inc.}},
   title   = {LangGraph},
@@ -27,4 +101,81 @@
   title   = {Gemini {API} Documentation},
   url     = {https://ai.google.dev},
   urldate = {2026-06-07}
+}
+
+@misc{postgresql,
+  author  = {{The PostgreSQL Global Development Group}},
+  title   = {{PostgreSQL} 16 Documentation},
+  url     = {https://www.postgresql.org/docs/16/},
+  urldate = {2026-06-08}
+}
+
+@misc{langchain,
+  author  = {{LangChain, Inc.}},
+  title   = {LangChain},
+  url     = {https://github.com/langchain-ai/langchain},
+  urldate = {2026-06-08}
+}
+
+@misc{psycopg,
+  author  = {Varrazzo, Daniele},
+  title   = {Psycopg: {PostgreSQL} adapter for {Python}},
+  url     = {https://www.psycopg.org/docs/},
+  urldate = {2026-06-08}
+}
+
+@misc{pydantic,
+  author  = {Colvin, Samuel},
+  title   = {Pydantic: Data validation using {Python} type hints},
+  url     = {https://docs.pydantic.dev},
+  urldate = {2026-06-08}
+}
+
+@misc{docker,
+  author  = {{Docker, Inc.}},
+  title   = {Docker Documentation},
+  url     = {https://docs.docker.com},
+  urldate = {2026-06-08}
+}
+
+@misc{jinja2,
+  author  = {{Pallets Projects}},
+  title   = {Jinja Documentation},
+  url     = {https://jinja.palletsprojects.com},
+  urldate = {2026-06-08}
+}
+
+@misc{uvicorn,
+  author  = {{Encode OSS Ltd.}},
+  title   = {Uvicorn: An {ASGI} web server for {Python}},
+  url     = {https://www.uvicorn.org},
+  urldate = {2026-06-08}
+}
+
+@misc{pytest,
+  author  = {Krekel, Holger and others},
+  title   = {pytest Documentation},
+  url     = {https://docs.pytest.org},
+  urldate = {2026-06-08}
+}
+
+@misc{pymupdf,
+  author  = {{Artifex Software, Inc.}},
+  title   = {{PyMuPDF} Documentation},
+  url     = {https://pymupdf.readthedocs.io},
+  urldate = {2026-06-08}
+}
+
+@misc{pdfplumber,
+  author  = {Singer-Vine, Jeremy},
+  title   = {pdfplumber: Plumb a {PDF} for detailed information},
+  url     = {https://github.com/jsvine/pdfplumber},
+  urldate = {2026-06-08}
+}
+
+@misc{langgraph_docs,
+  author  = {{LangChain, Inc.}},
+  title   = {LangGraph Documentation},
+  url     = {https://langchain-ai.github.io/langgraph/},
+  urldate = {2026-06-08}
 }
