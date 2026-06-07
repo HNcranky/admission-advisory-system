@@ -39,15 +39,15 @@ Sources: `docs/happy-path.md`, `docs/edge-case.md`,
 
 ## Chapter 3 — Theoretical background and technologies (≤ 10 pages)
 Rule: each technology must map to a Chapter 2 requirement + name alternatives.
-- [ ] 3.1 LLMs: Gemini family (cite), prompting, structured output.
-- [ ] 3.2 RAG + vector search: embeddings, pgvector (cite); alternative:
+- [~] 3.1 LLMs: Gemini family (cite), prompting, structured output.
+- [~] 3.2 RAG + vector search: embeddings, pgvector (cite); alternative:
       dedicated vector DBs; why Postgres-integrated.
-- [ ] 3.3 Agentic pipelines: LangGraph (cite) state graphs; alternative:
+- [~] 3.3 Agentic pipelines: LangGraph (cite) state graphs; alternative:
       plain function-calling loop; why a fixed graph (determinism,
       traceability).
-- [ ] 3.4 Document processing: PDF parsing, OCR for scanned proposals,
+- [~] 3.4 Document processing: PDF parsing, OCR for scanned proposals,
       degenerate-OCR detection rationale.
-- [ ] 3.5 Web stack: FastAPI (cite), Jinja2, background ThreadPoolExecutor.
+- [~] 3.5 Web stack: FastAPI (cite), Jinja2, background ThreadPoolExecutor.
 
 ## Chapter 4 — Design, implementation, and evaluation
 - [ ] 4.1.1 Architecture selection: layered service-oriented monolith.
