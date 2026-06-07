@@ -69,3 +69,9 @@ docker compose up -d --wait db        # pgvector/pgvector:pg16 on localhost:5432
 - Pydantic is **v2** throughout (`model_config = ConfigDict(...)`, not `class Config`).
 - `scripts/` holds one-off probe/verify drivers (some fetch the network at
   import) — they are NOT part of the test suite.
+
+## Thesis writing
+
+The graduation thesis (English, LaTeX) lives in `latex/` — rules and the
+chapter outline are in `latex/CLAUDE.md` and `latex/OUTLINE.md`.
+`latex-template/` is the school's read-only reference template: never edit it.
