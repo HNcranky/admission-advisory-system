@@ -18,6 +18,13 @@ import argparse
 import unicodedata
 from pathlib import Path
 
+# Windows consoles default to cp1252, which cannot encode Vietnamese program
+# names in the final JSON dump. Same workaround as db/setup_db.py.
+for _stream in (sys.stdout, sys.stderr):
+    _reconfigure = getattr(_stream, "reconfigure", None)
+    if _reconfigure is not None:
+        _reconfigure(encoding="utf-8")
+
                                       
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))

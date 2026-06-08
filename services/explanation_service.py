@@ -1,8 +1,15 @@
 from typing import Any, Dict, List, Optional
 
-from agents.models import CandidateProgram, PolicyDecision, RankedRecommendation, StudentProfile
+from agents.models import (
+    CandidateProgram,
+    EligibilityCheck,
+    PolicyDecision,
+    RankedRecommendation,
+    StudentProfile,
+)
 from services.conflict.models import ResolutionOutcome
 from services.conflict.source_labels import label_for_source
+from services.profile.admission_methods import method_display
 
 
 REASON_TRANSLATIONS = {
@@ -33,6 +40,7 @@ BAND_FIT_LABELS = {
 # Nhãn slot cho câu thông báo correction (AC7).
 _SLOT_LABELS = {
     "total_score": "điểm dự kiến",
+    "admission_method": "phương thức xét tuyển",
     "location_preference": "khu vực mong muốn",
     "subject_combination": "tổ hợp xét tuyển",
     "tuition_budget": "mức học phí",
@@ -44,6 +52,7 @@ _FIELD_LABELS = {
     "quota": "chỉ tiêu tuyển sinh",
     "subject_combinations": "tổ hợp xét tuyển",
     "tuition": "học phí",
+    "cutoff_score": "điểm chuẩn",
 }
 
 CLOSING_QUESTION = (
@@ -72,6 +81,15 @@ def _program_label(candidate: CandidateProgram) -> str:
     fallback program_name (canonical) khi raw rỗng/null."""
     raw = (candidate.program_name_raw or "").strip()
     return raw or candidate.program_name
+
+
+def _cutoff_reference_line(assessment) -> str:
+    """'Điểm chuẩn tham chiếu {year}: v1 (nguồn A) / v2 (nguồn B)' — EC-16 dual display."""
+    values = " / ".join(
+        f"{_fmt_num(v['value'])} ({label_for_source(v['source_url'])})"
+        for v in assessment.latest_values
+    )
+    return f"Điểm chuẩn tham chiếu {assessment.reference_year}: {values}"
 
 
 def _candidate_conflict_key(candidate: CandidateProgram) -> str:
@@ -104,6 +122,8 @@ def _intro_paragraph(profile: StudentProfile, admission_year: Optional[int], n: 
     facts: List[str] = []
     if admission_year:
         facts.append(f"xét tuyển năm {admission_year}")
+    if getattr(profile, "admission_method", None):
+        facts.append(f"phương thức {method_display(profile.admission_method)}")
     if profile.total_score is not None:
         facts.append(f"dự kiến {_fmt_num(profile.total_score)} điểm")
     if profile.subject_combination:
@@ -122,6 +142,68 @@ def _intro_paragraph(profile: StudentProfile, admission_year: Optional[int], n: 
     return f"Dựa trên thông tin hiện có, mình đề xuất {n} lựa chọn sau:"
 
 
+def _profile_criteria(profile: StudentProfile, admission_year: Optional[int]) -> List[str]:
+    facts: List[str] = []
+    if admission_year:
+        facts.append(f"năm {admission_year}")
+    if getattr(profile, "admission_method", None):
+        facts.append(f"phương thức {method_display(profile.admission_method)}")
+    if profile.total_score is not None:
+        facts.append(f"mức điểm {_fmt_num(profile.total_score)}")
+    if profile.subject_combination:
+        facts.append(f"tổ hợp {profile.subject_combination}")
+    if profile.preferred_majors:
+        facts.append("ngành " + ", ".join(profile.preferred_majors[:3]))
+    if profile.location_preference:
+        facts.append(f"khu vực {profile.location_preference}")
+    if profile.tuition_budget:
+        facts.append(f"ngân sách {profile.tuition_budget}")
+    return facts
+
+
+def _no_match_block(
+    profile: StudentProfile,
+    admission_year: Optional[int],
+    eligibility_checks: List[EligibilityCheck],
+) -> List[str]:
+    """EC-24: nói rõ tiêu chí đang áp, nguyên nhân (nếu biết) và gợi ý nới minh bạch.
+    KHÔNG bịa chương trình; KHÔNG tự nới tiêu chí."""
+    facts = _profile_criteria(profile, admission_year)
+    lines: List[str] = []
+    if facts:
+        lines.append(
+            "Mình chưa tìm thấy chương trình đáp ứng đồng thời: "
+            + "; ".join(facts) + " — trong dữ liệu hiện có."
+        )
+    else:
+        lines.append("Mình chưa tìm thấy chương trình phù hợp trong dữ liệu hiện có.")
+
+    not_eligible = [c for c in eligibility_checks if c.eligible is False]
+    if not_eligible and profile.subject_combination:
+        majors = ", ".join(profile.preferred_majors[:3]) or "em quan tâm"
+        lines.append("")
+        lines.append(
+            f"Các chương trình ngành {majors} trong dữ liệu hiện không nhận tổ hợp "
+            f"{profile.subject_combination}; em có thể cân nhắc tổ hợp khác hoặc ngành gần."
+        )
+        return lines
+
+    suggestions: List[str] = []
+    if profile.preferred_majors:
+        suggestions.append("mở rộng sang ngành gần")
+    if profile.location_preference:
+        suggestions.append("nới khu vực học")
+    if profile.tuition_budget:
+        suggestions.append("điều chỉnh ngân sách")
+    if suggestions:
+        lines.append("")
+        lines.append(
+            "Em có thể cân nhắc: " + "; ".join(suggestions)
+            + ". Mình sẽ không tự nới tiêu chí khi chưa có xác nhận của em."
+        )
+    return lines
+
+
 def _data_note(candidate: CandidateProgram, outcome_by_key: Dict[str, ResolutionOutcome]) -> Optional[str]:
     """Khối '**Lưu ý dữ liệu:**' theo từng chương trình (AC6)."""
     outcome = outcome_by_key.get(_candidate_conflict_key(candidate))
@@ -130,11 +212,16 @@ def _data_note(candidate: CandidateProgram, outcome_by_key: Dict[str, Resolution
 
     if outcome is not None and outcome.status == "resolved" and outcome.chosen_evidence:
         field = _field_label(outcome.field_name)
-        source = label_for_source(outcome.chosen_evidence.source_url)
+        chosen = outcome.chosen_evidence
+        all_options = [chosen] + list(outcome.rejected_evidence)
+        values = " và ".join(
+            f"{_fmt_num(o.value)} ({label_for_source(o.source_url)})" for o in all_options
+        )
         return (
-            f"**Lưu ý dữ liệu:** Các nguồn hiện ghi khác nhau về {field}. "
-            f"Hệ thống tham chiếu giá trị {outcome.resolved_value} từ {source}, "
-            "nhưng em nên kiểm tra thông báo tuyển sinh chính thức mới nhất của trường trước khi đăng ký."
+            f"**Lưu ý dữ liệu:** Các nguồn ghi khác nhau về {field}: {values}. "
+            f"Hệ thống tham chiếu giá trị {_fmt_num(outcome.resolved_value)} từ "
+            f"{label_for_source(chosen.source_url)}, nhưng em nên kiểm tra thông báo "
+            "tuyển sinh chính thức mới nhất của trường trước khi đăng ký."
         )
 
     if outcome is not None:
@@ -147,6 +234,31 @@ def _data_note(candidate: CandidateProgram, outcome_by_key: Dict[str, Resolution
     )
 
 
+def _not_eligible_lines(
+    eligibility_checks: List[EligibilityCheck],
+    candidates_by_id: Dict[str, List[CandidateProgram]],
+) -> List[str]:
+    """Section 'Không đủ điều kiện xét tuyển' (EC-12): cap 3, dedupe theo chương trình."""
+    lines: List[str] = []
+    seen = set()
+    for check in eligibility_checks or []:
+        if check.eligible is not False:
+            continue
+        group = candidates_by_id.get(check.candidate_id, [])
+        if not group:
+            continue
+        candidate = group[0]
+        key = (candidate.school_id, candidate.program_id or candidate.program_name)
+        if key in seen:
+            continue
+        seen.add(key)
+        reason = check.risks[0] if check.risks else "Không đáp ứng điều kiện xét tuyển đã công bố."
+        lines.append(f"- {candidate.school_name} — {_program_label(candidate)}: {reason}")
+        if len(lines) >= 3:
+            break
+    return lines
+
+
 def build_explanation(
     profile: StudentProfile,
     recommendations: List[RankedRecommendation],
@@ -155,6 +267,7 @@ def build_explanation(
     resolution_outcomes: Optional[List[ResolutionOutcome]] = None,
     admission_year: Optional[int] = None,
     correction_note: Optional[Dict[str, Any]] = None,
+    eligibility_checks: Optional[List[EligibilityCheck]] = None,
 ) -> str:
     resolution_outcomes = resolution_outcomes or []
     lines: List[str] = []
@@ -185,6 +298,20 @@ def build_explanation(
 
     if renderable:
         lines.append(_intro_paragraph(profile, admission_year, len(renderable)))
+        ref_years = sorted({
+            rec.cutoff_assessment.reference_year
+            for rec, _candidate in renderable
+            if rec.cutoff_assessment is not None
+        })
+        if ref_years and policy and "historical_cutoff_reference" in policy.policy_flags:
+            years_text = ", ".join(str(y) for y in ref_years)
+            target = f"năm {admission_year}" if admission_year else "sắp tới"
+            lines.append("")
+            lines.append(
+                f"Chưa có điểm chuẩn chính thức cho kỳ tuyển sinh {target}. "
+                f"Đánh giá dưới đây sử dụng dữ liệu năm {years_text} làm tham chiếu "
+                "và có thể thay đổi khi trường công bố thông tin mới."
+            )
         for idx, (recommendation, candidate) in enumerate(renderable, start=1):
             lines.append("")
             lines.append(f"### {idx}. {candidate.school_name} — {_program_label(candidate)}")
@@ -193,6 +320,8 @@ def build_explanation(
 
             bullets = [_translate(r) for r in recommendation.reasons[:3]]
             bullets += [_translate(c) for c in recommendation.cautions[:3]]
+            if recommendation.cutoff_assessment is not None and recommendation.cutoff_assessment.latest_values:
+                bullets.append(_cutoff_reference_line(recommendation.cutoff_assessment))
             if bullets:
                 lines.append("")
                 for bullet in bullets:
@@ -203,7 +332,17 @@ def build_explanation(
                 lines.append("")
                 lines.append(note)
     else:
-        lines.append("Chưa có đề xuất phù hợp từ dữ liệu hiện tại.")
+        lines.extend(_no_match_block(profile, admission_year, eligibility_checks or []))
+
+    # Section "Không đủ điều kiện xét tuyển" (EC-12) — render cả khi có lẫn khi
+    # không có đề xuất (policy_agent ghi đè ranked_recommendations nên các
+    # chương trình NOT_ELIGIBLE không còn trong danh sách đề xuất).
+    ne_lines = _not_eligible_lines(eligibility_checks or [], candidates_by_id)
+    if ne_lines:
+        lines.append("")
+        lines.append("**Không đủ điều kiện xét tuyển**")
+        lines.append("")
+        lines.extend(ne_lines)
 
     # Nguồn tham chiếu (dedup URL theo các đề xuất hiển thị).
     cited_sources: List[str] = []

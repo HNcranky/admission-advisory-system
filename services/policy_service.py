@@ -8,7 +8,7 @@ from agents.models import (
 )
 
 
-CRITICAL_PROFILE_SLOTS = {"total_score", "subject_combination", "preferred_majors"}
+CRITICAL_PROFILE_SLOTS = {"total_score", "subject_combination", "preferred_majors", "admission_method"}
 
 
 def _has_valid_evidence(candidate: CandidateProgram) -> bool:
@@ -31,6 +31,9 @@ def evaluate_policy_guardrails(
     if profile.total_score is None:
         blocked_claims.append("no_probability_claim_without_score")
 
+    if getattr(profile, "admission_method", None) is None:
+        blocked_claims.append("no_score_fit_without_method")
+
     if any(slot in CRITICAL_PROFILE_SLOTS for slot in profile.missing_slots):
         policy_flags.append("missing_critical_profile")
         warnings.append(
@@ -45,6 +48,26 @@ def evaluate_policy_guardrails(
     if not candidates:
         policy_flags.append("empty_retrieval")
         warnings.append("Không tìm thấy chương trình phù hợp trong dữ liệu chuẩn hóa hiện tại.")
+
+    if candidates and not recommendations:
+        policy_flags.append("no_eligible_recommendations")
+        warnings.append(
+            "Các chương trình tìm thấy hiện không đáp ứng điều kiện xét tuyển trong hồ sơ "
+            "(ví dụ tổ hợp); xem chi tiết trong phần giải thích."
+        )
+
+    assessments = [
+        rec.cutoff_assessment for rec in recommendations if rec.cutoff_assessment is not None
+    ]
+    if assessments:
+        # EC-18: mọi đánh giá dựa trên cutoff lịch sử → explanation phải render caveat năm tham chiếu.
+        policy_flags.append("historical_cutoff_reference")
+        if any(
+            a.score_fit in {"borderline", "uncertain"} or a.decision_changing
+            for a in assessments
+        ):
+            # EC-14/15/16: chặn ngôn ngữ khẳng định trúng tuyển khi sát ngưỡng/biến động/conflict.
+            blocked_claims.append("no_admission_assertion_on_reference_cutoff")
 
     lower_query = user_query.lower()
     if "chac do" in lower_query or "chac chan do" in lower_query:

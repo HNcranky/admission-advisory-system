@@ -14,6 +14,7 @@ def test_merge_profile_state_keeps_previous_values_and_orders_missing_slots():
     )
     extracted = StudentProfile(
         total_score=27.0,
+        admission_method="thpt_score",
         subject_combination="A00",
         location_preference="Ha Noi",
     )
@@ -43,6 +44,7 @@ def test_merge_profile_state_returns_first_missing_slot_prompt():
     assert merged.missing_slots == [
         "admission_year",
         "total_score",
+        "admission_method",
         "subject_combination",
     ]
     assert next_follow_up_question(merged) == "Bạn đang xét tuyển cho năm nào?"
@@ -61,6 +63,7 @@ def test_missing_critical_slots_complete_profile_returns_empty():
     profile = ChatProfileState(
         admission_year=2026,
         total_score=25.0,
+        admission_method="thpt_score",
         preferred_majors=["computer_science"],
         subject_combination="A00",
         location_preference="Ha Noi",

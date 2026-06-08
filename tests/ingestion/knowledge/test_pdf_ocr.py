@@ -162,3 +162,61 @@ def test_build_gateway_ocr_sends_png_through_media():
     assert req.output_mode == "free_text"
     assert req.temperature == 0.0
     assert req.media == [("image/png", b"\x89PNG-bytes")]
+
+
+# --- guard chống OCR thoái hóa (repetition loop) ---------------------------------
+
+GOOD_TABLE = (
+    "## Chuẩn đầu ra ngoại ngữ\n\n"
+    "| TT | Ngành | IELTS | TOEFL iBT |\n"
+    "|----|-------|-------|-----------|\n"
+    "| 1  | Ngôn ngữ Anh | 6,5 | 79 |\n"
+    "| 2  | POHE | 6,0 | 60 |\n"
+) * 8  # bảng markdown dài bình thường — không được coi là rác
+
+
+def test_degenerate_detects_runaway_length():
+    assert pdf_ocr.is_degenerate_ocr("A b c. " * 4000)   # ~28k ký tự / 1 trang
+
+
+def test_degenerate_detects_dominant_char_repetition():
+    # Loop kiểu trang 4 NEU: gần như toàn dấu '-' (kẻ bảng markdown lặp vô hạn).
+    assert pdf_ocr.is_degenerate_ocr("-" * 5000)
+    assert pdf_ocr.is_degenerate_ocr(("|" + "-" * 120) * 40)
+
+
+def test_degenerate_accepts_normal_page_and_markdown_table():
+    assert not pdf_ocr.is_degenerate_ocr("Điểm chuẩn năm 2026 là 27,5.")
+    assert not pdf_ocr.is_degenerate_ocr(GOOD_TABLE)
+    assert not pdf_ocr.is_degenerate_ocr("")              # trang trắng không phải rác
+
+
+class SequenceGateway:
+    """Gateway giả trả content theo thứ tự call — mô phỏng retry."""
+
+    def __init__(self, contents):
+        self.requests = []
+        self._contents = list(contents)
+
+    def run(self, request):
+        self.requests.append(request)
+        return SimpleNamespace(content=self._contents[len(self.requests) - 1])
+
+
+def test_gateway_ocr_retries_degenerate_output_with_higher_temperature():
+    gw = SequenceGateway(["-" * 5000, "Nội dung trang sạch."])
+    ocr = build_gateway_ocr(gateway=gw)
+
+    assert ocr(b"png") == "Nội dung trang sạch."
+    assert len(gw.requests) == 2
+    assert gw.requests[0].temperature == 0.0
+    assert gw.requests[1].temperature > 0.0   # retry phải đổi nhiệt độ để thoát loop
+
+
+def test_gateway_ocr_raises_when_both_attempts_degenerate():
+    gw = SequenceGateway(["-" * 5000, "=" * 30000])
+    ocr = build_gateway_ocr(gateway=gw)
+
+    with pytest.raises(InferenceError):       # → trang được đánh dấu failed, không vào corpus
+        ocr(b"png")
+    assert len(gw.requests) == 2              # đúng 1 lần retry, không lặp vô hạn

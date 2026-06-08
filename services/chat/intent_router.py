@@ -31,19 +31,25 @@ def _normalize_topic(value):
 from services import build_default_gateway
 from services.chat.models import ChatProfileState
 from services.inference.models import InferenceRequest
+from services.profile_service import normalize_text
 
 logger = logging.getLogger(__name__)
 
 INTENT_SYSTEM_PROMPT = """
 Bạn là bộ phân loại intent cho hệ thống tư vấn tuyển sinh đại học Việt Nam.
 
-Phân loại tin nhắn của user vào đúng 1 trong 6 route:
+Phân loại tin nhắn của user vào đúng 1 trong 7 route:
 
 CONVERSATIONAL — chào hỏi, hỏi năng lực trợ lý, cảm ơn, tạm biệt, hỏi danh tính,
   hoặc bộc lộ cảm xúc/lo lắng về tuyển sinh. Trả thêm "subtype":
   GREETING | CAPABILITY | THANKS | GOODBYE | IDENTITY | EMOTIONAL_SUPPORT
   Ví dụ: "xin chào", "bạn giúp được gì", "cảm ơn nhé", "tạm biệt", "bạn là ai",
          "mình lo không đỗ đại học"
+
+RESET_PROFILE — yêu cầu xoá hồ sơ tư vấn hiện tại, bắt đầu lại từ đầu, hoặc
+  tư vấn cho người khác (hồ sơ mới).
+  Ví dụ: "xoá thông tin cũ đi", "bắt đầu lại từ đầu", "tư vấn lại cho em gái em",
+         "làm hồ sơ khác cho bạn em", "giờ tư vấn cho đứa em mình nhé"
 
 ADVISORY_FLOW — câu hỏi tư vấn chọn ngành/trường dựa trên điểm số, nguyện vọng, khả năng đậu
   Ví dụ: "25 điểm A00 nên chọn trường nào", "em có đậu NEU không", "tư vấn ngành CNTT"
@@ -120,6 +126,7 @@ class IntentResult(BaseModel):
         "CLARIFICATION",
         "OUT_OF_SCOPE",
         "CONVERSATIONAL",
+        "RESET_PROFILE",
     ]
     subtype: Optional[
         Literal[
@@ -160,7 +167,36 @@ class IntentResult(BaseModel):
         return out
 
 
-_FALLBACK = IntentResult(route="ADVISORY_FLOW")
+# Deterministic keyword fallback for when the LLM gateway is unavailable or its
+# response is unusable. Phrases are normalize_text()-normalized substrings.
+# Knowledge topics are checked BEFORE advisory phrases so a factual question
+# never re-runs the advisory pipeline while the Gemini keys are cooling down
+# (session 131, 2026-05-31: "có bao nhiêu phương thức xét tuyển..." was
+# blanket-routed to ADVISORY_FLOW three turns in a row).
+_FALLBACK_KNOWLEDGE_TOPICS = (
+    ("hoc phi", "tuition"),
+    ("hoc bong", "scholarship"),
+    ("ky tuc xa", "dormitory"),
+    ("phuong thuc xet tuyen", "admission_policy"),
+    ("quy che tuyen sinh", "admission_policy"),
+    ("chi tieu", "admission_policy"),
+    ("chuong trinh hoc", "curriculum"),
+    ("mon hoc", "curriculum"),
+    ("viec lam", "career"),
+    ("ra truong lam", "career"),
+)
+_FALLBACK_ADVISORY_PHRASES = (
+    "tu van", "nen chon", "nen hoc", "nen nop",
+    "muon hoc", "muon theo hoc", "muon vao",
+    "co dau", "do dau", "kha nang dau", "co hoi dau", "diem chuan",
+)
+_FALLBACK_CONVERSATIONAL = (
+    ("cam on", "THANKS"),
+    ("tam biet", "GOODBYE"),
+    ("ban la ai", "IDENTITY"),
+    ("giup duoc gi", "CAPABILITY"),
+    ("chao", "GREETING"),
+)
 
 
 class IntentRouter:
@@ -170,7 +206,7 @@ class IntentRouter:
     def classify(self, message: str, profile_state: ChatProfileState) -> IntentResult:
         try:
             if hasattr(self._gateway, "is_available") and not self._gateway.is_available():
-                return _FALLBACK
+                return self._fallback_classify(message)
             result = self._gateway.run(
                 InferenceRequest(
                     agent_name="intent_router",
@@ -182,11 +218,33 @@ class IntentRouter:
                 )
             )
             if not result.parsed_data:
-                return _FALLBACK
+                return self._fallback_classify(message)
             return IntentResult.model_validate(result.parsed_data)
         except Exception as exc:
             logger.warning("intent classification failed, using fallback route: %r", exc)
-            return _FALLBACK
+            return self._fallback_classify(message)
+
+    @staticmethod
+    def _fallback_classify(message: str) -> IntentResult:
+        """Deterministic keyword router used when the LLM cannot classify.
+
+        Mirrors the prompt's priority rules (concrete need beats greeting).
+        Unrecognized messages become CLARIFICATION so the assistant asks again
+        instead of silently re-running the advisory pipeline. Bare slot answers
+        ("năm 2026", "29 điểm") never reach the router — ConversationService
+        handles them deterministically via _maybe_continue_advisory first.
+        """
+        normalized = normalize_text(message or "")
+        for phrase, topic in _FALLBACK_KNOWLEDGE_TOPICS:
+            if phrase in normalized:
+                return IntentResult(route="KNOWLEDGE_QA", topic=topic)
+        for phrase in _FALLBACK_ADVISORY_PHRASES:
+            if phrase in normalized:
+                return IntentResult(route="ADVISORY_FLOW")
+        for phrase, subtype in _FALLBACK_CONVERSATIONAL:
+            if phrase in normalized:
+                return IntentResult(route="CONVERSATIONAL", subtype=subtype)
+        return IntentResult(route="CLARIFICATION")
 
     def _build_user_prompt(self, message: str, profile_state: ChatProfileState) -> str:
         schools = (

@@ -1,6 +1,7 @@
 from agents.explanation_agent import explanation_agent
 from agents.models import (
     CandidateProgram,
+    CutoffAssessment,
     Evidence,
     PolicyDecision,
     RankedRecommendation,
@@ -286,3 +287,252 @@ def test_explanation_prepends_correction_sentence_when_correction_note_present()
     assert "27" in output.final_answer
     assert "25.75" in output.final_answer
     assert "thứ tự ưu tiên thay đổi" in output.final_answer
+
+
+from agents.models import EligibilityCheck
+
+
+def test_explanation_renders_not_eligible_section_with_reason():
+    """EC-12: chương trình sai tổ hợp xuất hiện ở section riêng kèm lý do,
+    KHÔNG nằm trong danh sách đề xuất đánh số."""
+    state = AgentState(user_query="Tu van", admission_year=2026)
+    state.student_profile = StudentProfile(
+        total_score=28.0, subject_combination="D01", admission_method="thpt_score",
+        preferred_majors=["computer_science"],
+    )
+    state.retrieved_programs = [
+        CandidateProgram(
+            candidate_id="uet:ne", school_id="vnu_uet",
+            school_name="Đại học Công nghệ - ĐHQGHN",
+            admission_year=2026, program_id="computer_science",
+            program_name="Khoa học máy tính", admission_method="thpt_score",
+            subject_combinations=["A00", "A01"],
+        ),
+        CandidateProgram(
+            candidate_id="hust:ok", school_id="hust", school_name="HUST",
+            admission_year=2026, program_id="data_science",
+            program_name="Khoa học dữ liệu", admission_method="thpt_score",
+            subject_combinations=["A00", "A01", "D01"],
+        ),
+    ]
+    state.eligibility_checks = [
+        EligibilityCheck(
+            candidate_id="uet:ne", eligible=False,
+            risks=["Chương trình không nhận tổ hợp D01 theo phương thức đã chọn — các tổ hợp được công bố: A00, A01."],
+        ),
+        EligibilityCheck(candidate_id="hust:ok", eligible=True),
+    ]
+    state.ranked_recommendations = [
+        RankedRecommendation(candidate_id="hust:ok", band="match", score=0.75, summary="fit"),
+    ]
+
+    output = explanation_agent(state)
+
+    assert "**Không đủ điều kiện xét tuyển**" in output.final_answer
+    assert "không nhận tổ hợp D01" in output.final_answer
+    # Chương trình NOT_ELIGIBLE không được nằm trong danh sách đề xuất đánh số
+    assert "### 1. HUST — Khoa học dữ liệu" in output.final_answer
+    assert "### 2." not in output.final_answer
+    assert output.final_answer.index("### 1.") < output.final_answer.index("Không đủ điều kiện")
+
+
+def test_explanation_no_not_eligible_section_when_all_eligible():
+    state = AgentState(user_query="Tu van")
+    state.retrieved_programs = [
+        CandidateProgram(
+            candidate_id="hust:1", school_id="hust", school_name="HUST",
+            admission_year=2026, program_id="computer_science",
+            program_name="Khoa hoc May tinh", admission_method="thpt_score",
+        )
+    ]
+    state.eligibility_checks = [EligibilityCheck(candidate_id="hust:1", eligible=True)]
+    state.ranked_recommendations = [
+        RankedRecommendation(candidate_id="hust:1", band="match", score=0.6, summary="fit"),
+    ]
+
+    output = explanation_agent(state)
+
+    assert "Không đủ điều kiện" not in output.final_answer
+
+
+def test_intro_paragraph_mentions_admission_method():
+    state = AgentState(user_query="Tu van", admission_year=2026)
+    state.student_profile = StudentProfile(
+        total_score=27.0, admission_method="thpt_score", subject_combination="A00",
+    )
+    state.retrieved_programs = [
+        CandidateProgram(
+            candidate_id="hust:1", school_id="hust", school_name="HUST",
+            admission_year=2026, program_id="computer_science",
+            program_name="Khoa hoc May tinh", admission_method="thpt_score",
+        )
+    ]
+    state.ranked_recommendations = [
+        RankedRecommendation(candidate_id="hust:1", band="match", score=0.6, summary="fit"),
+    ]
+
+    output = explanation_agent(state)
+
+    assert "phương thức điểm thi tốt nghiệp THPT" in output.final_answer
+
+
+def test_correction_sentence_labels_admission_method():
+    from services.explanation_service import _correction_sentence
+    sentence = _correction_sentence(
+        {"slot": "admission_method", "previous_value": "thpt_score", "new_value": "school_record"}
+    )
+    assert "phương thức xét tuyển" in sentence
+
+
+def test_no_match_lists_active_criteria_and_suggestions():
+    """EC-24: 0 đề xuất → liệt kê đúng tiêu chí đang áp + gợi ý nới minh bạch."""
+    state = AgentState(user_query="Tu van", admission_year=2026)
+    state.student_profile = StudentProfile(
+        total_score=23.0, subject_combination="A01", admission_method="thpt_score",
+        preferred_majors=["artificial_intelligence"],
+        location_preference="Ha Noi", tuition_budget="duoi 20 trieu",
+    )
+    state.retrieved_programs = []
+    state.ranked_recommendations = []
+    state.policy_decision = PolicyDecision(policy_flags=["empty_retrieval"])
+
+    output = explanation_agent(state)
+
+    answer = output.final_answer
+    assert "chưa tìm thấy chương trình đáp ứng đồng thời" in answer
+    assert "năm 2026" in answer
+    assert "phương thức điểm thi tốt nghiệp THPT" in answer
+    assert "tổ hợp A01" in answer
+    assert "artificial_intelligence" in answer
+    assert "Ha Noi" in answer
+    assert "duoi 20 trieu" in answer
+    # Gợi ý nới CHỈ những tiêu chí đang set, nói rõ không tự nới
+    assert "ngành gần" in answer
+    assert "khu vực" in answer
+    assert "ngân sách" in answer
+    assert "không tự nới" in answer
+    # Không có câu hỏi chốt khi không có đề xuất
+    assert "Em có muốn ưu tiên theo tiêu chí nào hơn" not in answer
+
+
+def test_no_match_all_not_eligible_explains_combination_cause():
+    """EC-24 + EC-12: mọi chương trình bị loại vì tổ hợp → nói thẳng nguyên nhân."""
+    state = AgentState(user_query="Tu van", admission_year=2026)
+    state.student_profile = StudentProfile(
+        total_score=28.0, subject_combination="D01", admission_method="thpt_score",
+        preferred_majors=["computer_science"],
+    )
+    state.retrieved_programs = [
+        CandidateProgram(
+            candidate_id="uet:ne", school_id="vnu_uet",
+            school_name="Đại học Công nghệ - ĐHQGHN",
+            admission_year=2026, program_id="computer_science",
+            program_name="Khoa học máy tính", admission_method="thpt_score",
+            subject_combinations=["A00", "A01"],
+        ),
+    ]
+    state.eligibility_checks = [
+        EligibilityCheck(
+            candidate_id="uet:ne", eligible=False,
+            risks=["Chương trình không nhận tổ hợp D01 theo phương thức đã chọn — các tổ hợp được công bố: A00, A01."],
+        ),
+    ]
+    state.ranked_recommendations = []
+    state.policy_decision = PolicyDecision(policy_flags=["no_eligible_recommendations"])
+
+    output = explanation_agent(state)
+
+    answer = output.final_answer
+    assert "không nhận tổ hợp D01" in answer               # section NOT_ELIGIBLE vẫn render
+    assert "cân nhắc tổ hợp khác hoặc ngành gần" in answer  # gợi ý đúng nguyên nhân
+
+
+def test_no_match_without_any_criteria_falls_back_generic():
+    # Qua agent thì admission_year luôn có default (state.py:25) nên test fallback
+    # generic ở mức service: không có bất kỳ tiêu chí nào → câu generic.
+    from services.explanation_service import build_explanation
+
+    answer = build_explanation(
+        profile=StudentProfile(), recommendations=[], candidates=[], policy=None,
+    )
+
+    assert "chưa tìm thấy chương trình phù hợp trong dữ liệu hiện có" in answer
+
+
+def _candidate_with_rec(assessment=None, policy=None):
+    state = AgentState(user_query="Tu van", admission_year=2026)
+    state.student_profile = StudentProfile(
+        total_score=26.5, admission_method="thpt_score", subject_combination="A00",
+        preferred_majors=["computer_science"],
+    )
+    state.retrieved_programs = [
+        CandidateProgram(
+            candidate_id="hust:1", school_id="hust", school_name="HUST",
+            admission_year=2026, program_id="computer_science",
+            program_name="Khoa hoc May tinh", admission_method="thpt_score",
+            evidence=[Evidence(source_url="https://src", school_name="HUST",
+                               admission_year=2026, field_name="record")],
+        )
+    ]
+    state.ranked_recommendations = [
+        RankedRecommendation(candidate_id="hust:1", band="match", score=0.6,
+                             summary="fit", cutoff_assessment=assessment)
+    ]
+    state.policy_decision = policy
+    return state
+
+
+def test_cutoff_reference_line_renders_all_values():
+    assessment = CutoffAssessment(
+        score_fit="below", reference_year=2025, margin=-0.3,
+        latest_values=[
+            {"value": 26.2, "source_url": "mock://uet/program-page", "trust_level": 4},
+            {"value": 26.8, "source_url": "mock://vnu/proposal-pdf", "trust_level": 5},
+        ],
+        conflicted=True, decision_changing=True,
+    )
+    output = explanation_agent(_candidate_with_rec(assessment))
+
+    answer = output.final_answer
+    assert "Điểm chuẩn tham chiếu 2025" in answer
+    assert "26.2" in answer and "26.8" in answer           # EC-16: hiển thị CẢ HAI giá trị
+
+
+def test_global_caveat_renders_with_policy_flag():
+    assessment = CutoffAssessment(score_fit="above", reference_year=2025, margin=1.5)
+    policy = PolicyDecision(policy_flags=["historical_cutoff_reference"])
+    output = explanation_agent(_candidate_with_rec(assessment, policy))
+
+    answer = output.final_answer
+    assert "Chưa có điểm chuẩn chính thức cho kỳ tuyển sinh năm 2026" in answer
+    assert "dữ liệu năm 2025 làm tham chiếu" in answer
+
+
+def test_no_global_caveat_without_flag():
+    assessment = CutoffAssessment(score_fit="above", reference_year=2025, margin=1.5)
+    output = explanation_agent(_candidate_with_rec(assessment, PolicyDecision()))
+    assert "Chưa có điểm chuẩn chính thức" not in output.final_answer
+
+
+def test_ec17_data_note_lists_both_quota_values_with_sources():
+    chosen = EvidenceOption(evidence_id="mock://vnu/proposal-pdf|quota",
+                            source_url="mock://vnu/proposal-pdf", trust_level=3, value=150)
+    rejected = EvidenceOption(evidence_id="mock://uet/program-page|quota",
+                              source_url="mock://uet/program-page", trust_level=2, value=120)
+    state = _candidate_with_rec()
+    state.retrieved_programs[0].candidate_id = "hust:2026:computer_science:thpt_score"
+    state.ranked_recommendations[0].candidate_id = "hust:2026:computer_science:thpt_score"
+    state.resolution_outcomes = [
+        ResolutionOutcome(
+            conflict_key="hust:2026:computer_science:thpt_score", field_name="quota",
+            school_id="hust", school_name="HUST", program_name="Khoa hoc May tinh",
+            status="resolved", resolved_value=150,
+            chosen_evidence=chosen, rejected_evidence=[rejected],
+            rationale="Resolved by deterministic comparison.", decision_axes=["trust_level"],
+        )
+    ]
+    output = explanation_agent(state)
+
+    answer = output.final_answer
+    assert "120" in answer and "150" in answer             # EC-17: đủ CẢ HAI giá trị + nguồn
+    assert "tham chiếu giá trị 150" in answer

@@ -232,30 +232,74 @@ def test_classify_clarification_no_context():
     assert r.classify("còn nữa không", ChatProfileState()).route == "CLARIFICATION"
 
 
-# --- FALLBACK / DEGRADED (4) ---
+# --- FALLBACK / DEGRADED (deterministic keyword router) ---
+# Blanket-falling back to ADVISORY_FLOW re-ran the advisory pipeline on factual
+# questions whenever the Gemini keys were cooling down (session 131, 2026-05-31:
+# "có bao nhiêu phương thức xét tuyển..." → 3× advisory re-run). The degraded
+# path must classify by keywords instead, and ask for clarification when unsure.
 
-def test_classify_fallback_on_inference_error():
+def test_fallback_admission_methods_question_is_not_advisory():
+    """Session-131 regression: LLM down → factual question must NOT re-run advisory."""
+    result = _router(available=False).classify(
+        "có bao nhiêu phương thức xét tuyển của đại học bách khoa hà nội",
+        ChatProfileState(),
+    )
+    assert result.route == "KNOWLEDGE_QA"
+    assert result.topic == "admission_policy"
+
+
+def test_fallback_on_inference_error_routes_tuition_by_keyword():
+    result = _router(should_raise=True).classify("học phí HUST bao nhiêu", ChatProfileState())
+    assert result.route == "KNOWLEDGE_QA"
+    assert result.topic == "tuition"
+
+
+def test_fallback_on_invalid_route_routes_dormitory_by_keyword():
+    """LLM returns a route outside the Literal → validation error → keyword fallback."""
+    result = _router(parsed_data={"route": "MADE_UP_ROUTE"}).classify(
+        "ký túc xá thế nào", ChatProfileState()
+    )
+    assert result.route == "KNOWLEDGE_QA"
+    assert result.topic == "dormitory"
+
+
+def test_fallback_greeting_routes_conversational():
+    result = _router(parsed_data=None).classify("chào bạn", ChatProfileState())
+    assert result.route == "CONVERSATIONAL"
+    assert result.subtype == "GREETING"
+
+
+def test_fallback_thanks_routes_conversational():
+    result = _router(should_raise=True).classify("cảm ơn nhé", ChatProfileState())
+    assert result.route == "CONVERSATIONAL"
+    assert result.subtype == "THANKS"
+
+
+def test_fallback_advisory_request_stays_advisory():
+    result = _router(should_raise=True).classify("tư vấn ngành CNTT cho mình", ChatProfileState())
+    assert result.route == "ADVISORY_FLOW"
+
+
+def test_fallback_study_wish_opener_stays_advisory():
+    """An advisory opener like 'em muốn học X' must keep collecting the profile
+    in degraded mode (asserted end-to-end by the web fallback-extractor test)."""
+    result = _router(available=False).classify(
+        "Em muon hoc CNTT tai HUST nam 2026", ChatProfileState()
+    )
+    assert result.route == "ADVISORY_FLOW"
+
+
+def test_fallback_unrecognized_message_asks_clarification():
+    """No keyword match → ask the user again instead of guessing ADVISORY_FLOW."""
     result = _router(should_raise=True).classify("bất kỳ câu gì", ChatProfileState())
-    assert result.route == "ADVISORY_FLOW"
-    assert result.topic is None
-    assert result.school is None
+    assert result.route == "CLARIFICATION"
 
 
-def test_classify_fallback_when_parsed_data_is_none():
-    result = _router(parsed_data=None).classify("bất kỳ câu gì", ChatProfileState())
-    assert result.route == "ADVISORY_FLOW"
-
-
-def test_classify_fallback_on_invalid_route_in_response():
-    """LLM returns a route outside the Literal → validation error → fallback."""
-    result = _router(parsed_data={"route": "MADE_UP_ROUTE"}).classify("x", ChatProfileState())
-    assert result.route == "ADVISORY_FLOW"
-
-
-def test_classify_fallback_when_gateway_unavailable():
-    """is_available() false → skip the LLM call entirely, return fallback."""
-    result = _router(available=False, parsed_data={"route": "OUT_OF_SCOPE"}).classify("x", ChatProfileState())
-    assert result.route == "ADVISORY_FLOW"
+def test_fallback_mixed_greeting_and_knowledge_prefers_knowledge():
+    """Mirror of the LLM prompt rule: greeting + concrete need → answer the need."""
+    result = _router(available=False).classify("chào bạn, học phí UET bao nhiêu?", ChatProfileState())
+    assert result.route == "KNOWLEDGE_QA"
+    assert result.topic == "tuition"
 
 
 # --- HYBRID schema (Phase 5a) ---
@@ -363,3 +407,21 @@ def test_intent_prompt_enumerates_topics_and_maps_admission_methods():
     from services.chat.intent_router import INTENT_SYSTEM_PROMPT
     assert "admission_policy" in INTENT_SYSTEM_PROMPT
     assert "phương thức xét tuyển" in INTENT_SYSTEM_PROMPT
+
+
+# --- RESET_PROFILE (reasoning-integrity plan 4) ---
+
+def test_intent_result_accepts_reset_profile_route():
+    assert IntentResult(route="RESET_PROFILE").route == "RESET_PROFILE"
+
+
+def test_classify_reset_profile_passthrough():
+    r = _router(parsed_data={"route": "RESET_PROFILE"})
+    result = r.classify("xoá thông tin cũ đi, tư vấn lại cho em gái em", ChatProfileState())
+    assert result.route == "RESET_PROFILE"
+
+
+def test_intent_prompt_documents_reset_profile_route():
+    from services.chat.intent_router import INTENT_SYSTEM_PROMPT
+    assert "RESET_PROFILE" in INTENT_SYSTEM_PROMPT
+    assert "tư vấn cho người khác" in INTENT_SYSTEM_PROMPT

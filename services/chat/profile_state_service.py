@@ -25,6 +25,7 @@ def merge_profile_state(current: ChatProfileState, extracted: StudentProfile, ra
     merged = ChatProfileState(
         admission_year=_extract_admission_year(raw_message) or current.admission_year,
         total_score=extracted.total_score or current.total_score,
+        admission_method=extracted.admission_method or current.admission_method,
         subject_combination=extracted.subject_combination or current.subject_combination,
         preferred_majors=extracted.preferred_majors or current.preferred_majors,
         preferred_schools=extracted.preferred_schools or current.preferred_schools,

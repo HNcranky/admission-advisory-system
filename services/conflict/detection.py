@@ -73,3 +73,51 @@ def detect_quota_conflicts(candidates: List[CandidateProgram]) -> List[ConflictR
             )
         )
     return records
+
+
+def detect_cutoff_conflicts(candidates: List[CandidateProgram]) -> List[ConflictRecord]:
+    """Conflict điểm chuẩn giữa các nguồn (EC-16).
+
+    Group theo (school_id, program, cutoff_year, method); options theo source_url
+    (dedupe — nhiều candidate row có thể chia sẻ cùng cutoff_history vì attach
+    theo (school, program)). LƯU Ý: ConflictRecord.admission_year mang CUTOFF_YEAR
+    (năm của điểm chuẩn lịch sử), khác quota conflicts (năm đề án).
+    """
+    per_source: Dict[Tuple[str, str, int, str], Dict[str, Any]] = {}
+    sample: Dict[Tuple[str, str, int, str], CandidateProgram] = {}
+    for candidate in candidates:
+        program_key = candidate.program_id or candidate.program_name
+        for entry in candidate.cutoff_history:
+            key = (candidate.school_id, program_key, entry.cutoff_year, entry.admission_method)
+            per_source.setdefault(key, {}).setdefault(entry.source_url, entry)
+            sample.setdefault(key, candidate)
+
+    records: List[ConflictRecord] = []
+    for key, by_source in per_source.items():
+        entries = list(by_source.values())
+        if len({e.cutoff_score for e in entries}) < 2:
+            continue
+        school_id, program_key, cutoff_year, method = key
+        candidate = sample[key]
+        records.append(
+            ConflictRecord(
+                conflict_key=f"{school_id}:{cutoff_year}:{program_key}:{method}:cutoff",
+                field_name="cutoff_score",
+                school_id=school_id,
+                school_name=candidate.school_name,
+                admission_year=cutoff_year,
+                program_id=candidate.program_id,
+                program_name=candidate.program_name,
+                admission_method=method,
+                options=[
+                    EvidenceOption(
+                        evidence_id=f"{e.source_url}|cutoff_score",
+                        source_url=e.source_url,
+                        trust_level=e.trust_level,
+                        value=e.cutoff_score,
+                    )
+                    for e in entries
+                ],
+            )
+        )
+    return records

@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from decimal import Decimal
 
 import services.retrieval_service as retrieval_service
 from agents.models import StudentProfile
@@ -207,3 +208,82 @@ def test_fetch_candidates_warns_on_mock_bypass(monkeypatch, caplog):
         "ADVISORY_MOCK_CONFLICTS" in record.message and "bypass" in record.message.lower()
         for record in caplog.records
     )
+
+
+def test_fetch_cutoff_history_maps_rows_and_decimal(monkeypatch):
+    fake_rows = [
+        ("hust", "computer_science", 2025, "thpt_score",
+         Decimal("30"), Decimal("28.25"), "https://ts.hust.edu.vn/dc-2025", 5, "TTNV <= 2"),
+        ("hust", "computer_science", 2024, "thpt_score",
+         Decimal("30"), Decimal("27.10"), "https://ts.hust.edu.vn/dc-2024", 5, None),
+    ]
+    fake_cursor = _FakeCursor(fake_rows)
+
+    @contextmanager
+    def fake_get_cursor(commit=False):
+        yield fake_cursor
+
+    monkeypatch.setattr(retrieval_service, "get_cursor", fake_get_cursor)
+
+    history = retrieval_service.fetch_cutoff_history({("hust", "computer_science")})
+
+    entries = history[("hust", "computer_science")]
+    assert [e.cutoff_year for e in entries] == [2025, 2024]
+    assert entries[0].cutoff_score == 28.25            # Decimal -> float
+    assert entries[0].score_scale == 30.0
+    assert entries[0].trust_level == 5
+    assert entries[0].note == "TTNV <= 2"
+    assert "cutoff_records" in fake_cursor.executed_sql
+
+
+def test_fetch_cutoff_history_empty_pairs_skips_db(monkeypatch):
+    def explode(*a, **k):
+        raise AssertionError("DB must not be touched for empty pairs")
+
+    monkeypatch.setattr(retrieval_service, "get_cursor", explode)
+
+    assert retrieval_service.fetch_cutoff_history(set()) == {}
+    # program_id None bị lọc trước khi chạm DB:
+    assert retrieval_service.fetch_cutoff_history({("hust", None)}) == {}
+
+
+def test_fetch_cutoff_history_degrades_to_empty_on_db_error(monkeypatch):
+    @contextmanager
+    def broken_get_cursor(commit=False):
+        raise RuntimeError("relation cutoff_records does not exist")
+        yield  # pragma: no cover
+
+    monkeypatch.setattr(retrieval_service, "get_cursor", broken_get_cursor)
+
+    assert retrieval_service.fetch_cutoff_history({("hust", "computer_science")}) == {}
+
+
+def test_fetch_candidates_attaches_cutoff_history(monkeypatch):
+    monkeypatch.delenv("ADVISORY_MOCK_CONFLICTS", raising=False)
+    fake_rows = [
+        ("hust", "HUST", 2026, "computer_science", "Khoa hoc May tinh", "Khoa học Máy tính",
+         "thpt_score", ["A00", "A01"], {"total": 300}, None, {}, "https://src", 5, 0.9),
+    ]
+    fake_cursor = _FakeCursor(fake_rows)
+
+    @contextmanager
+    def fake_get_cursor(commit=False):
+        yield fake_cursor
+
+    monkeypatch.setattr(retrieval_service, "get_cursor", fake_get_cursor)
+
+    from agents.models import CutoffEntry
+    entry = CutoffEntry(cutoff_year=2025, admission_method="thpt_score",
+                        cutoff_score=27.5, source_url="https://dc", trust_level=5)
+    captured = {}
+
+    def fake_history(pairs):
+        captured["pairs"] = pairs
+        return {("hust", "computer_science"): [entry]}
+
+    monkeypatch.setattr(retrieval_service, "fetch_cutoff_history", fake_history)
+
+    candidates = retrieval_service.fetch_candidates({"admission_year": 2026})
+
+    assert captured["pairs"] == {("hust", "computer_science")}
+    assert candidates[0].cutoff_history == [entry]

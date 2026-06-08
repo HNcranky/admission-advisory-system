@@ -23,7 +23,7 @@
 - Modify: `agents/explanation_agent.py:5-14`
 - Test: `tests/agents/test_explanation_agent.py`
 
-- [ ] **Step 1: Viết test fail (append vào test_explanation_agent.py)**
+- [x] **Step 1: Viết test fail (append vào test_explanation_agent.py)**
 
 ```python
 from agents.models import EligibilityCheck
@@ -121,12 +121,12 @@ def test_correction_sentence_labels_admission_method():
     assert "phương thức xét tuyển" in sentence
 ```
 
-- [ ] **Step 2: Chạy test, xác nhận fail**
+- [x] **Step 2: Chạy test, xác nhận fail**
 
 Run: `python -m pytest tests/agents/test_explanation_agent.py -v`
 Expected: FAIL — chưa có section/label/method trong intro
 
-- [ ] **Step 3: Implementation**
+- [x] **Step 3: Implementation**
 
 `services/explanation_service.py`:
 
@@ -198,12 +198,12 @@ def build_explanation(
         eligibility_checks=state.eligibility_checks,
 ```
 
-- [ ] **Step 4: Chạy test, xác nhận pass**
+- [x] **Step 4: Chạy test, xác nhận pass**
 
 Run: `python -m pytest tests/agents/test_explanation_agent.py -v`
 Expected: PASS toàn bộ (test cũ giữ nguyên — tham số mới có default None)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add services/explanation_service.py agents/explanation_agent.py tests/agents/test_explanation_agent.py
@@ -219,7 +219,7 @@ git commit -m "feat: surface not-eligible programs with reasons in final answer 
 - Test: `tests/agents/test_explanation_agent.py`
 - Modify: `tests/e2e/test_advisory_flow.py:189` (assertion message mới)
 
-- [ ] **Step 1: Viết test fail (append vào test_explanation_agent.py)**
+- [x] **Step 1: Viết test fail (append vào test_explanation_agent.py)**
 
 ```python
 def test_no_match_lists_active_criteria_and_suggestions():
@@ -295,12 +295,12 @@ def test_no_match_without_any_criteria_falls_back_generic():
     assert "chưa tìm thấy chương trình phù hợp trong dữ liệu hiện có" in output.final_answer
 ```
 
-- [ ] **Step 2: Chạy test, xác nhận fail**
+- [x] **Step 2: Chạy test, xác nhận fail**
 
 Run: `python -m pytest tests/agents/test_explanation_agent.py -v`
 Expected: FAIL — vẫn trả "Chưa có đề xuất phù hợp từ dữ liệu hiện tại."
 
-- [ ] **Step 3: Implementation (explanation_service.py)**
+- [x] **Step 3: Implementation (explanation_service.py)**
 
 Helper mới (đặt cạnh `_intro_paragraph`):
 
@@ -376,7 +376,7 @@ Trong `build_explanation`, THAY nhánh else:
 
 (Section "Không đủ điều kiện" của Task 1 đặt NGOÀI `if renderable:` — sau cả hai nhánh — nên ở ca all-not-eligible nó vẫn render. Kiểm tra vị trí: `ne_lines` chèn sau if/else, trước "Nguồn tham chiếu".)
 
-- [ ] **Step 4: Cập nhật e2e assertion**
+- [x] **Step 4: Cập nhật e2e assertion**
 
 `tests/e2e/test_advisory_flow.py` — trong `test_advisory_flow_handles_empty_retrieval`, THAY:
 
@@ -391,17 +391,17 @@ bằng:
     assert "tổ hợp A00" in result["final_answer"]
 ```
 
-- [ ] **Step 5: Chạy test, xác nhận pass**
+- [x] **Step 5: Chạy test, xác nhận pass**
 
 Run: `python -m pytest tests/agents/test_explanation_agent.py tests/e2e/test_advisory_flow.py -v`
 Expected: PASS toàn bộ
 
-- [ ] **Step 6: Chạy toàn bộ suite**
+- [x] **Step 6: Chạy toàn bộ suite**
 
 Run: `python -m pytest -q`
 Expected: PASS (0 failed). Nếu có test nào khác assert chuỗi "Chưa có đề xuất phù hợp", cập nhật sang chuỗi mới "chưa tìm thấy chương trình" (grep: `python -m pytest` sẽ chỉ ra; chuỗi cũ chỉ còn ở `tests/e2e/test_chat_session_run_flow.py` nếu có — sửa tương tự).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add services/explanation_service.py tests/agents/test_explanation_agent.py tests/e2e/test_advisory_flow.py

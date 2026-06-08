@@ -1,5 +1,5 @@
-from agents.models import CandidateProgram, Evidence
-from services.conflict.detection import detect_quota_conflicts
+from agents.models import CandidateProgram, CutoffEntry, Evidence
+from services.conflict.detection import detect_cutoff_conflicts, detect_quota_conflicts
 
 
 def candidate(
@@ -102,3 +102,60 @@ def test_heterogeneous_quota_shapes_are_conflict_eligible():
     )
 
     assert len(conflicts) == 1
+
+
+def _cutoff_candidate(candidate_id="hust:2026:computer_science:thpt_score", history=()):
+    return CandidateProgram(
+        candidate_id=candidate_id, school_id="hust", school_name="HUST",
+        admission_year=2026, program_id="computer_science",
+        program_name="Khoa hoc May tinh", admission_method="thpt_score",
+        cutoff_history=list(history),
+    )
+
+
+def _ce(year, score, source, trust=5):
+    return CutoffEntry(cutoff_year=year, admission_method="thpt_score",
+                       cutoff_score=score, score_scale=30.0,
+                       source_url=source, trust_level=trust)
+
+
+def test_detect_cutoff_conflicts_two_sources_distinct_values():
+    candidate = _cutoff_candidate(history=[
+        _ce(2025, 26.2, "https://truong/dc"), _ce(2025, 26.8, "https://dhqg/dc", trust=4),
+    ])
+    records = detect_cutoff_conflicts([candidate])
+
+    assert len(records) == 1
+    record = records[0]
+    assert record.field_name == "cutoff_score"
+    assert record.admission_year == 2025                  # mang CUTOFF_YEAR
+    assert record.conflict_key.endswith(":cutoff")
+    assert {o.value for o in record.options} == {26.2, 26.8}
+
+
+def test_detect_cutoff_conflicts_dedupes_shared_history_across_rows():
+    """Hai candidate row (2 phương thức) chia sẻ cùng history (attach theo school+program)
+    → options KHÔNG được nhân đôi."""
+    history = [_ce(2025, 26.2, "https://a"), _ce(2025, 26.8, "https://b")]
+    rows = [
+        _cutoff_candidate(history=history),
+        _cutoff_candidate(candidate_id="hust:2026:computer_science:talent", history=history),
+    ]
+    records = detect_cutoff_conflicts(rows)
+    assert len(records) == 1 and len(records[0].options) == 2
+
+
+def test_detect_cutoff_conflicts_ignores_same_value_or_single_source():
+    same = _cutoff_candidate(history=[_ce(2025, 26.2, "https://a"), _ce(2025, 26.2, "https://b")])
+    single = _cutoff_candidate(history=[_ce(2025, 26.2, "https://a")])
+    assert detect_cutoff_conflicts([same]) == []
+    assert detect_cutoff_conflicts([single]) == []
+
+
+def test_detect_cutoff_conflicts_groups_per_year():
+    candidate = _cutoff_candidate(history=[
+        _ce(2025, 26.2, "https://a"), _ce(2025, 26.8, "https://b"),
+        _ce(2024, 25.0, "https://a"),                     # năm khác, 1 nguồn → không conflict
+    ])
+    records = detect_cutoff_conflicts([candidate])
+    assert len(records) == 1 and records[0].admission_year == 2025

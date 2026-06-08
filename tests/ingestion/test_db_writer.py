@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 
 import ingestion.storage.db_writer as db_writer
-from ingestion.models.pipeline_models import NormalizedAdmissionRecord
+from ingestion.models.pipeline_models import NormalizedAdmissionRecord, NormalizedCutoffRecord
 
 
 def _make_record(source_url: str) -> NormalizedAdmissionRecord:
@@ -86,3 +86,43 @@ def test_save_canonical_records_two_distinct_sources_both_written(monkeypatch):
     source_urls_in_params = [ex[1][14] for ex in cursor.executions]
     assert "https://hust.edu.vn/admission/2026" in source_urls_in_params
     assert "https://ts.hust.edu.vn/tuyen-sinh/2026" in source_urls_in_params
+
+
+def _make_cutoff(source_url: str) -> NormalizedCutoffRecord:
+    return NormalizedCutoffRecord(
+        school_id="hust", program_id="computer_science",
+        program_name_canonical="Khoa học Máy tính", program_name_raw="Khoa học máy tính (IT1)",
+        cutoff_year=2025, admission_method="thpt_score", score_scale=30.0,
+        cutoff_score=28.25, subject_combinations=["A00", "A01"],
+        note="TTNV <= 2", source_url=source_url, source_trust_level=5,
+    )
+
+
+def test_save_cutoff_records_upserts_per_source(monkeypatch):
+    cursor = _TrackingCursor()
+
+    @contextmanager
+    def fake_get_cursor(commit=True):
+        yield cursor
+
+    monkeypatch.setattr(db_writer, "get_cursor", fake_get_cursor)
+
+    count = db_writer.save_cutoff_records([_make_cutoff("https://ts.hust.edu.vn/diem-chuan-2025")])
+
+    assert count == 1
+    sql, params = cursor.executions[0]
+    assert "INSERT INTO cutoff_records" in sql
+    assert "ON CONFLICT (school_id, cutoff_year, program_id, admission_method, source_url)" in sql
+    assert "https://ts.hust.edu.vn/diem-chuan-2025" in params
+    assert 28.25 in params
+
+
+def test_save_cutoff_records_swallows_db_error_returns_zero(monkeypatch):
+    @contextmanager
+    def broken_get_cursor(commit=True):
+        raise RuntimeError("db down")
+        yield  # pragma: no cover
+
+    monkeypatch.setattr(db_writer, "get_cursor", broken_get_cursor)
+
+    assert db_writer.save_cutoff_records([_make_cutoff("https://x")]) == 0

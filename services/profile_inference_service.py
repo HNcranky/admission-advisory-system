@@ -15,6 +15,7 @@ PROFILE_SYSTEM_PROMPT = """
 Trích xuất hồ sơ tư vấn tuyển sinh từ tin nhắn của học sinh Việt Nam.
 Trả JSON với các khóa (dùng null cho vô hướng chưa biết, [] cho list chưa biết):
 - total_score: số hoặc null
+- admission_method: một trong "thpt_score" | "school_record" | "competency_test" | "combined" | "talent_admission", hoặc null
 - subject_combination: mã tổ hợp như "A00", "A01", "D01" hoặc null
 - preferred_schools: danh sách trường học sinh nhắc tới
 - location_preference: tỉnh/khu vực muốn học (vd "Ha Noi", "Mien Bac") hoặc null

@@ -3,6 +3,7 @@ from typing import Optional
 
 from services.chat.models import ChatProfileState, union_majors
 from services.inference.models import InferenceError, InferenceRequest
+from services.profile.admission_methods import METHOD_CODES, parse_admission_method
 from services.profile.major_resolver import is_explicit_choice, resolve_majors
 from services.profile.slots import SLOTS, missing_critical_slots, parse_slot
 
@@ -11,7 +12,7 @@ logger = logging.getLogger(__name__)
 # Slot vô hướng LLM được phép trả (preferred_majors do resolver; preferred_schools/
 # constraints trích cơ hội nhưng vẫn nằm trong allow-list bên dưới nếu LLM trả).
 _LLM_SLOT_KEYS = {
-    "admission_year", "total_score", "subject_combination",
+    "admission_year", "total_score", "subject_combination", "admission_method",
     "location_preference", "tuition_budget", "preferred_schools", "constraints",
 }
 
@@ -21,7 +22,9 @@ Bạn được cho HỒ SƠ ĐÃ BIẾT và TIN NHẮN MỚI. CHỈ trả về c
 hoặc MỚI xuất hiện trong tin nhắn mới (delta), KHÔNG lặp lại trường không đổi.
 
 Trả JSON, chỉ gồm các khóa có giá trị mới (dùng đúng tên khóa):
-- total_score: số (0..40)
+- total_score: số (0..150 tuỳ phương thức; thang phổ biến là 30)
+- admission_method: một trong "thpt_score" (điểm thi TN THPT) | "school_record" (học bạ)
+  | "competency_test" (ĐGNL/ĐGTD) | "combined" (kết hợp) | "talent_admission" (tài năng/tuyển thẳng)
 - subject_combination: mã tổ hợp "A00"/"A01"/"D01"...
 - admission_year: năm (số)
 - location_preference: tỉnh/khu vực
@@ -57,6 +60,10 @@ def _coerce_llm_delta(parsed) -> dict:
             continue
         if value is None or value == [] or value == "":
             continue
+        if key == "admission_method" and value not in METHOD_CODES:
+            value = parse_admission_method(str(value))
+            if value is None:
+                continue
         out[key] = value
     return out
 

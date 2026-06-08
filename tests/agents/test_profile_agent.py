@@ -74,9 +74,9 @@ def test_profile_agent_uses_injected_gateway():
     # not StudentProfile, so it always reads as missing here).
     assert output.student_profile == StudentProfile(
         preferred_majors=["economics"],
-        missing_slots=["admission_year", "total_score", "subject_combination"],
+        missing_slots=["admission_year", "total_score", "admission_method", "subject_combination"],
     )
-    assert output.retrieval_missing_data == ["admission_year", "total_score", "subject_combination"]
+    assert output.retrieval_missing_data == ["admission_year", "total_score", "admission_method", "subject_combination"]
 
 def test_profile_agent_reuses_seeded_student_profile(monkeypatch):
     seeded = StudentProfile(
