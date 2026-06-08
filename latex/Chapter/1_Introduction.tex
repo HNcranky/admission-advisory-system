@@ -6,9 +6,13 @@
 \section{Motivation}
 \label{section:1.1}
 
-Choosing a university program is one of the most consequential decisions a Vietnamese student makes, and it must be made from information that is unusually hard to assemble.
-The relevant facts --- which programs admit which subject combinations, how many places each program offers, what last year's cutoff scores were, and which admission methods apply --- are scattered across three kinds of sources that do not share a format.
-Each university publishes its own admission pages, structured differently from every other university's.
+Choosing a university program is among the most consequential decisions a Vietnamese student makes, and it must be made from information that is unusually hard to assemble.
+Every year, following the national high-school graduation examination, a large cohort of candidates across the country must convert their results into a small, ranked set of program applications under intense competition for a limited number of places.
+The choice shapes a student's field of study and early career, and once the application window closes it is difficult to revise.
+The difficulty of the decision falls not only on students but also on the parents and teachers who advise them.
+
+The facts a student needs are scattered across three kinds of sources that share no common format.
+Each university publishes its own admission pages, structured differently from every other university's, listing the subject combinations each program admits, the number of places it offers, and the admission methods it accepts.
 Detailed admission proposals are released as \gls{PDF} documents, some of which are scanned images rather than digital text.
 Nationwide rules are issued separately by the \gls{MOET}, which also operates the central application portal.
 
@@ -16,24 +20,32 @@ This information is not only fragmented but unstable and inconsistent.
 Admission documents are revised repeatedly through an admission season, so a figure read in one week may be superseded the next.
 Worse, sources disagree: two official publications for the same program can state different quotas, and an aggregator portal can republish a cutoff score that no longer matches the school's own page.
 A student facing these contradictions has no straightforward way to tell which value is current or authoritative.
+
 Because an application decision is hard to reverse and the competition for places is intense, acting on a stale or incorrect figure carries a real cost.
-The motivation for this thesis is the gap between the importance of the decision and the poor state of the information available to make it.
+A misread cutoff can steer a qualified student away from a program that was within reach, or toward one that was not.
+The motivation for this thesis is the gap between the importance of this decision and the poor state of the information available to make it.
 
 \section{Objectives and scope of the graduation thesis}
 \label{section:1.2}
 
-Students currently bridge this gap with channels that each fall short.
-Official school pages and ministry documents are authoritative but fragmented and unreconciled.
-Hotlines and human counselors personalize their advice but cannot scale to every student at peak season.
-Aggregator portals improve discoverability but strip away provenance, so a student cannot judge a republished number.
-General-purpose \gls{LLM} chatbots are conversational and always available, but their training data lags the admission season and they fabricate specific figures when pressed.
-Specialized admission-engagement platforms used by universities abroad show that grounded, knowledge-base-backed admission chat is practical, but they are built around a single institution's own trusted data and are not designed to reconcile contradictory figures from independent sources.
+Students currently bridge this gap with several channels, each of which falls short in a different way.
+Official school pages and ministry documents are authoritative but fragmented and unreconciled, leaving the work of comparison to the student.
+Hotlines and human counselors personalize their advice but cannot scale to every student during the peak of an admission season.
+Aggregator portals collect cutoff scores and program lists into searchable tables and so improve discoverability, but they republish figures without provenance, so a student cannot judge a number that disagrees with a school's own page.
+General-purpose \gls{LLM} chatbots are conversational and always available, but their training data lags the admission season and they fabricate plausible-sounding figures when asked about specific quotas or cutoffs.
+Specialized admission-engagement platforms deployed by universities abroad, such as Element451~\cite{element451} and Mainstay~\cite{mainstay}, show that grounded, knowledge-base-backed admission chat is practical.
+These products are built on conversational frameworks of the kind exemplified by Rasa's \gls{CALM} architecture~\cite{rasa_calm} and Google Dialogflow CX~\cite{dialogflow}, but each serves a single institution's own trusted data and is not designed to reconcile contradictory figures from independent sources.
+
+Across these channels, three gaps recur.
+None reconciles contradictory official data, none combines grounded answers with incremental personalization, and none collects a student profile gradually and withholds recommendations until it has enough data to give them responsibly.
 A fuller comparison of these channels is given in Chapter~\ref{chapter:Related_works}.
 
-Across all of them, three gaps recur: none reconciles contradictory official data, none combines grounded answers with incremental personalization, and none collects a student profile gradually and withholds recommendations until it has enough data to give them responsibly.
-
 The objective of this thesis is to build an end-to-end system that closes these gaps for the Vietnamese admission context.
-Concretely, the system has three parts: an ingestion pipeline that collects and normalizes data from official sources, a canonical and conflict-aware data store that preserves rather than discards contradictory values, and an \gls{LLM}-based advisory chat that collects a student profile over a conversation and produces grounded, conflict-aware recommendations.
+The system performs three main functions.
+The first is to collect admission data from official sources and normalize it into a single store, replacing the manual gathering a student would otherwise do across many heterogeneous pages and documents.
+The second is to consolidate that data into a canonical, conflict-aware store that preserves contradictory values per source rather than silently discarding them.
+The third is to conduct an \gls{LLM}-based advisory conversation that collects a student profile incrementally and produces grounded, conflict-aware program recommendations alongside free-form question answering.
+
 The scope is deliberately bounded.
 The configured data sources are the universities registered in the ingestion configuration --- principally HUST and VNU-UET for structured admission data, with HUST, NEU, VNU-UET, and national \gls{MOET} documents in the knowledge corpus --- rather than every Vietnamese university.
 The user-facing dialogue is conducted in Vietnamese, the language of its intended students, while this thesis is written in English.
@@ -42,16 +54,17 @@ Training or fine-tuning a language model is out of scope; the work concerns engi
 \section{Tentative solution}
 \label{section:1.3}
 
-The system is built from three technologies matched to the three gaps.
-Grounded answering is provided by retrieval-augmented generation over a vector store, so factual replies are conditioned on ingested official documents and cite them.
-The advisory consultation is orchestrated as a fixed LangGraph pipeline whose six stages --- profile, retrieve, conflict, reason, policy, explain --- run in a deterministic, traceable order.
-All model access passes through a single resilient inference gateway that distinguishes hard \gls{API} failures from malformed-output failures and degrades gracefully through retries, fallbacks, and deterministic alternatives.
+The system is built from three technologies, each matched to one of the gaps identified above.
+Grounded answering is provided by \gls{RAG}~\cite{lewis2020rag} over a vector store, so that factual replies are conditioned on ingested official documents and can cite them.
+The advisory consultation is orchestrated as a fixed LangGraph~\cite{langgraph} state graph whose six stages --- profile, retrieve, conflict, reason, policy, explain --- run in a deterministic and traceable order.
+All model access passes through a single resilient inference gateway, built on a hosted Gemini model~\cite{gemini}, that distinguishes hard \gls{API} failures from malformed-output failures and degrades gracefully through retries, fallbacks, and deterministic alternatives.
 
 The thesis makes three principal contributions, developed in Chapter~\ref{chapter:SolutionAndContribution}.
 The first is conflict-aware data consolidation: contradictory quota and cutoff figures are preserved per source and surfaced in recommendations, with model judgment confined to the narrow cases where it is safe.
 The second is the resilient inference gateway, which keeps the assistant usable through model outages by treating the two failure modes differently and providing a deterministic fallback for intent routing.
 The third is end-to-end ingestion of heterogeneous official sources, including a hybrid text-and-\gls{OCR} extractor with an explicit safeguard against model transcription failures on scanned documents.
-The resulting system comprises roughly 28{,}000 lines of Python verified by 856 automated tests, with a populated canonical store and knowledge corpus drawn from real official sources, as quantified in Chapter~\ref{chapter:Experiment}.
+
+The resulting system comprises more than 28{,}000 lines of Python, exercised by a suite of 856 automated tests, and is backed by a populated canonical store and knowledge corpus drawn from real official sources, as quantified in Chapter~\ref{chapter:Experiment}.
 
 \section{Thesis organization}
 \label{section:1.4}
