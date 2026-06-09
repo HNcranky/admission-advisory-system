@@ -1,3 +1,5 @@
+import threading
+
 from services.chat.intent_router import IntentResult
 from services.chat.knowledge_fanout import run_knowledge_fanout, format_knowledge_blocks
 from services.knowledge.models import Citation, KnowledgeQAResult
@@ -93,3 +95,33 @@ def test_format_knowledge_blocks_renders_data_and_fallback():
     out2 = format_knowledge_blocks(empty)
     assert "chưa có dữ liệu" in out2.lower()
     assert "liên hệ" in out2.lower()
+
+
+class _ConcurrentQA:
+    """answer() chặn trên barrier `parties`; chỉ giải phóng khi đủ số call chạy
+    đồng thời. Tuần tự → barrier timeout → max_concurrent < parties."""
+
+    def __init__(self, parties):
+        self._barrier = threading.Barrier(parties, timeout=2)
+        self._lock = threading.Lock()
+        self._active = 0
+        self.max_concurrent = 0
+
+    def answer(self, question, school, topic, conversation_context=""):
+        with self._lock:
+            self._active += 1
+            self.max_concurrent = max(self.max_concurrent, self._active)
+        try:
+            self._barrier.wait()
+        finally:
+            with self._lock:
+                self._active -= 1
+        return KnowledgeQAResult(has_data=False, confidence=0.0)
+
+
+def test_fanout_runs_pairs_concurrently():
+    qa = _ConcurrentQA(parties=2)
+    intent = IntentResult(route="HYBRID", schools=["A", "B"], topics=["t"])
+    blocks = run_knowledge_fanout(qa, intent, "q")
+    assert qa.max_concurrent == 2                      # hai call đồng thời
+    assert [b.school for b in blocks] == ["A", "B"]    # thứ tự bảo toàn
