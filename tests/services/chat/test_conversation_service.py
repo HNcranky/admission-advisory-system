@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 from services.chat.conversation_service import ConversationService
-from services.chat.models import ChatProfileState, FlowState
+from services.chat.models import ChatMessageRecord, ChatProfileState, FlowState
 from services.chat.intent_router import IntentResult
 from services.knowledge.models import Citation, KnowledgeQAResult
 
@@ -15,6 +15,13 @@ class FakeRepository:
 
     def append_message(self, session_token, role, content, kind="chat"):
         self.messages.append((role, kind, content))
+
+    def list_message(self, session_token):
+        # Mirror the real repository: chronological ChatMessageRecord objects.
+        return [
+            ChatMessageRecord(id=i, session_token=session_token, role=role, kind=kind, content=content)
+            for i, (role, kind, content) in enumerate(self.messages)
+        ]
 
     def get_session_by_token(self, session_token):
         # Only .status is read by ConversationService.
@@ -38,8 +45,10 @@ class FakeRepository:
 class FakeIntentRouter:
     def __init__(self, result: IntentResult):
         self._result = result
+        self.last_history = None
 
-    def classify(self, message, profile_state):
+    def classify(self, message, profile_state, history=""):
+        self.last_history = history
         return self._result
 
 
@@ -108,6 +117,31 @@ def test_conversation_service_accepts_intent_router_injection():
         intent_router=router,
     )
     assert service.intent_router is router
+
+
+# ─── Conversation history threading ───────────────────────────────────────────
+
+def test_handle_user_message_passes_history_to_intent_router():
+    """When prior turns exist, the intent router is called with a history block
+    containing the previous assistant answer."""
+    service, repo = _make_service(intent_result=IntentResult(route="CLARIFICATION"))
+    # Seed a prior completed turn (user question + assistant answer).
+    repo.append_message("tok", "user", "học phí UET?", "user_message")
+    repo.append_message("tok", "assistant", "15 triệu/năm", "assistant_result")
+
+    service.handle_user_message("tok", "còn HUST thì sao")
+
+    assert service.intent_router.last_history  # non-empty string
+    assert "Trợ lý:" in service.intent_router.last_history
+    assert "15 triệu/năm" in service.intent_router.last_history
+
+
+def test_handle_user_message_history_excludes_current_message():
+    """History is built BEFORE the current message is appended, so the message
+    being processed never appears in its own history block."""
+    service, repo = _make_service(intent_result=IntentResult(route="CLARIFICATION"))
+    service.handle_user_message("tok", "câu hỏi đầu tiên")
+    assert service.intent_router.last_history == ""  # no prior turns
 
 
 # ─── Resume offer (natural, không lặp câu hỏi cũ) ─────────────────────────────
