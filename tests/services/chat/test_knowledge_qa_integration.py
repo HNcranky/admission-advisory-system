@@ -18,6 +18,9 @@ class _ChatRepo:
     def append_message(self, *args, **kwargs):
         self.messages.append(args)
 
+    def list_message(self, token):
+        return []
+
     def get_session_by_token(self, token):
         return SimpleNamespace(session_token=token, status=self.status)
 
@@ -39,7 +42,7 @@ class _Router:
     def __init__(self, result):
         self._result = result
 
-    def classify(self, message, profile_state):
+    def classify(self, message, profile_state, history=""):
         return self._result
 
 
