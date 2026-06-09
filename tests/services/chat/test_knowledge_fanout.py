@@ -65,6 +65,22 @@ def test_fanout_falls_back_to_singular_then_school_fallback():
     assert qa2.calls[0]["school"] == "VNU-UET"
 
 
+class _CtxRecordingQA:
+    def __init__(self):
+        self.last_ctx = None
+
+    def answer(self, question, school, topic, conversation_context=""):
+        self.last_ctx = conversation_context
+        return KnowledgeQAResult(has_data=False, confidence=0.0)
+
+
+def test_run_knowledge_fanout_forwards_conversation_context():
+    qa = _CtxRecordingQA()
+    intent = IntentResult(route="HYBRID", topic="tuition", school="VNU-UET")
+    run_knowledge_fanout(qa, intent, "ngành đó học phí?", conversation_context="Trợ lý: ...")
+    assert qa.last_ctx == "Trợ lý: ..."
+
+
 def test_format_knowledge_blocks_renders_data_and_fallback():
     from services.chat.hybrid_models import KnowledgeBlock
     has = [KnowledgeBlock(school="VNU-UET", topic="tuition", has_data=True, answer="35 triệu",

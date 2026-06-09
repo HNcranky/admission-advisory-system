@@ -23,7 +23,7 @@ def _resolve_topics(intent):
     return [None]
 
 
-def run_knowledge_fanout(knowledge_qa, intent, content, school_fallback=None) -> list:
+def run_knowledge_fanout(knowledge_qa, intent, content, school_fallback=None, conversation_context="") -> list:
     """Call the single-school KnowledgeQA once per (school, topic) pair.
 
     Each call swallows its own error → a no-data KnowledgeBlock; siblings survive.
@@ -33,7 +33,8 @@ def run_knowledge_fanout(knowledge_qa, intent, content, school_fallback=None) ->
         for topic in _resolve_topics(intent):
             try:
                 result = knowledge_qa.answer(
-                    question=content, school=school, topic=topic, conversation_context="",
+                    question=content, school=school, topic=topic,
+                    conversation_context=conversation_context,
                 )
             except Exception as exc:
                 logger.warning(

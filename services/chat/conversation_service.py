@@ -114,7 +114,7 @@ class ConversationService:
         if intent.route == "KNOWLEDGE_QA":
             return self._handle_knowledge_qa(session_token, content, intent, profile_state, flow_state, session_status, history_ctx)
         if intent.route == "HYBRID":
-            return self._handle_hybrid(session_token, content, intent, profile_state, flow_state, session_status)
+            return self._handle_hybrid(session_token, content, intent, profile_state, flow_state, session_status, history_ctx)
         if intent.route == "OUT_OF_SCOPE":
             return self._handle_out_of_scope(session_token, profile_state, flow_state, session_status)
         if intent.route == "CONVERSATIONAL":
@@ -352,7 +352,7 @@ class ConversationService:
             citations=citations,
         )
 
-    def _handle_hybrid(self, session_token, content, intent, profile_state, flow_state, session_status):
+    def _handle_hybrid(self, session_token, content, intent, profile_state, flow_state, session_status, history_ctx=""):
         missing = missing_critical_slots(profile_state)
 
         if not missing:
@@ -373,7 +373,7 @@ class ConversationService:
 
         # Profile incomplete → answer the knowledge half inline, ask the next advisory follow-up.
         school_fallback = profile_state.preferred_schools[0] if profile_state.preferred_schools else None
-        blocks = run_knowledge_fanout(self.knowledge_qa, intent, content, school_fallback)
+        blocks = run_knowledge_fanout(self.knowledge_qa, intent, content, school_fallback, conversation_context=history_ctx)
         body = format_knowledge_blocks(blocks)
 
         follow_up = next_follow_up_question(profile_state.model_copy(update={"missing_slots": missing}))
