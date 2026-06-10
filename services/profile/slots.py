@@ -56,7 +56,8 @@ SLOTS: List[Slot] = [
     Slot("admission_year", True, 0, "Bạn đang xét tuyển cho năm nào?", parse_admission_year),
     Slot("total_score", True, 1, "Tổng điểm hoặc mức điểm ước tính của bạn là bao nhiêu?", parse_score),
     Slot("admission_method", True, 2,
-         "Bạn xét tuyển theo phương thức nào: điểm thi tốt nghiệp THPT, học bạ, đánh giá năng lực hay xét tuyển kết hợp?",
+         "Bạn dự định xét tuyển bằng phương thức nào nhỉ? Ví dụ: điểm thi tốt nghiệp THPT, "
+         "xét học bạ, đánh giá năng lực, hoặc xét tuyển kết hợp.",
          parse_admission_method),
     Slot("preferred_majors", True, 3, "Bạn quan tâm nhất đến ngành nào?", None, present=_major_present),
     Slot("subject_combination", True, 4, "Bạn xét theo tổ hợp nào, ví dụ A00, A01 hay D01?", parse_subject_combination),

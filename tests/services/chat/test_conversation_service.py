@@ -822,8 +822,8 @@ def test_score_answer_then_system_asks_admission_method():
     assert repo.profile_state.total_score == 27.0
     assert "phương thức" in result.assistant_message
     assert repo.flow_state.pending_question == (
-        "Bạn xét tuyển theo phương thức nào: điểm thi tốt nghiệp THPT, học bạ, "
-        "đánh giá năng lực hay xét tuyển kết hợp?"
+        "Bạn dự định xét tuyển bằng phương thức nào nhỉ? Ví dụ: điểm thi tốt nghiệp THPT, "
+        "xét học bạ, đánh giá năng lực, hoặc xét tuyển kết hợp."
     )
 
 
