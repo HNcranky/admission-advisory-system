@@ -169,11 +169,16 @@ slice 1's embed-once; `question`/`content` is never mutated):
 - `run_knowledge_fanout`: today it only receives the rendered
   `conversation_context`. Thread the prior-user text down as a **new
   `prev_user` arg** from `_handle_hybrid`, build the augmented query once, and
-  embed *that* via `embed_query(...)` while still passing `question=content`
-  (original) to each `answer()`. The referent is school-agnostic, so the one
-  augmented vector is correct for every `(school, topic)` task. On the embed-fail
-  fallback (`query_vector is None`), pass `retrieval_query` so each `answer()`
-  embeds the augmented text internally — still keeping `question=content`.
+  embed *that* via `embed_query(...)`. The fan-out already pre-embeds and shares
+  `query_vector`, so it passes the augmented vector through the **existing
+  `query_vector` param** (no `retrieval_query` needed here → the fan-out fakes
+  stay untouched), while still passing `question=content` (original) to each
+  `answer()`. The referent is school-agnostic, so the one augmented vector is
+  correct for every `(school, topic)` task. On the embed-fail fallback
+  (`query_vector is None`), the fan-out degrades to embedding the original
+  `question` internally (augmentation is a best-effort optimization, dropped on
+  the rare embed-failure path) — `retrieval_query` is only needed on the single
+  no-vector path above.
 
 **Acceptance:**
 - A fixture: an elided follow-up (continuation cue, `prev_user` names the
