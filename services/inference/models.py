@@ -29,6 +29,7 @@ class InferencePolicy(BaseModel):
     output_mode: str = "free_text"
     max_retries: int = 1
     max_tokens: Optional[int] = None
+    thinking_budget: Optional[int] = None
 
 
 class InferenceResult(BaseModel):
