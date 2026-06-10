@@ -58,8 +58,17 @@ class KnowledgeQAService:
         conversation_context: str = "",
         query_vector=None,
         national=None,
+        retrieval_query: Optional[str] = None,
     ) -> KnowledgeQAResult:
-        embedding = query_vector if query_vector is not None else self.embed_query(question)
+        # Embedding precedence: caller-supplied vector > retrieval_query (e.g. a
+        # context-augmented follow-up) > the raw question. Generation always uses
+        # `question` (see _generate), so the augmented text never reaches the prompt.
+        if query_vector is not None:
+            embedding = query_vector
+        elif retrieval_query:
+            embedding = self.embed_query(retrieval_query)
+        else:
+            embedding = self.embed_query(question)
         chunks = self._chunk_repository.vector_search(
             embedding, school=school, topic=topic, limit=self._top_k
         )

@@ -225,6 +225,39 @@ def test_answer_uses_supplied_query_vector_without_embedding():
     assert result.has_data is False
 
 
+# ─── retrieval_query (embed-only augmentation) ───────────────────────────────
+
+def test_answer_embeds_retrieval_query_but_generates_from_question():
+    chunks = [_chunk("Học phí HUST 30 triệu", "http://hust/fee", 0.9)]
+    service, embedder, _, gateway = _build(
+        chunks, parsed_data={"answer": "30 triệu", "used_source_ids": [1]}
+    )
+    service.answer(
+        question="còn học phí thì sao",
+        school="HUST", topic="tuition",
+        retrieval_query="HUST học phí ra sao\ncòn học phí thì sao",
+    )
+    # embedding used the augmented retrieval text...
+    assert embedder.calls[0]["texts"] == ["HUST học phí ra sao\ncòn học phí thì sao"]
+    assert embedder.calls[0]["task_type"] == "RETRIEVAL_QUERY"
+    # ...but the generation prompt's question stayed the original
+    prompt = gateway.calls[0].user_prompt
+    assert "Câu hỏi: còn học phí thì sao" in prompt
+    assert "HUST học phí ra sao" not in prompt
+
+
+def test_query_vector_takes_precedence_over_retrieval_query():
+    chunks = [_chunk("x", "http://x", 0.9)]
+    service, embedder, _, _ = _build(
+        chunks, parsed_data={"answer": "ok", "used_source_ids": [1]}
+    )
+    service.answer(
+        question="q", school="VNU-UET", topic="tuition",
+        query_vector=[0.7, 0.7], retrieval_query="ignored",
+    )
+    assert embedder.calls == []  # supplied vector → no embedding at all
+
+
 # ─── national-scope augmentation ─────────────────────────────────────────────
 
 from ingestion.config.settings import KNOWLEDGE_QA_NATIONAL_TOP_K
