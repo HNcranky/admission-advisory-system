@@ -218,8 +218,12 @@ def _no_match_block(
     return lines
 
 
-def _data_note(candidate: CandidateProgram, outcome_by_key: Dict[str, ResolutionOutcome]) -> Optional[str]:
-    """Khối '**Lưu ý dữ liệu:**' theo từng chương trình (AC6)."""
+def _data_note(candidate: CandidateProgram, outcome_by_key: Dict[str, ResolutionOutcome],
+               concise: bool = False) -> Optional[str]:
+    """Khối '**Lưu ý dữ liệu:**' theo từng chương trình (AC6).
+
+    concise=True bỏ câu nhắc 'kiểm tra thông báo chính thức' (đã gộp lên đầu khi
+    ≥2 chương trình mâu thuẫn — 3e)."""
     outcome = outcome_by_key.get(_candidate_conflict_key(candidate))
     if outcome is None and not candidate.data_uncertain_fields:
         return None
@@ -231,21 +235,26 @@ def _data_note(candidate: CandidateProgram, outcome_by_key: Dict[str, Resolution
         values = " và ".join(
             f"{_fmt_num(o.value)} ({label_for_source(o.source_url)})" for o in all_options
         )
-        return (
+        note = (
             f"**Lưu ý dữ liệu:** Các nguồn ghi khác nhau về {field}: {values}. "
             f"Hệ thống tham chiếu giá trị {_fmt_num(outcome.resolved_value)} từ "
-            f"{label_for_source(chosen.source_url)}, nhưng bạn nên kiểm tra thông báo "
-            "tuyển sinh chính thức mới nhất của trường trước khi đăng ký."
+            f"{label_for_source(chosen.source_url)}"
+        )
+        if concise:
+            return note + "."
+        return note + (
+            ", nhưng bạn nên kiểm tra thông báo tuyển sinh chính thức mới nhất của "
+            "trường trước khi đăng ký."
         )
 
     if outcome is not None:
         field = _field_label(outcome.field_name)
     else:
         field = ", ".join(_field_label(f) for f in candidate.data_uncertain_fields)
-    return (
-        f"**Lưu ý dữ liệu:** Thông tin về {field} đang mâu thuẫn giữa các nguồn. "
-        "Bạn nên kiểm tra trực tiếp với trường trước khi đăng ký."
-    )
+    base = f"**Lưu ý dữ liệu:** Thông tin về {field} đang mâu thuẫn giữa các nguồn."
+    if concise:
+        return base
+    return base + " Bạn nên kiểm tra trực tiếp với trường trước khi đăng ký."
 
 
 def _not_eligible_lines(

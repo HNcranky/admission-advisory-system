@@ -580,3 +580,19 @@ def test_intro_lead_differs_by_band():
     reach_out = build_explanation(profile2, recs_reach, cands2, None)
     assert "Hồ sơ của bạn đang khá cạnh tranh." in safe_out
     assert "Có một vài lựa chọn bạn nên cân nhắc kỹ." in reach_out
+
+
+def test_data_note_concise_drops_official_check_boilerplate():
+    from services.explanation_service import _data_note
+    from agents.models import CandidateProgram
+
+    candidate = CandidateProgram(
+        candidate_id="hust:2026:cs:thpt_score", school_id="hust", school_name="HUST",
+        admission_year=2026, program_id="cs", program_name="KHMT",
+        admission_method="thpt_score", data_uncertain_fields=["quota"],
+    )
+    full = _data_note(candidate, {})
+    concise = _data_note(candidate, {}, concise=True)
+    assert "kiểm tra trực tiếp với trường" in full
+    assert "kiểm tra trực tiếp với trường" not in concise
+    assert concise.startswith("**Lưu ý dữ liệu:**")
