@@ -31,7 +31,14 @@ changes except where explicitly noted (none in this slice).
 
 ## Execution order
 
-1c → 1b → 1a → 1e → 1d. (Cleanest pure-cost win first; robustness item last.)
+After grounding (reading `conversation_service.py`), **1b is dropped** — its safe
+win is already implemented (see below). Final plan set, split into small plans:
+
+- Plan A — 1c query-embedding dedup (`plans/2026-06-10-slice1a-embedding-dedup.md`)
+- Plan B — 1c national-search dedup (`plans/2026-06-10-slice1b-national-search-dedup.md`)
+- Plan C — 1a per-agent thinking budget (`plans/2026-06-10-slice1c-thinking-budget.md`)
+- Plan D — 1e major_resolver registry (`plans/2026-06-10-slice1d-major-resolver-registry.md`)
+- Plan E — 1d response_schema, robustness/last (`plans/2026-06-10-slice1e-response-schema.md`)
 
 ---
 
@@ -66,33 +73,24 @@ searches.
 
 ---
 
-## 1b. Cheap-path intent routing for bare slot answers
+## 1b. Cheap-path intent routing for bare slot answers — DROPPED (already done)
 
-**Now:** `conversation_service.py:79` runs `extract_profile` (LLM, but already
-gated to skip the LLM for bare answers at `extractor.py:110`), then `:109`
-`intent_router.classify` runs a **second** LLM call every turn. The router's
-deterministic keyword table (`intent_router.py:176-199`) is only a fallback.
+**Finding (grounding, `conversation_service.py:98-100`):** the safe win 1b
+targeted is **already implemented**. `handle_user_message` calls
+`_maybe_continue_advisory` **before** `intent_router.classify`; when a bare slot
+answer fills the pending slot it returns immediately, so the intent router LLM
+is **never** called for that turn. Extraction's own LLM is likewise gated for
+bare answers (`extractor.py:110`). The remaining double-call only happens on
+genuinely intent-bearing messages (greetings, knowledge questions, advisory
+triggers) where the LLM router is the right tool.
 
-**Change:**
-- Add a deterministic cheap path that fires **only** when the session is
-  mid-advisory-collection **and** the message parses as a single bare slot value
-  (reuse the extractor's existing deterministic gate / signal so the two stay in
-  sync). In that state the intent is unambiguous ("continue providing profile").
-- The cheap path returns an `IntentResult` byte-identical to what the LLM router
-  returns today for that case, with **zero** LLM calls. On any miss (not a bare
-  slot answer, or not mid-collection), fall through to the existing LLM
-  `classify` unchanged.
+The only further saving would be promoting the keyword table to a primary
+classifier — explicitly rejected (semantic-change risk). **No plan written.**
 
-**Explicitly NOT in scope:** promoting the keyword table to a primary classifier
-(risks changing intent decisions on ambiguous messages) and merging
-extraction+routing into one call (larger refactor) — both tracked as possible
-follow-ups, not done here.
-
-**Acceptance:**
-- A bare slot-answer turn mid-collection produces the same `IntentResult` as
-  today with **0** LLM calls (assert via a mocked gateway call counter).
-- A non-slot / ambiguous message still calls the LLM router and behaves
-  identically.
+**Separate follow-up (not 1b):** a greeting like "xin chào" still runs profile
+extraction (and can trigger a major-resolver Tier-2 embedding) before routing —
+up to 3 calls for one greeting, because extraction runs before intent routing.
+Tracked as a future investigation; larger than this slice.
 
 ---
 
