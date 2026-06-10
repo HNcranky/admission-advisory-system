@@ -536,3 +536,47 @@ def test_ec17_data_note_lists_both_quota_values_with_sources():
     answer = output.final_answer
     assert "120" in answer and "150" in answer             # EC-17: đủ CẢ HAI giá trị + nguồn
     assert "tham chiếu giá trị 150" in answer
+
+
+from services.explanation_service import build_explanation, CLOSING_VARIANTS
+
+
+def _one_rec(band="safe"):
+    profile = StudentProfile(total_score=27.0, subject_combination="A00",
+                             preferred_majors=["computer_science"])
+    candidate = CandidateProgram(
+        candidate_id="hust:1", school_id="hust", school_name="HUST",
+        admission_year=2026, program_id="computer_science",
+        program_name="Khoa hoc May tinh", admission_method="thpt_score",
+    )
+    rec = RankedRecommendation(candidate_id="hust:1", band=band, score=0.9, summary="fit")
+    return profile, [rec], [candidate]
+
+
+def test_closing_rotates_by_seed():
+    profile, recs, cands = _one_rec()
+    out0 = build_explanation(profile, recs, cands, None, closing_seed=0)
+    out1 = build_explanation(profile, recs, cands, None, closing_seed=1)
+    assert out0.endswith(CLOSING_VARIANTS[0])
+    assert out1.endswith(CLOSING_VARIANTS[1])
+    assert CLOSING_VARIANTS[0] != CLOSING_VARIANTS[1]
+
+
+def test_no_closing_on_correction_rerun():
+    profile, recs, cands = _one_rec()
+    out = build_explanation(
+        profile, recs, cands, None,
+        correction_note={"slot": "total_score", "previous_value": 27.0, "new_value": 25.0},
+        closing_seed=0,
+    )
+    for variant in CLOSING_VARIANTS:
+        assert variant not in out
+
+
+def test_intro_lead_differs_by_band():
+    profile, recs_safe, cands = _one_rec(band="safe")
+    profile2, recs_reach, cands2 = _one_rec(band="reach")
+    safe_out = build_explanation(profile, recs_safe, cands, None)
+    reach_out = build_explanation(profile2, recs_reach, cands2, None)
+    assert "Hồ sơ của bạn đang khá cạnh tranh." in safe_out
+    assert "Có một vài lựa chọn bạn nên cân nhắc kỹ." in reach_out

@@ -55,10 +55,22 @@ _FIELD_LABELS = {
     "cutoff_score": "điểm chuẩn",
 }
 
-CLOSING_QUESTION = (
+CLOSING_VARIANTS = [
+    # [0] giữ nguyên chuỗi slice 3a để seed 0 không đổi hành vi.
     "Bạn có muốn ưu tiên theo tiêu chí nào hơn: **khả năng trúng tuyển**, "
-    "**đúng sở thích**, hay **học phí an toàn nhất**?"
-)
+    "**đúng sở thích**, hay **học phí an toàn nhất**?",
+    "Giữa **khả năng trúng tuyển**, **đúng sở thích** và **học phí an toàn nhất**, "
+    "bạn muốn mình ưu tiên tiêu chí nào?",
+    "Bạn muốn mình sắp xếp ưu tiên theo **khả năng trúng tuyển**, **đúng sở thích** "
+    "hay **học phí an toàn nhất**?",
+]
+
+# Câu dẫn mở đầu theo band của đề xuất tốt nhất (3d). Mặc định cho reach/unknown.
+_BAND_INTRO_LEAD = {
+    "safe": "Hồ sơ của bạn đang khá cạnh tranh.",
+    "match": "Hồ sơ của bạn có một số lựa chọn phù hợp.",
+}
+_DEFAULT_INTRO_LEAD = "Có một vài lựa chọn bạn nên cân nhắc kỹ."
 
 
 def _translate(text: str) -> str:
@@ -118,7 +130,9 @@ def _correction_sentence(note: Dict[str, Any]) -> str:
     )
 
 
-def _intro_paragraph(profile: StudentProfile, admission_year: Optional[int], n: int) -> str:
+def _intro_paragraph(profile: StudentProfile, admission_year: Optional[int], n: int,
+                     top_band: Optional[str] = None) -> str:
+    lead = _BAND_INTRO_LEAD.get(top_band, _DEFAULT_INTRO_LEAD)
     facts: List[str] = []
     if admission_year:
         facts.append(f"xét tuyển năm {admission_year}")
@@ -136,10 +150,10 @@ def _intro_paragraph(profile: StudentProfile, admission_year: Optional[int], n: 
         facts.append(f"học phí {profile.tuition_budget}")
     if facts:
         return (
-            f"Dựa trên hồ sơ hiện tại của bạn — {', '.join(facts)} — "
+            f"{lead} Dựa trên hồ sơ hiện tại của bạn — {', '.join(facts)} — "
             f"mình đề xuất {n} lựa chọn sau:"
         )
-    return f"Dựa trên thông tin hiện có, mình đề xuất {n} lựa chọn sau:"
+    return f"{lead} Dựa trên thông tin hiện có, mình đề xuất {n} lựa chọn sau:"
 
 
 def _profile_criteria(profile: StudentProfile, admission_year: Optional[int]) -> List[str]:
@@ -268,6 +282,7 @@ def build_explanation(
     admission_year: Optional[int] = None,
     correction_note: Optional[Dict[str, Any]] = None,
     eligibility_checks: Optional[List[EligibilityCheck]] = None,
+    closing_seed: int = 0,
 ) -> str:
     resolution_outcomes = resolution_outcomes or []
     lines: List[str] = []
@@ -297,7 +312,8 @@ def build_explanation(
     outcome_by_key = {o.conflict_key: o for o in resolution_outcomes}
 
     if renderable:
-        lines.append(_intro_paragraph(profile, admission_year, len(renderable)))
+        top_band = renderable[0][0].band
+        lines.append(_intro_paragraph(profile, admission_year, len(renderable), top_band))
         ref_years = sorted({
             rec.cutoff_assessment.reference_year
             for rec, _candidate in renderable
@@ -371,8 +387,8 @@ def build_explanation(
             "Thông tin cần bổ sung: điểm, tổ hợp môn, ngành/trường ưu tiên để nâng độ chính xác."
         )
 
-    if renderable:
+    if renderable and not correction_note:
         lines.append("")
-        lines.append(CLOSING_QUESTION)
+        lines.append(CLOSING_VARIANTS[closing_seed % len(CLOSING_VARIANTS)])
 
     return "\n".join(lines)
