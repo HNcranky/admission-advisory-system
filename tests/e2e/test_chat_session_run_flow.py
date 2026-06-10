@@ -38,6 +38,9 @@ def test_student_can_complete_follow_up_and_receive_final_result(monkeypatch):
             session["profile_state_json"] = profile_state.model_dump(mode="json")
             return 7
 
+        def count_runs(self, session_token):
+            return 1
+
     class FakeConversationService:
         def __init__(self):
             self.repository = FakeRepository()
@@ -109,7 +112,7 @@ def test_student_can_complete_follow_up_and_receive_final_result(monkeypatch):
             )
 
     class FakeDispatcher:
-        def submit(self, session_token, run_id, latest_user_message, profile_state, correction_note=None):
+        def submit(self, session_token, run_id, latest_user_message, profile_state, correction_note=None, closing_seed=0):
             session["status"] = "completed"
             messages.append(
                 ChatMessageRecord(

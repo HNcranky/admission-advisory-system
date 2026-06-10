@@ -62,12 +62,14 @@ def post_message(session_token: str, payload: ChatMessageCreate):
                 intent=intent,
             )
         else:
+            closing_seed = max(0, repo.count_runs(session_token) - 1)
             get_run_dispatcher().submit(
                 session_token=session_token,
                 run_id=run_id,
                 latest_user_message=payload.content,
                 profile_state=result.profile_state,
                 correction_note=result.correction_note,
+                closing_seed=closing_seed,
             )
     return result.model_dump()
 
