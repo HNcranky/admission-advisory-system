@@ -47,6 +47,7 @@ class AgentState(BaseModel):
     uncertainty_reasons: List[str] = Field(default_factory=list)
 
     correction_note: Optional[Dict[str, Any]] = None
+    closing_seed: int = 0
 
 
                                                  

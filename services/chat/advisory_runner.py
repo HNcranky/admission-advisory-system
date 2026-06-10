@@ -4,7 +4,7 @@ from state import AgentState
 
 
 def run_advisory_for_session(profile_state, latest_user_message: str, trace_run_id: int | None = None,
-                             correction_note: dict | None = None):
+                             correction_note: dict | None = None, closing_seed: int = 0):
     student_profile = StudentProfile(
         total_score=profile_state.total_score,
         admission_method=profile_state.admission_method,
@@ -24,6 +24,7 @@ def run_advisory_for_session(profile_state, latest_user_message: str, trace_run_
         profile_seeded=True,
         trace_run_id=trace_run_id,
         correction_note=correction_note,
+        closing_seed=closing_seed,
     )
 
     return graph.invoke(state)

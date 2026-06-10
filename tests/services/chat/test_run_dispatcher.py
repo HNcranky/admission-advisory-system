@@ -30,7 +30,7 @@ def test_dispatcher_completes_run_and_posts_result_message():
     repo = FakeRepository()
     dispatcher = RunDispatcher(
         repository=repo,
-        runner=lambda profile_state, latest_user_message, trace_run_id=None, correction_note=None: {"final_answer": "De xuat phu hop"},
+        runner=lambda profile_state, latest_user_message, trace_run_id=None, correction_note=None, closing_seed=None: {"final_answer": "De xuat phu hop"},
         executor=InlineExecutor(),
     )
 
@@ -56,7 +56,7 @@ def test_dispatcher_posts_mock_conflict_verification_result_message(monkeypatch)
     repo = FakeRepository()
     dispatcher = RunDispatcher(
         repository=repo,
-        runner=lambda profile_state, latest_user_message, trace_run_id=None, correction_note=None: {
+        runner=lambda profile_state, latest_user_message, trace_run_id=None, correction_note=None, closing_seed=None: {
             "final_answer": "Gợi ý CNTT\n\nXác minh dữ liệu\n- Hạn ngạch có mâu thuẫn."
         },
         executor=InlineExecutor(),
@@ -87,7 +87,7 @@ def test_dispatcher_passes_run_id_as_trace_run_id_to_runner():
     repo = FakeRepository()
     captured = {}
 
-    def runner(profile_state, latest_user_message, trace_run_id=None, correction_note=None):
+    def runner(profile_state, latest_user_message, trace_run_id=None, correction_note=None, closing_seed=None):
         captured["trace_run_id"] = trace_run_id
         captured["correction_note"] = correction_note
         return {"final_answer": "ok"}
@@ -111,7 +111,7 @@ def test_dispatcher_passes_run_id_as_trace_run_id_to_runner():
 def test_dispatcher_failure_message_uses_diacritics_and_register():
     repo = FakeRepository()
 
-    def boom(profile_state, latest_user_message, trace_run_id=None, correction_note=None):
+    def boom(profile_state, latest_user_message, trace_run_id=None, correction_note=None, closing_seed=None):
         raise RuntimeError("inference down")
 
     dispatcher = RunDispatcher(repository=repo, runner=boom, executor=InlineExecutor())
@@ -130,3 +130,20 @@ def test_dispatcher_failure_message_uses_diacritics_and_register():
     assert error_msgs, "expected an assistant_error message"
     text = error_msgs[-1][3]
     assert text == "Xin lỗi, quá trình phân tích bị gián đoạn. Bạn thử lại giúp mình nhé."
+
+
+def test_dispatcher_forwards_closing_seed_to_runner():
+    repo = FakeRepository()
+    captured = {}
+
+    def runner(profile_state, latest_user_message, trace_run_id=None,
+               correction_note=None, closing_seed=None):
+        captured["closing_seed"] = closing_seed
+        return {"final_answer": "ok"}
+
+    dispatcher = RunDispatcher(repository=repo, runner=runner, executor=InlineExecutor())
+    dispatcher.submit(
+        session_token="s", run_id=1, latest_user_message="hi",
+        profile_state=ChatProfileState(admission_year=2026), closing_seed=3,
+    )
+    assert captured["closing_seed"] == 3
