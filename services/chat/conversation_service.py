@@ -347,7 +347,7 @@ class ConversationService:
             topic_label = self._TOPIC_LABELS.get(intent.topic or "", "thông tin này")
             school_label = school or "trường bạn hỏi"
             body = (
-                f"Hệ thống chưa có dữ liệu về {topic_label} của {school_label}. "
+                f"Mình hiện chưa có dữ liệu về {topic_label} của {school_label}. "
                 f"Bạn có thể liên hệ trực tiếp nhà trường để biết thêm chi tiết."
             )
             citations = []

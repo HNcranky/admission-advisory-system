@@ -205,3 +205,23 @@ def test_fanout_runs_pairs_concurrently():
     blocks = run_knowledge_fanout(qa, intent, "q")
     assert qa.max_concurrent == 2                      # hai call đồng thời
     assert [b.school for b in blocks] == ["A", "B"]    # thứ tự bảo toàn
+
+
+def test_format_knowledge_blocks_no_data_uses_first_person():
+    from services.chat.knowledge_fanout import format_knowledge_blocks
+    from services.chat.hybrid_models import KnowledgeBlock
+
+    blocks = [KnowledgeBlock(school="hust", topic="tuition", has_data=False)]
+    text = format_knowledge_blocks(blocks)
+
+    assert "Hệ thống chưa có" not in text
+    assert text.startswith("Mình hiện chưa có dữ liệu")
+
+
+def test_no_module_uses_cold_system_phrasing():
+    import pathlib
+
+    root = pathlib.Path(__file__).resolve().parents[3]
+    for rel in ["services/chat/knowledge_fanout.py", "services/chat/conversation_service.py"]:
+        text = (root / rel).read_text(encoding="utf-8")
+        assert "Hệ thống chưa có" not in text, f"{rel} still uses cold 'Hệ thống chưa có'"

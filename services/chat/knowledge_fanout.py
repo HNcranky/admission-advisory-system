@@ -108,7 +108,7 @@ def format_knowledge_blocks(blocks) -> str:
             lines.append(body)
     if not lines:
         return (
-            "Hệ thống chưa có dữ liệu cho thông tin bạn hỏi. "
+            "Mình hiện chưa có dữ liệu cho thông tin bạn hỏi. "
             "Bạn có thể liên hệ trực tiếp nhà trường để biết thêm chi tiết."
         )
     return "\n\n".join(lines)
