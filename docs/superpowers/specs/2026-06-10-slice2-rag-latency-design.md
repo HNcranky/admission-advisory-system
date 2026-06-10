@@ -1,7 +1,7 @@
 # Design: Slice 2 — RAG / Latency Correctness
 
 **Date:** 2026-06-10
-**Status:** Approved (refined after grounding review)
+**Status:** Approved (refined after grounding + conformance review)
 **Parent:** `2026-06-10-answer-quality-cost-naturalness-design.md`
 
 ## Goal
@@ -45,9 +45,14 @@ mock-skip behavior. Replace the per-option `_enrich_from_db` with a single
 batched lookup per record:
 
 1. Partition `record.options` into mock (passed through unchanged) and
-   DB-backed.
+   DB-backed (reusing the existing `_is_mock_source` + `candidates_by_source`
+   logic). **If the DB-backed set is empty (all-mock record), skip the query
+   entirely — do not open a cursor at all** (an all-mock record must issue zero
+   DB calls; `test_package_evidence_uses_candidate_evidence_for_mock_sources`
+   asserts `get_cursor` is never called).
 2. For the DB-backed set, run **one** query inside a single
-   `get_cursor(commit=False)`:
+   `get_cursor(commit=False)` (note: drops the per-option `LIMIT 1`, so use
+   `fetchall()` — see the dedup note below):
 
    ```sql
    SELECT car.source_url, rd.fetched_at
@@ -59,12 +64,19 @@ batched lookup per record:
      AND car.admission_year = %s
    ```
 
-3. Build a `{source_url: fetched_at}` map and assign `option.fetched_at` per
-   DB-backed option (options with no row keep their existing value, as today).
+3. Build a `{source_url: fetched_at}` map from `fetchall()` and assign
+   `option.fetched_at` per DB-backed option (options with no row keep their
+   existing value, as today). **Dedup:** without `LIMIT 1`, a `source_url` with
+   multiple canonical rows returns multiple rows — collapse to one entry per
+   `source_url` (any wins; `fetched_at` is a property of the source document, so
+   it is consistent across that URL's rows).
 
 Keep the resilience: a DB failure leaves the record's options un-enriched
 (wrap the batch in `try/except`, mirroring today's per-option swallow) rather
 than crashing the advisory run.
+
+**Test-fake impact:** existing `test_evidence_agent.py` fakes expose `fetchone`;
+the batched code calls `fetchall`, so the fakes need a `fetchall` method.
 
 **Scope:** per-record batching only. Whole-run batching (one query across all
 records) was considered and rejected — it would restructure `conflict_agent`'s
@@ -92,6 +104,21 @@ LLM names no valid sources but still produced a grounded answer.
 (non-empty `answer_text`), so the single best-matching source is a reasonable,
 non-misleading attribution; the existing dedup loop downstream is unchanged.
 
+**Behavior change (not just a count):** this changes *which* source surfaces on
+the fallback path, not only how many. Today the cite-all fallback is what
+surfaces a national-scope source when the LLM names no ids and that national
+chunk wasn't top-scored. After this change only `chunks[0]` is cited, so such a
+national source can drop out of the citation list. This is intended (a fallback
+should not attribute the answer to up to 8 chunks the LLM never named), but it
+is a real behavior shift, not a mechanical tweak.
+
+**Tests to update:**
+- `test_qa_service.py::test_citations_fallback_to_all_chunks_when_used_ids_empty`
+  (currently asserts `== 2`) → assert `<= 1`.
+- `test_qa_service.py::test_specific_school_query_also_pulls_national_chunks`
+  relies on the cite-all fallback to surface the national source; rework it so
+  the national chunk is top-scored (or assert the new top-1 behavior).
+
 **Acceptance:** a unit test driving the fallback path (LLM returns
 `used_source_ids = []` / invalid) returns **≤1** citation.
 
@@ -103,48 +130,74 @@ non-misleading attribution; the existing dedup loop downstream is unchanged.
 ("còn học phí thì sao?") embeds without its referent.
 
 **Change:** add a pure helper
-`services/knowledge/retrieval_query.py::build_retrieval_query(question, history_ctx) -> str`:
+`services/knowledge/retrieval_query.py::build_retrieval_query(question, prev_user) -> str`:
 
-- Returns `question` **unchanged** unless the question is **elliptical**.
-  Ellipsis heuristic (string-level, no LLM call): the question is short
-  **and** (it opens with a continuation cue — `còn` / `thế` / `vậy` /
-  `thì sao` / `so với` — **or** it contains no school/topic noun). The exact
-  rule is tuned against fixtures during implementation; start stricter (require
-  a continuation cue) and loosen only if a fixture follow-up is missed.
-- When it fires, prepend **only the last user turn** parsed out of
-  `history_ctx` (not assistant turns, not the full blob) →
-  `f"{prev_user}\n{question}"`. Assistant text is the noisiest thing to embed
-  and the most likely to derail retrieval; keeping context tiny stops a long
-  history from diluting a short query.
+- Takes the current `question` and the **previous user message text**
+  (`prev_user`) — *not* the rendered `history_ctx` blob. `history_ctx` is a
+  role-labeled, 500-char-truncated rendering (`Người dùng:` / `Trợ lý:`); a
+  multi-line user message spans several lines with only the first prefixed, so
+  re-parsing it for "the last user turn" is lossy. The caller extracts the raw
+  prior user message and passes it in (see call sites).
+- Returns `question` **unchanged** unless the question is **elliptical** (or
+  `prev_user` is empty). Ellipsis heuristic (string-level, no LLM call): the
+  question is short **and** (it opens with a continuation cue — `còn` / `thế` /
+  `vậy` / `thì sao` / `so với` — **or** it contains no school/topic noun). The
+  exact rule is tuned against fixtures; start stricter (require a continuation
+  cue) and loosen only if a fixture follow-up is missed.
+- When it fires, return `f"{prev_user}\n{question}"` — prepend **only** the
+  prior user turn (never assistant text, never the full history). Keeping
+  context tiny stops a long history from diluting a short query.
 
-Call sites (the helper finalizes the text **before** any embedding, preserving
-slice 1's embed-once):
+**Embedding-only — must not reach the generation prompt.** The augmented text is
+for *retrieval* only. The generation prompt already carries the prior turn via
+`conversation_context` (`qa_service.py:156-157`), so feeding the augmented text
+in as `question` would duplicate the prior question into the `Câu hỏi:` field and
+risk the model answering the *previous* question. Therefore:
 
-- `run_knowledge_fanout`: call `build_retrieval_query(content, conversation_context)`
-  and pass the result to `embed_query(...)` (and as `question` for the shared
-  vector path). The referent is school-agnostic, so the one augmented vector is
-  correct for every `(school, topic)` task.
-- `_handle_knowledge_qa`: call the helper and pass the result as `answer()`'s
-  `question`.
-- `answer()` itself is **untouched** — it embeds whatever text it is handed.
+- Add an optional `retrieval_query: str | None = None` to `answer()`. When set
+  (and no `query_vector` is supplied), embed `retrieval_query` instead of
+  `question`; **`question` stays the original `content`** and remains the only
+  text in the generation prompt. When both are `None`, behavior is exactly as
+  today.
+
+Call sites (the augmented text finalizes **before** embedding, preserving
+slice 1's embed-once; `question`/`content` is never mutated):
+
+- `_handle_knowledge_qa`: the raw message list is already fetched upstream
+  (`conversation_service.py:71`). Capture it once, derive the prior user message,
+  and call `answer(question=content, retrieval_query=build_retrieval_query(content, prev_user), ...)`.
+- `run_knowledge_fanout`: today it only receives the rendered
+  `conversation_context`. Thread the prior-user text down as a **new
+  `prev_user` arg** from `_handle_hybrid`, build the augmented query once, and
+  embed *that* via `embed_query(...)` while still passing `question=content`
+  (original) to each `answer()`. The referent is school-agnostic, so the one
+  augmented vector is correct for every `(school, topic)` task. On the embed-fail
+  fallback (`query_vector is None`), pass `retrieval_query` so each `answer()`
+  embeds the augmented text internally — still keeping `question=content`.
 
 **Acceptance:**
-- A fixture: an elided follow-up (continuation cue, prior user turn names the
+- A fixture: an elided follow-up (continuation cue, `prev_user` names the
   referent) retrieves the referent's chunks; without the helper it would not.
 - A standalone (non-elliptical) question takes the unchanged path and embeds
-  byte-for-byte as today (the helper returns the question verbatim) — satisfies
-  the parent spec's "standalone questions unchanged".
+  byte-for-byte as today (helper returns `question` verbatim) — satisfies the
+  parent spec's "standalone questions unchanged".
+- The generation prompt's `Câu hỏi:` field is always the original `question`,
+  never the augmented text (assert the augmented text does not appear as the
+  question in a captured prompt).
 - `build_retrieval_query` has direct unit tests for the gate (fires on
-  elliptical, no-ops on standalone) and the last-user-turn extraction.
+  elliptical, no-ops on standalone / empty `prev_user`).
 
 ---
 
 ## Testing strategy
 
-- 2a verified by a connection/query-counting spy + an output-equality fixture.
-- 2b verified by the ≤1-citation fallback assertion.
-- 2c verified by helper unit tests (gate + extraction) plus a fixture proving
-  follow-up retrieval improves and standalone retrieval is unchanged.
+- 2a verified by a connection/query-counting spy + an output-equality fixture;
+  existing `test_evidence_agent.py` fakes updated to expose `fetchall`.
+- 2b verified by the ≤1-citation fallback assertion; the two affected
+  `test_qa_service.py` tests updated (see 2b).
+- 2c verified by helper unit tests (gate + empty-`prev_user` no-op) plus a
+  fixture proving follow-up retrieval improves, standalone retrieval is
+  unchanged, and the generation prompt's question stays the original `content`.
 - Full `pytest -q` green against `admission_test` after the slice.
 
 ## Out of scope (tracked elsewhere)
