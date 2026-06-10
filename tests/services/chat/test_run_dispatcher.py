@@ -106,3 +106,27 @@ def test_dispatcher_passes_run_id_as_trace_run_id_to_runner():
     )
 
     assert captured["trace_run_id"] == 99
+
+
+def test_dispatcher_failure_message_uses_diacritics_and_register():
+    repo = FakeRepository()
+
+    def boom(profile_state, latest_user_message, trace_run_id=None, correction_note=None):
+        raise RuntimeError("inference down")
+
+    dispatcher = RunDispatcher(repository=repo, runner=boom, executor=InlineExecutor())
+
+    try:
+        dispatcher.submit(
+            session_token="session-err",
+            run_id=11,
+            latest_user_message="Tu van",
+            profile_state=ChatProfileState(admission_year=2026),
+        )
+    except RuntimeError:
+        pass  # _execute re-raises after recording the failure
+
+    error_msgs = [m for m in repo.messages if m[2] == "assistant_error"]
+    assert error_msgs, "expected an assistant_error message"
+    text = error_msgs[-1][3]
+    assert text == "Xin lỗi, quá trình phân tích bị gián đoạn. Bạn thử lại giúp mình nhé."

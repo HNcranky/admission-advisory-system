@@ -48,7 +48,7 @@ class RunDispatcher:
             self.repository.append_message(
                 session_token,
                 "assistant",
-                "Xin loi, qua trinh phan tich bi gian doan. Ban hay thu lai.",
+                "Xin lỗi, quá trình phân tích bị gián đoạn. Bạn thử lại giúp mình nhé.",
                 "assistant_error",
             )
         except Exception:
