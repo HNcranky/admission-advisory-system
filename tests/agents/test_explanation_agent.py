@@ -2,6 +2,7 @@ from agents.explanation_agent import explanation_agent
 from agents.models import (
     CandidateProgram,
     CutoffAssessment,
+    EligibilityCheck,
     Evidence,
     PolicyDecision,
     RankedRecommendation,
@@ -636,3 +637,23 @@ def test_multiple_conflicts_consolidate_caveat_once():
     assert "nhưng bạn nên kiểm tra thông báo" not in answer
     # but per-program specifics survive
     assert "100" in answer and "150" in answer
+
+
+def test_not_eligible_section_has_bridge_lead_in():
+    state = AgentState(user_query="Tu van", admission_year=2026)
+    state.retrieved_programs = [
+        CandidateProgram(candidate_id="uet:ne", school_id="vnu_uet", school_name="UET",
+                         admission_year=2026, program_id="cs", program_name="KHMT",
+                         admission_method="thpt_score", subject_combinations=["A00"]),
+    ]
+    state.eligibility_checks = [
+        EligibilityCheck(candidate_id="uet:ne", eligible=False,
+                         risks=["Chương trình không nhận tổ hợp D01."]),
+    ]
+    state.ranked_recommendations = []
+    state.policy_decision = PolicyDecision(policy_flags=["no_eligible_recommendations"])
+
+    answer = explanation_agent(state).final_answer
+    bridge = "Một vài chương trình bạn quan tâm chưa đáp ứng điều kiện xét tuyển:"
+    assert bridge in answer
+    assert answer.index(bridge) < answer.index("**Không đủ điều kiện xét tuyển**")

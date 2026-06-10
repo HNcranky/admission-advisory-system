@@ -376,6 +376,8 @@ def build_explanation(
     ne_lines = _not_eligible_lines(eligibility_checks or [], candidates_by_id)
     if ne_lines:
         lines.append("")
+        lines.append("Một vài chương trình bạn quan tâm chưa đáp ứng điều kiện xét tuyển:")
+        lines.append("")
         lines.append("**Không đủ điều kiện xét tuyển**")
         lines.append("")
         lines.extend(ne_lines)
