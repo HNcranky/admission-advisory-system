@@ -284,6 +284,23 @@ def test_national_school_query_does_not_recurse():
     assert [c["school"] for c in repo.calls] == [NATIONAL_SCHOOL]   # single call only
 
 
+def test_answer_uses_supplied_national_without_research():
+    class _Repo:
+        def __init__(self):
+            self.national_searches = 0
+        def vector_search(self, embedding, school, topic, limit):
+            if school == NATIONAL_SCHOOL:
+                self.national_searches += 1
+            return []
+
+    repo = _Repo()
+    service = KnowledgeQAService(chunk_repository=repo, embedder=object(), gateway=object())
+    service.answer("q", school="VNU-UET", topic="tuition",
+                   query_vector=[0.1], national=[])
+
+    assert repo.national_searches == 0   # supplied national list → no national search
+
+
 def test_low_score_national_chunks_are_dropped():
     repo = RepoBySchool({
         "HUST": [_chunk("HUST a", "http://hust/a", 0.92, school="HUST")],

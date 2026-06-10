@@ -57,31 +57,42 @@ class KnowledgeQAService:
         topic: Optional[str],
         conversation_context: str = "",
         query_vector=None,
+        national=None,
     ) -> KnowledgeQAResult:
         embedding = query_vector if query_vector is not None else self.embed_query(question)
         chunks = self._chunk_repository.vector_search(
             embedding, school=school, topic=topic, limit=self._top_k
         )
-        chunks = self._augment_with_national(embedding, school, topic, chunks)
+        chunks = self._augment_with_national(embedding, school, topic, chunks, national=national)
         confidence = chunks[0].score if chunks else 0.0
         if not chunks or confidence < self._min_score:
             return KnowledgeQAResult(has_data=False, confidence=confidence)
         return self._generate(question, chunks, confidence, conversation_context)
 
-    def _augment_with_national(self, embedding, school, topic, chunks):
+    def national_chunks(self, query_vector, topic):
+        """National-scope (Bộ GD&ĐT) chunks for a topic, score-filtered. The result
+        depends only on the topic, not the school, so the fan-out can compute this
+        once per distinct topic and reuse it across schools."""
+        national = self._chunk_repository.vector_search(
+            query_vector, school=NATIONAL_SCHOOL, topic=topic,
+            limit=self._national_top_k,
+        )
+        return [c for c in national if c.score >= self._min_score]
+
+    def _augment_with_national(self, embedding, school, topic, chunks, national=None):
         """A school-scoped query also pulls national-scope (Bộ GD&ĐT) chunks with
         their own budget — national regulations apply to every school. The two
         scopes keep separate top_k, so national never crowds out the school's own
         chunks. Skipped when the query isn't school-scoped (school=None already
-        scans national chunks) or is already national."""
+        scans national chunks) or is already national.
+
+        A precomputed ``national`` list (e.g. from the fan-out) is reused as-is;
+        otherwise national chunks are fetched on demand."""
         if school in (None, NATIONAL_SCHOOL):
             return chunks
-        national = self._chunk_repository.vector_search(
-            embedding, school=NATIONAL_SCHOOL, topic=topic,
-            limit=self._national_top_k,
-        )
-        national = [c for c in national if c.score >= self._min_score]
-        merged = list(chunks) + national
+        if national is None:
+            national = self.national_chunks(embedding, topic)
+        merged = list(chunks) + list(national)
         merged.sort(key=lambda c: c.score, reverse=True)
         return merged
 
