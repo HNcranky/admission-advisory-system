@@ -47,6 +47,17 @@ def run_knowledge_fanout(knowledge_qa, intent, content, school_fallback=None, co
     except Exception as exc:
         logger.warning("knowledge fan-out query embed failed, per-call fallback: %r", exc)
 
+    # Precompute national-scope chunks once per distinct topic (the national search
+    # depends only on the topic, not the school). Skipped when the embed failed
+    # (query_vector is None) → each answer() self-serves national, unchanged path.
+    national_by_topic = {}
+    if query_vector is not None:
+        for topic in {t for _, t in tasks}:
+            try:
+                national_by_topic[topic] = knowledge_qa.national_chunks(query_vector, topic)
+            except Exception as exc:
+                logger.warning("national precompute failed for topic=%r: %r", topic, exc)
+
     def _answer_one(task):
         school, topic = task
         try:
@@ -54,6 +65,7 @@ def run_knowledge_fanout(knowledge_qa, intent, content, school_fallback=None, co
                 question=content, school=school, topic=topic,
                 conversation_context=conversation_context,
                 query_vector=query_vector,
+                national=national_by_topic.get(topic),
             )
         except Exception as exc:
             logger.warning(

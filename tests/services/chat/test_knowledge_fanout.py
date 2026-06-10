@@ -12,7 +12,7 @@ class FakeKnowledgeQA:
         self._raise_for = raise_for or set()
         self.calls = []
 
-    def answer(self, question, school, topic, conversation_context="", query_vector=None):
+    def answer(self, question, school, topic, conversation_context="", query_vector=None, national=None):
         self.calls.append({"question": question, "school": school, "topic": topic})
         if school in self._raise_for:
             raise RuntimeError("boom")
@@ -29,9 +29,33 @@ class _EmbedCountingQA(FakeKnowledgeQA):
         self.embed_calls += 1
         return [0.5, 0.5]
 
-    def answer(self, question, school, topic, conversation_context="", query_vector=None):
+    def answer(self, question, school, topic, conversation_context="", query_vector=None, national=None):
         self.vectors_seen.append(query_vector)
         return super().answer(question, school, topic, conversation_context)
+
+
+class _NationalCountingQA(FakeKnowledgeQA):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.national_calls = []
+
+    def embed_query(self, question):
+        return [0.5]
+
+    def national_chunks(self, query_vector, topic):
+        self.national_calls.append(topic)
+        return []
+
+    def answer(self, question, school, topic, conversation_context="", query_vector=None, national=None):
+        return super().answer(question, school, topic, conversation_context)
+
+
+def test_fanout_computes_national_once_per_topic():
+    qa = _NationalCountingQA()
+    intent = IntentResult(route="HYBRID", schools=["VNU-UET", "HUST"], topics=["tuition"])
+    run_knowledge_fanout(qa, intent, "so sánh học phí", school_fallback=None)
+    # 2 schools × 1 topic = 2 answer() calls, but national computed once for "tuition"
+    assert qa.national_calls == ["tuition"]
 
 
 def test_fanout_embeds_query_once_and_shares_vector():
@@ -95,7 +119,7 @@ class _CtxRecordingQA:
     def __init__(self):
         self.last_ctx = None
 
-    def answer(self, question, school, topic, conversation_context="", query_vector=None):
+    def answer(self, question, school, topic, conversation_context="", query_vector=None, national=None):
         self.last_ctx = conversation_context
         return KnowledgeQAResult(has_data=False, confidence=0.0)
 
@@ -131,7 +155,7 @@ class _ConcurrentQA:
         self._active = 0
         self.max_concurrent = 0
 
-    def answer(self, question, school, topic, conversation_context="", query_vector=None):
+    def answer(self, question, school, topic, conversation_context="", query_vector=None, national=None):
         with self._lock:
             self._active += 1
             self.max_concurrent = max(self.max_concurrent, self._active)
