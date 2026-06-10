@@ -119,3 +119,40 @@ def test_admission_method_slot_asked_right_after_score():
 
 def test_parse_slot_dispatches_admission_method():
     assert parse_slot("admission_method", "em xét học bạ") == "school_record"
+
+
+from services.chat.models import ChatProfileState
+from services.profile.slots import build_slot_acknowledgement
+
+
+def test_ack_echoes_single_captured_value_when_under_two_filled():
+    state = ChatProfileState(total_score=26.0)
+    ack = build_slot_acknowledgement({"total_score": 26.0}, state)
+    assert ack == "Mình ghi nhận mức điểm 26."
+
+
+def test_ack_recaps_filled_and_missing_when_two_or_more_filled():
+    state = ChatProfileState(admission_year=2026, total_score=26.0, admission_method="thpt_score")
+    ack = build_slot_acknowledgement({"admission_method": "thpt_score"}, state)
+    assert ack.startswith("Mình đã nắm:")
+    assert "năm xét tuyển 2026" in ack
+    assert "mức điểm 26" in ack
+    assert "phương thức xét tuyển điểm thi tốt nghiệp THPT" in ack
+    assert "Còn thiếu:" in ack
+    assert "tổ hợp xét tuyển" in ack
+    assert "ngành quan tâm" in ack
+
+
+def test_ack_returns_none_when_nothing_captured():
+    state = ChatProfileState(total_score=26.0)
+    assert build_slot_acknowledgement({}, state) is None
+    assert build_slot_acknowledgement({"preferred_schools": ["hust"]}, state) is None
+
+
+def test_ack_dedupes_major_variants_to_one_label():
+    state = ChatProfileState(preferred_majors=["computer_science"])
+    ack = build_slot_acknowledgement(
+        {"explicit_preferred_majors": ["computer_science"], "preferred_majors": ["computer_science"]},
+        state,
+    )
+    assert ack == "Mình ghi nhận ngành quan tâm computer_science."
