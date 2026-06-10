@@ -37,6 +37,12 @@ BAND_FIT_LABELS = {
     "unknown": "Chưa đủ dữ liệu",
 }
 
+_CONSOLIDATED_CONFLICT_CAVEAT = (
+    "**Lưu ý dữ liệu:** Một số chương trình dưới đây có dữ liệu chưa thống nhất giữa "
+    "các nguồn; bạn nên đối chiếu thông báo tuyển sinh chính thức mới nhất của trường "
+    "trước khi đăng ký."
+)
+
 # Nhãn slot cho câu thông báo correction (AC7).
 _SLOT_LABELS = {
     "total_score": "điểm dự kiến",
@@ -337,6 +343,11 @@ def build_explanation(
                 f"Đánh giá dưới đây sử dụng dữ liệu năm {years_text} làm tham chiếu "
                 "và có thể thay đổi khi trường công bố thông tin mới."
             )
+        conflicted = [c for _rec, c in renderable if _data_note(c, outcome_by_key) is not None]
+        consolidate = len(conflicted) >= 2
+        if consolidate:
+            lines.append("")
+            lines.append(_CONSOLIDATED_CONFLICT_CAVEAT)
         for idx, (recommendation, candidate) in enumerate(renderable, start=1):
             lines.append("")
             lines.append(f"### {idx}. {candidate.school_name} — {_program_label(candidate)}")
@@ -352,7 +363,7 @@ def build_explanation(
                 for bullet in bullets:
                     lines.append(f"- {bullet}")
 
-            note = _data_note(candidate, outcome_by_key)
+            note = _data_note(candidate, outcome_by_key, concise=consolidate)
             if note:
                 lines.append("")
                 lines.append(note)

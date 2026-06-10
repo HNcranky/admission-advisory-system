@@ -596,3 +596,43 @@ def test_data_note_concise_drops_official_check_boilerplate():
     assert "kiểm tra trực tiếp với trường" in full
     assert "kiểm tra trực tiếp với trường" not in concise
     assert concise.startswith("**Lưu ý dữ liệu:**")
+
+
+def _resolved_outcome(conflict_key, value):
+    chosen = EvidenceOption(evidence_id=f"mock://{conflict_key}|quota",
+                            source_url=f"mock://{conflict_key}", trust_level=3, value=value)
+    return ResolutionOutcome(
+        conflict_key=conflict_key, field_name="quota", school_id="x", school_name="X",
+        program_name="P", status="resolved", resolved_value=value,
+        chosen_evidence=chosen, rationale="r", decision_axes=["trust_level"],
+    )
+
+
+def test_multiple_conflicts_consolidate_caveat_once():
+    state = AgentState(user_query="Tu van", admission_year=2026)
+    state.student_profile = StudentProfile(total_score=27.0, subject_combination="A00")
+    state.retrieved_programs = [
+        CandidateProgram(candidate_id="hust:2026:cs:thpt_score", school_id="hust",
+                         school_name="HUST", admission_year=2026, program_id="cs",
+                         program_name="KHMT", admission_method="thpt_score"),
+        CandidateProgram(candidate_id="vnu_uet:2026:cntt:thpt_score", school_id="vnu_uet",
+                         school_name="UET", admission_year=2026, program_id="cntt",
+                         program_name="CNTT", admission_method="thpt_score"),
+    ]
+    state.ranked_recommendations = [
+        RankedRecommendation(candidate_id="hust:2026:cs:thpt_score", band="match", score=0.7, summary="f"),
+        RankedRecommendation(candidate_id="vnu_uet:2026:cntt:thpt_score", band="match", score=0.6, summary="f"),
+    ]
+    state.resolution_outcomes = [
+        _resolved_outcome("hust:2026:cs:thpt_score", 100),
+        _resolved_outcome("vnu_uet:2026:cntt:thpt_score", 150),
+    ]
+
+    answer = explanation_agent(state).final_answer
+
+    # consolidated caveat appears exactly once
+    assert answer.count("đối chiếu thông báo tuyển sinh chính thức") == 1
+    # per-program boilerplate is dropped (concise notes)
+    assert "nhưng bạn nên kiểm tra thông báo" not in answer
+    # but per-program specifics survive
+    assert "100" in answer and "150" in answer
