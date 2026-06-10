@@ -34,11 +34,13 @@ changes except where explicitly noted (none in this slice).
 After grounding (reading `conversation_service.py`), **1b is dropped** — its safe
 win is already implemented (see below). Final plan set, split into small plans:
 
-- Plan A — 1c query-embedding dedup (`plans/2026-06-10-slice1a-embedding-dedup.md`)
-- Plan B — 1c national-search dedup (`plans/2026-06-10-slice1b-national-search-dedup.md`)
-- Plan C — 1a per-agent thinking budget (`plans/2026-06-10-slice1c-thinking-budget.md`)
-- Plan D — 1e major_resolver registry (`plans/2026-06-10-slice1d-major-resolver-registry.md`)
-- Plan E — 1d response_schema, robustness/last (`plans/2026-06-10-slice1e-response-schema.md`)
+All plans live under `plans/2026-06-10-slice1-cost-quickwins/`:
+
+- Plan A — 1c query-embedding dedup (`slice1a-embedding-dedup.md`)
+- Plan B — 1c national-search dedup (`slice1b-national-search-dedup.md`)
+- Plan C — 1a per-agent thinking budget (`slice1c-thinking-budget.md`)
+- Plan D — 1e major_resolver registry (`slice1d-major-resolver-registry.md`)
+- Plan E — 1d response_schema, robustness/last (`slice1e-response-schema.md`)
 
 ---
 
