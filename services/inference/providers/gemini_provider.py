@@ -55,6 +55,8 @@ class GeminiProvider:
             config_kwargs["thinking_config"] = types.ThinkingConfig(
                 thinking_budget=policy.thinking_budget
             )
+        if json_mode and request.response_schema is not None:
+            config_kwargs["response_schema"] = request.response_schema
 
         return client.models.generate_content(
             model=policy.primary_model,

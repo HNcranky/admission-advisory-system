@@ -292,3 +292,31 @@ def test_no_thinking_budget_leaves_thinking_config_unset():
     provider = GeminiProvider(pool=pool)
     provider.generate(_request(), _policy())  # _policy() → thinking_budget None
     assert captured["config"].thinking_config is None
+
+
+# --- response schema -----------------------------------------------------------
+
+def test_response_schema_passed_to_config_for_json():
+    import pydantic
+
+    class _Shape(pydantic.BaseModel):
+        route: str
+
+    captured = {}
+    pool = _pool({"k1": FakeClient(text='{"route": "X"}', captured=captured)})
+    provider = GeminiProvider(pool=pool)
+    request = InferenceRequest(
+        agent_name="intent_router", task_type="t",
+        system_prompt="sys", user_prompt="usr",
+        output_mode="json", response_schema=_Shape,
+    )
+    provider.generate(request, _policy())
+    assert captured["config"].response_schema is _Shape
+
+
+def test_no_response_schema_leaves_config_unset():
+    captured = {}
+    pool = _pool({"k1": FakeClient(text='{"ok": true}', captured=captured)})
+    provider = GeminiProvider(pool=pool)
+    provider.generate(_request(), _policy())  # _request() sets no schema
+    assert captured["config"].response_schema is None
