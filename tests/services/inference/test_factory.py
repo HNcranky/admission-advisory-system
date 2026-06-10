@@ -34,6 +34,17 @@ def test_synthesis_agent_is_registered():
     assert policy.fallback_model == "gemini-2.5-flash-lite"
 
 
+def test_knowledge_qa_agent_disables_thinking():
+    gateway = build_default_gateway()
+    assert gateway.registry.resolve("knowledge_qa_agent").thinking_budget == 0
+
+
+def test_synthesis_agent_keeps_default_thinking():
+    gateway = build_default_gateway()
+    # Deferred to Slice 4 eval — must remain unset (default dynamic thinking).
+    assert gateway.registry.resolve("synthesis_agent").thinking_budget is None
+
+
 def test_knowledge_ocr_agent_uses_default_model_with_fallback():
     gateway = build_default_gateway()
     policy = gateway.registry.resolve("knowledge_ocr")

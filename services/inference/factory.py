@@ -35,6 +35,7 @@ def build_default_gateway() -> LLMGateway:
                 "allow_fallback": True,
                 "fallback_model": "gemini-2.5-flash-lite",
                 "max_tokens": 800,
+                "thinking_budget": 0,
             },
             "synthesis_agent": {
                 "primary_model": "gemini-2.5-flash",
