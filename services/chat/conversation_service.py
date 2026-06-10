@@ -9,7 +9,8 @@ from services.chat.repository import ChatSessionRepository
 from services.knowledge.qa_service import KnowledgeQAService
 from services.knowledge.retrieval_query import build_retrieval_query
 from services.profile.slots import (
-    SLOTS, follow_up_for, missing_critical_slots, next_follow_up_question, parse_slot,
+    SLOTS, build_slot_acknowledgement, follow_up_for, missing_critical_slots,
+    next_follow_up_question, parse_slot,
 )
 from services.profile.extractor import apply_profile_delta, extract_profile_update
 from services.profile.validation import validate_profile_delta
@@ -279,23 +280,25 @@ class ConversationService:
 
     def _handle_advisory(self, session_token, profile_state, flow_state, delta):
         merged = apply_profile_delta(profile_state, delta)
-        return self._advance_advisory(session_token, merged, flow_state)
+        return self._advance_advisory(session_token, merged, flow_state, delta)
 
-    def _advance_advisory(self, session_token, merged, flow_state):
+    def _advance_advisory(self, session_token, merged, flow_state, delta=None):
         follow_up = next_follow_up_question(merged)
         if follow_up:
+            ack = build_slot_acknowledgement(delta, merged)
+            message = f"{ack}\n\n{follow_up}" if ack else follow_up
             self.repository.update_profile_state(session_token, merged, "collecting_profile")
             self.repository.update_flow_state(
                 session_token,
                 flow_state.model_copy(update={
                     "active_flow": "ADVISORY_FLOW",
-                    "pending_question": follow_up,
+                    "pending_question": follow_up,  # stays bare; ack is message-only
                 }),
             )
-            self.repository.append_message(session_token, "assistant", follow_up, "assistant_follow_up")
+            self.repository.append_message(session_token, "assistant", message, "assistant_follow_up")
             return ConversationTurnResult(
                 session_status="collecting_profile",
-                assistant_message=follow_up,
+                assistant_message=message,
                 should_start_run=False,
                 profile_state=merged,
             )
