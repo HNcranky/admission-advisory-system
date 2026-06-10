@@ -54,6 +54,7 @@ def build_default_gateway() -> LLMGateway:
             "knowledge_classify": {"output_mode": "json", "max_retries": 1},
             "intent_router": {"output_mode": "json", "max_retries": 1, "max_tokens": 256},
             "profile_extractor": {"output_mode": "json", "max_retries": 1, "max_tokens": 300},
+            "major_resolver": {"output_mode": "json", "max_retries": 1, "max_tokens": 100},
         },
     )
     return LLMGateway(registry=registry, telemetry=InferenceTelemetry())

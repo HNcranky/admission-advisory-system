@@ -60,3 +60,10 @@ def test_knowledge_classify_agent_uses_json_mode():
     assert policy.primary_model == "gemini-2.5-flash-lite"
     assert policy.output_mode == "json"
     assert policy.max_retries == 1
+
+
+def test_major_resolver_has_bounded_token_override():
+    policy = build_default_gateway().registry.resolve("major_resolver")
+    assert policy.primary_model == "gemini-2.5-flash-lite"  # cheap model is intended
+    assert policy.max_tokens == 100                          # bounded tiny output
+    assert policy.output_mode == "json"
