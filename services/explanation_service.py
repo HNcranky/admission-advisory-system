@@ -56,7 +56,7 @@ _FIELD_LABELS = {
 }
 
 CLOSING_QUESTION = (
-    "Em có muốn ưu tiên theo tiêu chí nào hơn: **khả năng trúng tuyển**, "
+    "Bạn có muốn ưu tiên theo tiêu chí nào hơn: **khả năng trúng tuyển**, "
     "**đúng sở thích**, hay **học phí an toàn nhất**?"
 )
 
@@ -113,7 +113,7 @@ def _correction_sentence(note: Dict[str, Any]) -> str:
     if isinstance(prev, (int, float)) and isinstance(new, (int, float)):
         direction = "xuống" if new < prev else ("lên" if new > prev else "thành")
     return (
-        f"Mình đã cập nhật {label} của em từ {_fmt_num(prev)} {direction} {_fmt_num(new)}. "
+        f"Mình đã cập nhật {label} của bạn từ {_fmt_num(prev)} {direction} {_fmt_num(new)}. "
         "Với dữ liệu mới, thứ tự ưu tiên thay đổi:"
     )
 
@@ -136,7 +136,7 @@ def _intro_paragraph(profile: StudentProfile, admission_year: Optional[int], n: 
         facts.append(f"học phí {profile.tuition_budget}")
     if facts:
         return (
-            f"Dựa trên hồ sơ hiện tại của em — {', '.join(facts)} — "
+            f"Dựa trên hồ sơ hiện tại của bạn — {', '.join(facts)} — "
             f"mình đề xuất {n} lựa chọn sau:"
         )
     return f"Dựa trên thông tin hiện có, mình đề xuất {n} lựa chọn sau:"
@@ -180,11 +180,11 @@ def _no_match_block(
 
     not_eligible = [c for c in eligibility_checks if c.eligible is False]
     if not_eligible and profile.subject_combination:
-        majors = ", ".join(profile.preferred_majors[:3]) or "em quan tâm"
+        majors = ", ".join(profile.preferred_majors[:3]) or "bạn quan tâm"
         lines.append("")
         lines.append(
             f"Các chương trình ngành {majors} trong dữ liệu hiện không nhận tổ hợp "
-            f"{profile.subject_combination}; em có thể cân nhắc tổ hợp khác hoặc ngành gần."
+            f"{profile.subject_combination}; bạn có thể cân nhắc tổ hợp khác hoặc ngành gần."
         )
         return lines
 
@@ -198,8 +198,8 @@ def _no_match_block(
     if suggestions:
         lines.append("")
         lines.append(
-            "Em có thể cân nhắc: " + "; ".join(suggestions)
-            + ". Mình sẽ không tự nới tiêu chí khi chưa có xác nhận của em."
+            "Bạn có thể cân nhắc: " + "; ".join(suggestions)
+            + ". Mình sẽ không tự nới tiêu chí khi chưa có xác nhận của bạn."
         )
     return lines
 
@@ -220,7 +220,7 @@ def _data_note(candidate: CandidateProgram, outcome_by_key: Dict[str, Resolution
         return (
             f"**Lưu ý dữ liệu:** Các nguồn ghi khác nhau về {field}: {values}. "
             f"Hệ thống tham chiếu giá trị {_fmt_num(outcome.resolved_value)} từ "
-            f"{label_for_source(chosen.source_url)}, nhưng em nên kiểm tra thông báo "
+            f"{label_for_source(chosen.source_url)}, nhưng bạn nên kiểm tra thông báo "
             "tuyển sinh chính thức mới nhất của trường trước khi đăng ký."
         )
 
@@ -230,7 +230,7 @@ def _data_note(candidate: CandidateProgram, outcome_by_key: Dict[str, Resolution
         field = ", ".join(_field_label(f) for f in candidate.data_uncertain_fields)
     return (
         f"**Lưu ý dữ liệu:** Thông tin về {field} đang mâu thuẫn giữa các nguồn. "
-        "Em nên kiểm tra trực tiếp với trường trước khi đăng ký."
+        "Bạn nên kiểm tra trực tiếp với trường trước khi đăng ký."
     )
 
 

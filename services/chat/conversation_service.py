@@ -238,7 +238,7 @@ class ConversationService:
                 "pending_question": None,
             }),
         )
-        ack = "Mình sẽ tính lại với thông tin em vừa cập nhật."
+        ack = "Mình sẽ tính lại với thông tin bạn vừa cập nhật."
         self.repository.append_message(session_token, "assistant", ack, "assistant_ready")
         return ConversationTurnResult(
             session_status="ready",

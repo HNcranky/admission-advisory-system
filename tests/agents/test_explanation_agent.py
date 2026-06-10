@@ -257,7 +257,7 @@ def test_explanation_uses_vietnamese_accents_and_readable_sections():
     assert "- Tổ hợp xét tuyển phù hợp." in output.final_answer
     assert "**Nguồn tham chiếu**" in output.final_answer
     # Câu hỏi chốt mời ưu tiên tiêu chí (happy-path Turn 6).
-    assert "Em có muốn ưu tiên theo tiêu chí nào hơn" in output.final_answer
+    assert "Bạn có muốn ưu tiên theo tiêu chí nào hơn" in output.final_answer
 
 
 def test_explanation_prepends_correction_sentence_when_correction_note_present():
@@ -412,7 +412,7 @@ def test_no_match_lists_active_criteria_and_suggestions():
     assert "ngân sách" in answer
     assert "không tự nới" in answer
     # Không có câu hỏi chốt khi không có đề xuất
-    assert "Em có muốn ưu tiên theo tiêu chí nào hơn" not in answer
+    assert "Bạn có muốn ưu tiên theo tiêu chí nào hơn" not in answer
 
 
 def test_no_match_all_not_eligible_explains_combination_cause():

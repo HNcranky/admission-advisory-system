@@ -73,7 +73,7 @@ export function renderGreeting(node) {
       </svg>
     </div>
     <p class="transcript-greeting__title">
-      Xin chào! Hãy mô tả tình hình xét tuyển của em...
+      Xin chào! Hãy mô tả tình hình xét tuyển của bạn...
     </p>
     <ul class="transcript-greeting__chips" role="list">
       ${GREETING_PROMPTS.map(
