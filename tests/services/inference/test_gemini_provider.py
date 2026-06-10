@@ -253,3 +253,22 @@ def test_request_without_media_keeps_plain_string_contents():
     provider.generate(_request(output_mode="free_text"), _policy())
 
     assert captured["contents"] == "usr"
+
+
+# --- bounded output tokens -----------------------------------------------------
+
+def test_max_tokens_passed_to_config_when_set():
+    captured = {}
+    pool = _pool({"k1": FakeClient(text='{"ok": true}', captured=captured)})
+    provider = GeminiProvider(pool=pool)
+    policy = InferencePolicy(agent_name="a", primary_model="m", max_tokens=321)
+    provider.generate(_request(), policy)
+    assert captured["config"].max_output_tokens == 321
+
+
+def test_max_tokens_none_leaves_config_unbounded():
+    captured = {}
+    pool = _pool({"k1": FakeClient(text='{"ok": true}', captured=captured)})
+    provider = GeminiProvider(pool=pool)
+    provider.generate(_request(), _policy())  # _policy() → max_tokens None
+    assert captured["config"].max_output_tokens is None

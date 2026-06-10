@@ -16,6 +16,9 @@ class _Repo:
     def append_message(self, *a):
         self.messages.append(a)
 
+    def list_message(self, t):
+        return []
+
     def get_session_by_token(self, t):
         return SimpleNamespace(status=self.status)
 
@@ -37,7 +40,7 @@ class _CountingRouter:
     def __init__(self):
         self.calls = 0
 
-    def classify(self, message, profile_state):
+    def classify(self, message, profile_state, history=""):
         self.calls += 1
         return IntentResult(route="ADVISORY_FLOW")
 

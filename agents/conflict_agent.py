@@ -3,7 +3,7 @@ from services.conflict.comparison_agent import compare
 from services.conflict.detection import detect_cutoff_conflicts, detect_quota_conflicts
 from services.conflict.evidence_agent import package_evidence
 from services.conflict.resolution_agent import resolve, resolve_cutoff_conflict
-from services.conflict.resolution_inference_service import interpret_conflict_tiebreak
+from services.conflict.resolution_inference_service import batch_interpret_conflict_tiebreak
 from state import AgentState
 
 
@@ -40,16 +40,29 @@ def conflict_agent(state: AgentState):
 
     # Gateway (LLM tiebreaker) CHỈ cho quota; cutoff không bao giờ pick-winner bằng LLM (EC-16).
     gateway = build_default_gateway() if quota_records else None
-    tiebreak = (
-        (lambda record, report: interpret_conflict_tiebreak(record, report, gateway))
-        if gateway is not None
-        else None
-    )
 
+    # Pha A: dựng (record, report) cho mọi quota conflict.
+    pairs = []
     for record in quota_records:
         options = package_evidence(record, state.retrieved_programs)
         record.options = options
         report = compare(options)
+        pairs.append((record, report))
+
+    # Pha B: chỉ conflict indecisive cần LLM → MỘT call gom cả batch.
+    indecisive = [(record, report) for record, report in pairs if not report.is_decisive]
+    decisions = (
+        batch_interpret_conflict_tiebreak(indecisive, gateway)
+        if gateway is not None else {}
+    )
+
+    def _lookup(record, report):
+        return decisions.get(record.conflict_key, {"confidence": "low"})
+
+    tiebreak = _lookup if gateway is not None else None
+
+    # Pha C: resolve() KHÔNG đổi — nhận callback tra cứu thay vì callback LLM.
+    for record, report in pairs:
         outcome = resolve(record, report, gateway=tiebreak)
         outcomes.append(outcome)
         if outcome.status == "unresolved":

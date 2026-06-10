@@ -94,6 +94,9 @@ def test_post_message_uses_fallback_extractor_when_gateway_is_unavailable(monkey
         def append_message(self, session_token, role, content, kind="chat"):
             self.messages.append((role, kind, content))
 
+        def list_message(self, session_token):
+            return []
+
         def get_session_by_token(self, session_token):
             return SimpleNamespace(session_token=session_token, status=self.status)
 

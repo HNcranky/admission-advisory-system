@@ -3,6 +3,7 @@ import logging
 from services import build_default_gateway
 from services.chat.intent_router import IntentRouter
 from services.chat.models import ChatProfileState, ConversationTurnResult
+from services.chat.history import build_history_context
 from services.chat.knowledge_fanout import format_knowledge_blocks, run_knowledge_fanout
 from services.chat.repository import ChatSessionRepository
 from services.knowledge.qa_service import KnowledgeQAService
@@ -65,6 +66,9 @@ class ConversationService:
     }
 
     def handle_user_message(self, session_token: str, content: str) -> ConversationTurnResult:
+        # Build history from turns BEFORE this one — fetch prior to appending so
+        # the message being processed is excluded.
+        history_ctx = build_history_context(self.repository.list_message(session_token))
         self.repository.append_message(session_token, "user", content, "user_message")
         session = self.repository.get_session_by_token(session_token)
         profile_state = self.repository.get_profile_state(session_token)
@@ -102,15 +106,15 @@ class ConversationService:
         if corrected is not None:
             return corrected
 
-        intent = self.intent_router.classify(content, profile_state)
+        intent = self.intent_router.classify(content, profile_state, history=history_ctx)
         session_status = session.status if session else "collecting_profile"
 
         if intent.route == "ADVISORY_FLOW":
             return self._handle_advisory(session_token, profile_state, flow_state, delta)
         if intent.route == "KNOWLEDGE_QA":
-            return self._handle_knowledge_qa(session_token, content, intent, profile_state, flow_state, session_status)
+            return self._handle_knowledge_qa(session_token, content, intent, profile_state, flow_state, session_status, history_ctx)
         if intent.route == "HYBRID":
-            return self._handle_hybrid(session_token, content, intent, profile_state, flow_state, session_status)
+            return self._handle_hybrid(session_token, content, intent, profile_state, flow_state, session_status, history_ctx)
         if intent.route == "OUT_OF_SCOPE":
             return self._handle_out_of_scope(session_token, profile_state, flow_state, session_status)
         if intent.route == "CONVERSATIONAL":
@@ -307,7 +311,7 @@ class ConversationService:
             profile_state=merged,
         )
 
-    def _handle_knowledge_qa(self, session_token, content, intent, profile_state, flow_state, session_status):
+    def _handle_knowledge_qa(self, session_token, content, intent, profile_state, flow_state, session_status, history_ctx=""):
         # Resolve school: router value first, else the student's top preferred school.
         school = intent.school or (
             profile_state.preferred_schools[0] if profile_state.preferred_schools else None
@@ -319,7 +323,7 @@ class ConversationService:
                 question=content,
                 school=school,
                 topic=intent.topic,
-                conversation_context="",
+                conversation_context=history_ctx,
             )
         except Exception as exc:
             # any embed/LLM/DB failure → graceful fallback below
@@ -348,7 +352,7 @@ class ConversationService:
             citations=citations,
         )
 
-    def _handle_hybrid(self, session_token, content, intent, profile_state, flow_state, session_status):
+    def _handle_hybrid(self, session_token, content, intent, profile_state, flow_state, session_status, history_ctx=""):
         missing = missing_critical_slots(profile_state)
 
         if not missing:
@@ -369,7 +373,7 @@ class ConversationService:
 
         # Profile incomplete → answer the knowledge half inline, ask the next advisory follow-up.
         school_fallback = profile_state.preferred_schools[0] if profile_state.preferred_schools else None
-        blocks = run_knowledge_fanout(self.knowledge_qa, intent, content, school_fallback)
+        blocks = run_knowledge_fanout(self.knowledge_qa, intent, content, school_fallback, conversation_context=history_ctx)
         body = format_knowledge_blocks(blocks)
 
         follow_up = next_follow_up_question(profile_state.model_copy(update={"missing_slots": missing}))

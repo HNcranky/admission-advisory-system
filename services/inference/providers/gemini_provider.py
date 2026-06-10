@@ -51,6 +51,7 @@ class GeminiProvider:
                 system_instruction=request.system_prompt,
                 temperature=request.temperature,
                 response_mime_type="application/json" if json_mode else None,
+                max_output_tokens=policy.max_tokens,
             ),
         )
 

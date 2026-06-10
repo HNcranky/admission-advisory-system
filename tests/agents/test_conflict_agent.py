@@ -1,3 +1,5 @@
+import json
+
 import agents.conflict_agent as conflict_agent_module
 from agents.conflict_agent import conflict_agent
 from agents.models import CandidateProgram, CutoffEntry, Evidence, StudentProfile
@@ -83,15 +85,68 @@ def test_conflict_agent_resolves_via_llm_tiebreaker(monkeypatch):
 
     monkeypatch.setattr(conflict_agent_module, "build_default_gateway", lambda: _Gateway())
 
-    def fake_tiebreak(record, report, gateway):
-        chosen = report.ranked_options[0].source_url
-        return {"confidence": "high", "chosen_source_url": chosen, "rationale": "nguon dang tin nhat"}
+    def fake_batch(pairs, gateway):
+        return {
+            record.conflict_key: {
+                "confidence": "high",
+                "chosen_source_url": report.ranked_options[0].source_url,
+                "rationale": "nguon dang tin nhat",
+            }
+            for record, report in pairs
+        }
 
-    monkeypatch.setattr(conflict_agent_module, "interpret_conflict_tiebreak", fake_tiebreak)
+    monkeypatch.setattr(conflict_agent_module, "batch_interpret_conflict_tiebreak", fake_batch)
 
     state = conflict_agent(_conflicting_state())
 
     assert any(o.used_llm_tiebreaker and o.status == "resolved" for o in state.resolution_outcomes)
+
+
+def _indecisive_candidate(program_id, source_url, quota):
+    return CandidateProgram(
+        candidate_id=f"hust:2026:{program_id}:thpt_score",
+        school_id="hust", school_name="HUST", admission_year=2026,
+        program_id=program_id, program_name=program_id.upper(),
+        admission_method="thpt_score", quota={"value": quota},
+        evidence=[Evidence(source_url=source_url, school_name="HUST",
+                           admission_year=2026, field_name="quota", trust_level=5)],
+    )
+
+
+def test_conflict_agent_batches_indecisive_into_single_llm_call(monkeypatch):
+    calls = []
+
+    class _CountingGateway:
+        def is_available(self):
+            return True
+
+        def run(self, request):
+            calls.append(request)
+            payload = json.loads(request.user_prompt)
+            decisions = [
+                {"conflict_key": c["conflict_key"], "confidence": "high",
+                 "chosen_source_url": c["options"][0]["source_url"], "rationale": "r"}
+                for c in payload["conflicts"]
+            ]
+            from services.inference.models import InferenceResult
+            return InferenceResult(agent_name="resolution_agent", model="m", provider="fake",
+                                   content="{}", parsed_data={"decisions": decisions})
+
+    monkeypatch.setattr(conflict_agent_module, "build_default_gateway", lambda: _CountingGateway())
+
+    state = AgentState(user_query="q", retrieved_programs=[
+        _indecisive_candidate("cs", "https://a.test", 120),
+        _indecisive_candidate("cs", "https://b.test", 150),
+        _indecisive_candidate("ee", "https://c.test", 80),
+        _indecisive_candidate("ee", "https://d.test", 95),
+    ])
+
+    output = conflict_agent(state)
+
+    assert len(calls) == 1                                  # MỘT call batch cho 2 conflict
+    resolved_via_llm = [o for o in output.resolution_outcomes
+                        if o.used_llm_tiebreaker and o.status == "resolved"]
+    assert len(resolved_via_llm) == 2
 
 
 def test_conflict_agent_marks_unresolved_candidates_uncertain(monkeypatch):

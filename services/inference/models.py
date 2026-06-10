@@ -28,6 +28,7 @@ class InferencePolicy(BaseModel):
     allow_fallback: bool = False
     output_mode: str = "free_text"
     max_retries: int = 1
+    max_tokens: Optional[int] = None
 
 
 class InferenceResult(BaseModel):

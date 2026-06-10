@@ -23,3 +23,13 @@ def test_registry_resolves_default_and_agent_override():
     assert reasoning_policy.fallback_model == "gemini-2.5-flash"
     assert reasoning_policy.allow_fallback is True
     assert reasoning_policy.output_mode == "json"
+
+
+def test_resolve_reads_max_tokens_from_override():
+    registry = ModelRegistry(default_model="m", agent_overrides={"a": {"max_tokens": 512}})
+    assert registry.resolve("a").max_tokens == 512
+
+
+def test_resolve_max_tokens_defaults_to_none():
+    registry = ModelRegistry(default_model="m")
+    assert registry.resolve("a").max_tokens is None

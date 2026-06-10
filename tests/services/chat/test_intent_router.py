@@ -87,6 +87,20 @@ def test_build_user_prompt_has_no_return_to_flow_line():
     assert "return_to_flow" not in prompt
 
 
+def test_build_user_prompt_includes_history_block():
+    history = "Người dùng: học phí UET?\nTrợ lý: 15 triệu/năm"
+    prompt = _prompt_router()._build_user_prompt(
+        "còn HUST thì sao", ChatProfileState(), history=history
+    )
+    assert "Lịch sử hội thoại gần đây" in prompt
+    assert "15 triệu/năm" in prompt
+
+
+def test_build_user_prompt_omits_history_block_when_empty():
+    prompt = _prompt_router()._build_user_prompt("msg", ChatProfileState(), history="")
+    assert "Lịch sử hội thoại" not in prompt
+
+
 from services.inference.models import InferenceError, InferenceResult
 
 

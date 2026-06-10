@@ -203,7 +203,7 @@ class IntentRouter:
     def __init__(self, gateway=None):
         self._gateway = gateway or build_default_gateway()
 
-    def classify(self, message: str, profile_state: ChatProfileState) -> IntentResult:
+    def classify(self, message: str, profile_state: ChatProfileState, history: str = "") -> IntentResult:
         try:
             if hasattr(self._gateway, "is_available") and not self._gateway.is_available():
                 return self._fallback_classify(message)
@@ -212,7 +212,7 @@ class IntentRouter:
                     agent_name="intent_router",
                     task_type="intent_classification",
                     system_prompt=INTENT_SYSTEM_PROMPT,
-                    user_prompt=self._build_user_prompt(message, profile_state),
+                    user_prompt=self._build_user_prompt(message, profile_state, history),
                     output_mode="json",
                     temperature=0.0,
                 )
@@ -246,7 +246,7 @@ class IntentRouter:
                 return IntentResult(route="CONVERSATIONAL", subtype=subtype)
         return IntentResult(route="CLARIFICATION")
 
-    def _build_user_prompt(self, message: str, profile_state: ChatProfileState) -> str:
+    def _build_user_prompt(self, message: str, profile_state: ChatProfileState, history: str = "") -> str:
         schools = (
             ", ".join(profile_state.preferred_schools)
             if profile_state.preferred_schools
@@ -257,7 +257,11 @@ class IntentRouter:
             if profile_state.preferred_majors
             else "chưa có"
         )
+        prefix = (
+            f"Lịch sử hội thoại gần đây:\n{history}\n\n" if history else ""
+        )
         return (
+            f"{prefix}"
             f'Tin nhắn: "{message}"\n\n'
             f"Profile hiện tại:\n"
             f"- Trường quan tâm: {schools}\n"
