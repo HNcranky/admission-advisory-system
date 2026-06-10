@@ -137,7 +137,7 @@ class KnowledgeQAService:
             if isinstance(i, int) and 1 <= i <= len(chunks)
         ]
         if not selected:
-            selected = list(chunks)  # deterministic fallback: cite every passed chunk
+            selected = chunks[:1]  # fallback: cite only the top-scored chunk
 
         citations = []
         seen = set()

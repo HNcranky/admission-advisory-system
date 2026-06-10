@@ -120,8 +120,8 @@ def test_above_threshold_returns_grounded_answer_with_confidence():
     assert res.answer == "Học phí khoảng 35 triệu/năm."
     assert res.confidence == 0.92
     assert len(gateway.calls) == 1
-    # No used_source_ids in the response → cite every passed chunk.
-    assert len(res.citations) == 2
+    # No used_source_ids → fallback cites only the top-scored chunk.
+    assert len(res.citations) == 1
 
 
 def test_citations_limited_to_used_source_ids():
@@ -138,13 +138,14 @@ def test_citations_limited_to_used_source_ids():
     assert res.citations[0].chunk_text == "Học phí 35 triệu/năm"
 
 
-def test_citations_fallback_to_all_chunks_when_used_ids_empty():
+def test_citations_fallback_to_top_chunk_when_used_ids_empty():
     chunks = [_chunk("a", "http://uet/a", 0.9), _chunk("b", "http://uet/b", 0.8)]
     service, _, _, _ = _build(
         chunks, parsed_data={"answer": "ans", "used_source_ids": []}
     )
     res = service.answer("q", "VNU-UET", "tuition")
-    assert len(res.citations) == 2
+    assert len(res.citations) == 1
+    assert res.citations[0].source_url == "http://uet/a"  # highest score
 
 
 def test_citations_fallback_when_used_ids_invalid():
@@ -260,12 +261,12 @@ def test_specific_school_query_also_pulls_national_chunks():
                                  "https://chinhphu/r.pdf", 0.80,
                                  school=NATIONAL_SCHOOL, topic="admission_policy")],
     })
-    service = _service_with(repo, parsed_data={"answer": "...", "used_source_ids": []})
+    service = _service_with(repo, parsed_data={"answer": "...", "used_source_ids": [2]})
     res = service.answer("HUST xét tuyển thế nào", school="HUST", topic="admission_policy")
     # two retrievals: the school scope, then the national scope with its own budget
     assert [c["school"] for c in repo.calls] == ["HUST", NATIONAL_SCHOOL]
     assert repo.calls[1]["limit"] == KNOWLEDGE_QA_NATIONAL_TOP_K
-    # the national source is woven into the answer's citations
+    # the national source (cited explicitly by the LLM) is in the answer's citations
     assert "https://chinhphu/r.pdf" in {c.source_url for c in res.citations}
 
 
