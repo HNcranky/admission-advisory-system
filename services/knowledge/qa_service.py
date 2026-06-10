@@ -45,14 +45,20 @@ class KnowledgeQAService:
         self._min_score = min_score
         self._national_top_k = national_top_k
 
+    def embed_query(self, question: str):
+        """Embed a retrieval query. Exposed so callers (e.g. the fan-out) can
+        embed once and reuse the vector across many answer() calls."""
+        return self._embedder.embed([question], task_type="RETRIEVAL_QUERY")[0]
+
     def answer(
         self,
         question: str,
         school: Optional[str],
         topic: Optional[str],
         conversation_context: str = "",
+        query_vector=None,
     ) -> KnowledgeQAResult:
-        embedding = self._embedder.embed([question], task_type="RETRIEVAL_QUERY")[0]
+        embedding = query_vector if query_vector is not None else self.embed_query(question)
         chunks = self._chunk_repository.vector_search(
             embedding, school=school, topic=topic, limit=self._top_k
         )

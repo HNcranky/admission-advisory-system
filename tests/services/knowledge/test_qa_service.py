@@ -196,6 +196,34 @@ def test_gateway_exception_degrades_to_no_data():
     assert len(gateway.calls) == 1
 
 
+# ─── precomputed query vector ────────────────────────────────────────────────
+
+def test_answer_uses_supplied_query_vector_without_embedding():
+    class _CountingEmbedder:
+        def __init__(self):
+            self.calls = 0
+        def embed(self, texts, task_type):
+            self.calls += 1
+            return [[0.0, 0.0, 0.0]]
+
+    class _FakeRepo:
+        def __init__(self):
+            self.searched_with = []
+        def vector_search(self, embedding, school, topic, limit):
+            self.searched_with.append(list(embedding))
+            return []  # no chunks → early no-data return, LLM never called
+
+    embedder = _CountingEmbedder()
+    repo = _FakeRepo()
+    service = KnowledgeQAService(chunk_repository=repo, embedder=embedder, gateway=object())
+    result = service.answer("học phí?", school="VNU-UET", topic="tuition",
+                            query_vector=[0.1, 0.2, 0.3])
+
+    assert embedder.calls == 0                       # supplied vector reused
+    assert repo.searched_with[0] == [0.1, 0.2, 0.3]  # search used that vector
+    assert result.has_data is False
+
+
 # ─── national-scope augmentation ─────────────────────────────────────────────
 
 from ingestion.config.settings import KNOWLEDGE_QA_NATIONAL_TOP_K
