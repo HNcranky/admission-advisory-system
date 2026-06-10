@@ -50,6 +50,38 @@ class _NationalCountingQA(FakeKnowledgeQA):
         return super().answer(question, school, topic, conversation_context)
 
 
+class _PrevUserEmbedQA(FakeKnowledgeQA):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.embedded_texts = []
+
+    def embed_query(self, question):
+        self.embedded_texts.append(question)
+        return [0.5]
+
+    def national_chunks(self, query_vector, topic):
+        return []
+
+
+def test_fanout_prepends_prev_user_to_embedded_query():
+    qa = _PrevUserEmbedQA()
+    intent = IntentResult(route="HYBRID", school="HUST", topic="tuition")
+    run_knowledge_fanout(
+        qa, intent, "còn học phí thì sao",
+        conversation_context="Trợ lý: ...", prev_user="HUST xét tuyển thế nào",
+    )
+    assert qa.embedded_texts == ["HUST xét tuyển thế nào\ncòn học phí thì sao"]
+
+
+def test_fanout_standalone_question_embeds_verbatim():
+    qa = _PrevUserEmbedQA()
+    intent = IntentResult(route="HYBRID", school="HUST", topic="tuition")
+    run_knowledge_fanout(
+        qa, intent, "học phí HUST là bao nhiêu", prev_user="ngành CNTT thế nào",
+    )
+    assert qa.embedded_texts == ["học phí HUST là bao nhiêu"]  # has noun → not elliptical
+
+
 def test_fanout_computes_national_once_per_topic():
     qa = _NationalCountingQA()
     intent = IntentResult(route="HYBRID", schools=["VNU-UET", "HUST"], topics=["tuition"])

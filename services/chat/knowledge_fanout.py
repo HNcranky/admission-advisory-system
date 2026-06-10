@@ -2,6 +2,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 
 from services.chat.hybrid_models import KnowledgeBlock
+from services.knowledge.retrieval_query import build_retrieval_query
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ def _resolve_topics(intent):
     return [None]
 
 
-def run_knowledge_fanout(knowledge_qa, intent, content, school_fallback=None, conversation_context="") -> list:
+def run_knowledge_fanout(knowledge_qa, intent, content, school_fallback=None, conversation_context="", prev_user="") -> list:
     """Call the single-school KnowledgeQA once per (school, topic) pair, in parallel.
 
     Each call swallows its own error → a no-data KnowledgeBlock; siblings survive.
@@ -39,11 +40,14 @@ def run_knowledge_fanout(knowledge_qa, intent, content, school_fallback=None, co
         for topic in _resolve_topics(intent)
     ]
 
-    # Embed the query once for the whole fan-out. On failure, leave it None so
-    # each answer() embeds internally (resilience over the micro-optimization).
+    # Embed the (optionally context-augmented) query once for the whole fan-out.
+    # An elided follow-up gets its referent from prev_user; standalone questions
+    # are embedded verbatim. On failure, leave the vector None so each answer()
+    # embeds the original question internally (resilience over the micro-opt).
+    retrieval_text = build_retrieval_query(content, prev_user)
     query_vector = None
     try:
-        query_vector = knowledge_qa.embed_query(content)
+        query_vector = knowledge_qa.embed_query(retrieval_text)
     except Exception as exc:
         logger.warning("knowledge fan-out query embed failed, per-call fallback: %r", exc)
 
