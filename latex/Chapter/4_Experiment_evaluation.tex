@@ -1,0 +1,288 @@
+\documentclass[../main.tex]{subfiles}
+\begin{document}
+
+% Target length: 17-20 pages.
+
+Chapter~\ref{chapter:Methodology} reviewed the technologies the system is built on.
+This chapter presents how they are assembled into a working system and how the result is evaluated.
+Section~\ref{section:4.1} covers the architecture and package design, Section~\ref{section:4.2} the user interface, layer interactions, and database, Section~\ref{section:4.3} the implementation libraries and measured achievements, Section~\ref{section:4.4} the testing strategy and its results, and Section~\ref{section:4.5} the deployment.
+
+\section{Architecture design}
+\label{section:4.1}
+
+\subsection{Software architecture selection}
+
+The system is built as a \textit{layered, service-oriented monolith}: a single deployable application internally organized into layers (web, services, advisory pipeline, ingestion, database) with explicit boundaries between them.
+A microservice decomposition was considered and rejected.
+The functional requirements form one cohesive domain --- a student message flows through routing, profile collection, retrieval, reasoning, and explanation in a single logical transaction --- and splitting these stages across network boundaries would add serialization, partial-failure handling, and deployment complexity without a corresponding scaling benefit at the system's scale.
+A monolith also keeps the vector corpus, the canonical admission records, and the chat state in one PostgreSQL instance, which the conflict-tolerance requirement (NFR-02) relies on, since conflict detection queries structured records and \gls{RAG} queries vector chunks against the same database.
+The layered internal structure preserves most of the benefits a service split would have offered --- clear interfaces, independent testability, single-responsibility modules --- without the distributed-systems cost.
+
+\subsection{Overall design}
+
+Figure~\ref{fig:package-overview} shows the package structure and the principal dependencies between packages.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{package_overview.png}
+    \caption{Package overview and dependencies between layers}
+    \label{fig:package-overview}
+\end{figure}
+
+The \texttt{web} package is the entry layer: it exposes the chat \gls{HTTP} \gls{API} and serves the interface.
+The \texttt{services} package holds the domain logic, divided into focused sub-packages --- \texttt{chat} (session, routing, dispatch), \texttt{inference} (the \gls{LLM} gateway), \texttt{knowledge} (\gls{RAG}), \texttt{conflict}, \texttt{cutoff}, \texttt{profile}, and \texttt{tracing}.
+The advisory pipeline (\texttt{graph.py}, \texttt{state.py}, and the \texttt{agents} package) is the orchestration layer driven by the chat dispatchers.
+The \texttt{ingestion} package is an independent layer feeding the database offline.
+All layers converge on a single PostgreSQL instance.
+Dependencies point inward and downward: the web layer depends on services, services depend on the inference gateway and the database, and no lower layer depends on the web layer.
+
+\subsection{Detailed package design}
+
+Three packages carry the core logic and are described in detail.
+
+\textbf{Advisory pipeline.}
+The pipeline is defined in \texttt{graph.py} as a LangGraph state graph over the shared state \texttt{state.py::AgentState}.
+Six nodes are registered and connected in a fixed linear order --- \texttt{profile}, \texttt{retrieve}, \texttt{conflict}, \texttt{reason}, \texttt{policy}, \texttt{explain} --- as shown in Figure~\ref{fig:advisory-graph}.
+Each node is a thin function in the \texttt{agents} package that reads fields from the state, calls a service for the real work, writes its results back, and returns the state; for example, the reasoning node calls \texttt{reason\_candidates} and stores the resulting eligibility checks and ranked recommendations.
+Every node is wrapped by a tracing decorator that records a per-stage event, so the fixed structure of the graph is exactly what makes the pipeline observable.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{advisory_graph.png}
+    \caption{The advisory pipeline as a fixed LangGraph state graph}
+    \label{fig:advisory-graph}
+\end{figure}
+
+\textbf{Inference gateway.}
+All \gls{LLM} access is funneled through \texttt{services/inference/gateway.py}.
+A call site builds an \texttt{InferenceRequest} and receives an \texttt{InferenceResult}; the gateway resolves a per-agent policy from the model \texttt{registry.py} (primary model, optional fallback model, retry budget) and delegates the actual call to a provider in \texttt{providers/gemini\_provider.py}.
+This single choke point is where the retry, fallback, and failure-type logic of Section~\ref{section:5.2} lives, so every reasoning step in the system inherits the same resilience without repeating it.
+
+\textbf{Ingestion pipeline.}
+The ingestion layer is orchestrated by \texttt{ingestion/pipeline/ingestion\_pipeline.py}, which runs each source through five steps: fetch (dispatched by strategy), route (predict the document type), parse (dispatch the matching parser), extract (pull admission facts from parsed text and tables), and normalize (map raw facts to canonical records using per-school dictionaries).
+Normalized records are persisted by \texttt{storage/db\_writer.py}.
+The pipeline can run for one source, for all sources of a school, or for an ad-hoc \gls{URL}, matching the operator use cases of Section~\ref{subsection:2.2.2}.
+
+\section{Detailed design}
+\label{section:4.2}
+
+\subsection{User interface design}
+
+The interface is a single-page chat application with a three-pane layout, shown in Figure~\ref{fig:ui-landing}.
+The center pane is the conversation.
+The left pane shows the profile the system has collected so far and the latest recommendation, making the incremental profile collection visible to the student.
+The right pane is the advisory analysis panel: it lists the six pipeline stages and, when the operator debug mode is enabled, shows each stage moving from \textit{pending} to \textit{running} to \textit{completed} as the background run progresses.
+This panel is the user-facing surface of the tracing subsystem and realizes the operator observability use case.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{screenshot_chat_landing.png}
+    \caption{The chat interface: profile pane (left), conversation (center), and the six-stage advisory analysis panel (right)}
+    \label{fig:ui-landing}
+\end{figure}
+
+% TODO: add a second screenshot (screenshot_chat_conversation.png) of a
+% completed advisory consultation showing ranked recommendations and a conflict
+% note. This requires a live run against the Gemini API (consumes quota) and
+% must be captured by the author; reference it from this subsection once added.
+
+\subsection{Layer design}
+
+The interaction between layers is clearest in the two central flows.
+
+\textbf{Advisory dispatch.}
+Figure~\ref{fig:seq-advisory} traces a student message that triggers an advisory run.
+The message endpoint in the \texttt{chat\_api} route calls the conversation service, which classifies intent and decides whether to start a run.
+When a run is warranted, the route creates a run record through the repository and submits the work to the \texttt{RunDispatcher}, then returns immediately so the request does not block (NFR-04).
+The dispatcher executes the run on a background thread pool: it marks the run running, invokes the LangGraph pipeline through \texttt{advisory\_runner}, persists the final answer and the per-stage trace, and marks the session completed.
+The browser polls the session and trace endpoints until the run completes and then renders the answer together with the stage ladder.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{seq_advisory_dispatch.png}
+    \caption{Sequence of an advisory run dispatched to the background executor}
+    \label{fig:seq-advisory}
+\end{figure}
+
+\textbf{Knowledge question answering.}
+Figure~\ref{fig:seq-knowledge} traces a factual question.
+The knowledge service embeds the question, runs a vector search over the knowledge chunks scoped to the requested school and topic, and additionally retrieves national (ministry) chunks with their own budget, because national regulations apply to every school.
+If the best match falls below a confidence threshold, the service returns a ``no data'' result rather than calling the model, satisfying the honest-degradation behavior of UC-02.
+Otherwise it asks the model to answer strictly from the retrieved passages and resolves the cited sources.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{seq_knowledge_qa.png}
+    \caption{Sequence of a grounded knowledge question-answering request}
+    \label{fig:seq-knowledge}
+\end{figure}
+
+A design convention shared by every repository supports the testability requirement (NFR-05): each repository takes an injectable connection factory and performs its work over the PostgreSQL driver psycopg~\cite{psycopg} inside a \texttt{\_cursor} context manager that guarantees commit on success, rollback on exception, and connection cleanup in all cases.
+This both prevents leaked connections and lets tests substitute a connection factory bound to the isolated test database.
+
+\subsection{Database design}
+
+The persistent state is one PostgreSQL schema built by sixteen numbered, idempotent migrations (\texttt{db/migrations/001--016}).
+Figure~\ref{fig:erd} shows the entity-relationship structure, grouped into four areas.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{erd_database.png}
+    \caption{Entity-relationship diagram of the database schema}
+    \label{fig:erd}
+\end{figure}
+
+The \textit{ingestion working store} (\texttt{source\_registry}, \texttt{discovered\_resources}, \texttt{raw\_documents}, \texttt{extracted\_facts}) records the provenance chain from a registered source to the raw facts extracted from a fetched document.
+The \textit{canonical store} (\texttt{canonical\_admission\_records}, \texttt{cutoff\_records}) holds the normalized, query-ready admission data.
+A design decision central to conflict awareness lives here: both canonical tables are unique \textit{per source} --- the uniqueness key includes the source \gls{URL} --- so two official publications that disagree about the same program coexist as two rows rather than overwriting each other.
+The \textit{chat and tracing} area (\texttt{chat\_sessions}, \texttt{chat\_messages}, \texttt{chat\_advisory\_runs}, \texttt{advisory\_trace\_events}) stores anonymous sessions keyed by a random token, their transcripts, the advisory runs, and the per-stage trace events that drive the analysis panel.
+The \textit{knowledge corpus} area (\texttt{knowledge\_documents}, \texttt{knowledge\_chunks}, \texttt{program\_catalog\_embeddings}) holds the \gls{RAG} documents and their 768-dimensional embeddings, indexed with \gls{HNSW} for vector search.
+
+\section{Application building}
+\label{section:4.3}
+
+\subsection{Libraries and tools}
+
+Table~\ref{table:libraries} lists the principal libraries and their versions, taken from \texttt{requirements.txt}.
+
+\begin{table}[H]
+    \centering
+    \caption{Principal libraries and tools, with versions}
+    \label{table:libraries}
+    \begin{tabular}{|p{3.6cm}|p{2.2cm}|p{7.5cm}|}
+        \hline
+        \textbf{Library} & \textbf{Version} & \textbf{Role} \\
+        \hline
+        Python & 3.12.0 & Implementation language \\
+        \hline
+        langgraph & 1.1.10 & Advisory pipeline state graph \\
+        \hline
+        langchain~\cite{langchain} & 1.2.17 & \gls{LLM} orchestration primitives \\
+        \hline
+        google-genai & 1.75.0 & Gemini \gls{API} client \\
+        \hline
+        pydantic & 2.13.4 & Typed data validation \\
+        \hline
+        psycopg2-binary & 2.9.12 & PostgreSQL driver \\
+        \hline
+        fastapi & 0.136.1 & Web framework \\
+        \hline
+        uvicorn & 0.46.0 & \gls{ASGI} server \\
+        \hline
+        jinja2 & 3.1.6 & \gls{HTML} templating \\
+        \hline
+        pdfplumber & 0.11.9 & \gls{PDF} text and table extraction \\
+        \hline
+        pymupdf & 1.27.2.3 & \gls{PDF} page rendering for \gls{OCR} \\
+        \hline
+        beautifulsoup4 & 4.14.3 & \gls{HTML} parsing \\
+        \hline
+        thefuzz & 0.22.1 & Fuzzy string matching in normalization \\
+        \hline
+        tenacity & 9.1.4 & Retry logic \\
+        \hline
+        pytest & 9.0.3 & Test framework \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\subsection{Achievement}
+
+The implemented system comprises 28{,}055 lines of Python across 315 tracked source files, of which 13{,}646 lines are tests.
+By layer, ingestion is the largest at 6{,}767 lines, followed by the services layer at 5{,}473 lines.
+The database schema is defined by sixteen idempotent migrations.
+
+The data layer is populated from real official sources.
+The canonical store holds 136 admission records for HUST and 20 for VNU-UET, together with 715 historical cutoff-score records (699 for HUST, 16 for VNU-UET) and 81 program-catalog embeddings used to resolve free-text major names.
+The knowledge corpus for grounded question answering holds 18 documents and 406 embedded chunks, drawn from HUST, NEU, VNU-UET, and national \gls{MOET} regulation documents.
+These figures are summarized in Table~\ref{table:achievement}.
+
+\begin{table}[H]
+    \centering
+    \caption{Measured size of the implemented system and its data}
+    \label{table:achievement}
+    \begin{tabular}{|p{7.5cm}|r|}
+        \hline
+        \textbf{Metric} & \textbf{Value} \\
+        \hline
+        Python source lines (total) & 28{,}055 \\
+        \hline
+        Python source files (tracked) & 315 \\
+        \hline
+        Test lines & 13{,}646 \\
+        \hline
+        Database migrations & 16 \\
+        \hline
+        Canonical admission records (HUST / VNU-UET) & 136 / 20 \\
+        \hline
+        Historical cutoff records (total) & 715 \\
+        \hline
+        Program-catalog embeddings & 81 \\
+        \hline
+        Knowledge documents / chunks & 18 / 406 \\
+        \hline
+        Automated tests & 856 \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\subsection{Illustration of main functions}
+
+The chat interface in Figure~\ref{fig:ui-landing} greets the student and invites a free-form description of their score, intended major, and preferred region.
+As the conversation proceeds, the left pane fills with the collected profile and the right pane animates the six advisory stages for each run.
+A completed consultation presents ranked program recommendations in the conversation pane, each with a fit assessment and, where the underlying sources disagree, an explicit note advising the student to verify against the latest official announcement.
+
+\section{Testing}
+\label{section:4.4}
+
+The system is verified by an automated test suite of 856 tests across 149 test files, built with the pytest framework~\cite{pytest} and spanning unit tests of individual services, integration tests that exercise real \gls{SQL} paths, and end-to-end tests of the advisory and ingestion flows.
+
+The defining feature of the test strategy is \textit{database isolation}.
+A fixture in \texttt{tests/conftest.py} (\texttt{\_isolate\_test\_db}) redirects the entire suite to an automatically created \texttt{admission\_test} database, so integration and end-to-end tests can create, mutate, and drop data without ever touching the development database.
+This makes the integration tests safe to run repeatedly and satisfies the testability requirement NFR-05.
+
+A full run of the suite on the isolated database completes in approximately 7.4 minutes with 854 tests passing, one skipped, and one failing.
+The skipped test is an end-to-end conflict-resolution scenario that requires an external dataset dump not committed to the repository.
+The single failure is a known, deferred issue in the knowledge-source registry seed: the default seed exposes no NEU sources because NEU documents were ingested through the local-directory path rather than the registered-source path, so a test asserting that every seeded school has at least one registered source fails for NEU.
+This failure concerns test-fixture seeding, not the runtime advisory or question-answering behavior.
+
+Beyond the automated suite, the system's conversational behavior was evaluated against a catalogue of 25 edge cases documented in the project's requirements (\texttt{docs/edge-case.md}), covering short answers to pending questions, multi-slot messages, profile corrections, ambiguous major terms, conflicting source data, budget filtering, and conversation control.
+In the most recent evaluation, 17 of the 25 cases were fully satisfied, 4 partially, and 4 not yet, up from 8 of 25 at an earlier baseline.
+Table~\ref{table:edge-cases} summarizes the outcome.
+
+\begin{table}[H]
+    \centering
+    \caption{Edge-case compliance evaluation (25 cases)}
+    \label{table:edge-cases}
+    \begin{tabular}{|p{2.6cm}|c|p{8.2cm}|}
+        \hline
+        \textbf{Outcome} & \textbf{Count} & \textbf{Representative cases} \\
+        \hline
+        Satisfied & 17 & Short pending-slot answers, multi-slot messages, score correction with re-ranking, eligibility gating, cutoff margin/volatility caveats, conflict disclosure, profile reset \\
+        \hline
+        Partial & 4 & Off-slot re-ask without e2e coverage, tuition shown but not scored, band-shift causality, partial data-uncertainty handling \\
+        \hline
+        Not yet & 4 & Removing a major, location and budget as structured soft preferences feeding retrieval \\
+        \hline
+    \end{tabular}
+\end{table}
+
+The four unmet cases share a single root cause: the profile model stores location and tuition as flat strings, and the reasoning stage does not yet consume them, so preferences that should soften or expand the search are not acted on.
+This cluster is carried forward as the principal item of future work in Section~\ref{section:6.2}.
+
+\section{Deployment}
+\label{section:4.5}
+
+The system is deployed with Docker Compose~\cite{docker}.
+A single service definition runs the database from the \texttt{pgvector/pgvector:pg16} image, which provides PostgreSQL~16 with the pgvector extension preinstalled, exposed on the standard port with a persistent named volume and a health check.
+Bringing up the database and waiting for its health check is a single command, after which a setup script (\texttt{db/setup\_db.py}) creates the \texttt{admission} database, applies the sixteen migrations in order, verifies the expected tables, and seeds the source registry.
+The web application is then served by Uvicorn.
+Ingestion is run separately through the \gls{CLI} to populate the canonical store and the knowledge corpus.
+
+This separation --- a containerized database, a one-command schema setup, an application server, and an offline ingestion \gls{CLI} --- keeps the runtime dependencies minimal (a Python environment and a Docker engine) while the idempotent migrations and upsert-based ingestion let the operator refresh school data at any time during the admission season, as required by NFR-02.
+
+This chapter presented the system's layered architecture, the design of its core packages, the three-pane interface, the layer interactions behind the two central flows, the database schema, and the deployment, then evaluated the result against an automated suite of 856 tests and a 25-case edge-case catalogue.
+The evaluation showed a system that is functionally substantial and well tested, with a clearly identified cluster of unmet preference-handling cases.
+Chapter~\ref{chapter:SolutionAndContribution} steps back from the full system to present its three principal contributions in depth.
+
+\end{document}

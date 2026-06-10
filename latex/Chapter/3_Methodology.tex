@@ -1,0 +1,97 @@
+\documentclass[../main.tex]{subfiles}
+\begin{document}
+
+% Target length: <= 10 pages.
+
+Chapter~\ref{chapter:Related_works} derived the system's functional and non-functional requirements.
+This chapter reviews the theoretical background and the technologies chosen to meet them.
+Each technology is presented together with the requirement it serves and the main alternative that was considered, so that the design decisions in Chapter~\ref{chapter:Experiment} rest on an explicit rationale rather than convention.
+Section~\ref{section:3.1} covers large language models and structured output, Section~\ref{section:3.2} retrieval-augmented generation over vector search, Section~\ref{section:3.3} the agentic pipeline, Section~\ref{section:3.4} document processing, and Section~\ref{section:3.5} the web stack.
+
+\section{Large language models and structured output}
+\label{section:3.1}
+
+A \gls{LLM} is a neural network trained on large text corpora to predict the next token given a context.
+Modern \gls{LLM}s are built on the Transformer architecture~\cite{vaswani2017attention}, whose self-attention mechanism lets the model condition each output token on every input token.
+A key property exploited throughout this system is \textit{in-context learning}: a sufficiently large model can perform a new task from instructions and a few examples in its prompt, without parameter updates~\cite{brown2020fewshot}.
+Every \gls{LLM}-backed step in this system --- intent classification, conflict tie-breaking, knowledge answering, and \gls{OCR} --- is implemented as a prompt with task instructions and, where helpful, worked examples, rather than as a fine-tuned model.
+
+The system uses the Gemini family of models through Google's hosted \gls{API}~\cite{gemini}.
+Gemini is a family of multimodal models that accept interleaved text and image input~\cite{geminiteam2023}; the multimodal capability is what makes the single-gateway approach to \gls{OCR} in Section~\ref{section:3.4} possible, since page images and text prompts pass through the same interface.
+A hosted model was preferred over a self-hosted open-weight model because the project's constraint is engineering a reliable system around an external model, not training one; the trade-off is a dependency on an external service with quotas and transient failures, which directly motivates the graceful-degradation requirement NFR-01.
+
+Two prompting techniques recur.
+The first is \textit{role and instruction prompting}: each call sends a system prompt that fixes the model's role (for example, an intent classifier for Vietnamese admission advising) and a user prompt that carries the task input.
+The second is \textit{structured output}: for tasks whose result feeds downstream code --- intent routing, profile extraction, knowledge answering --- the model is instructed to return strict \gls{JSON}, and the response is parsed into a typed object.
+Structured output is fragile by nature: a model can return prose around the \gls{JSON}, malformed syntax, or a value outside the expected set.
+The system therefore distinguishes a \textit{hard \gls{API} failure} (network, authentication, rate limit) from a \textit{structure failure} (a successful call whose body cannot be parsed into the expected schema).
+This distinction, realized as the \texttt{failure\_type} field on the inference result and discussed in detail in Section~\ref{section:5.2}, lets the system retry or fall back on structure failures while treating hard failures differently, so that a malformed response degrades gracefully instead of crashing a consultation (NFR-01).
+
+\section{Retrieval-augmented generation and vector search}
+\label{section:3.2}
+
+A bare \gls{LLM} cannot answer questions about current admission documents: the information either postdates its training data or never appeared in it, and asking the model directly invites fabrication.
+Retrieval-augmented generation (\gls{RAG}) addresses this by retrieving relevant passages from an external corpus and conditioning the model's answer on them~\cite{lewis2020rag}.
+This pattern directly serves the grounded-answer requirement behind UC-02: the knowledge question-answering step retrieves passages from ingested official documents and instructs the model to answer only from those passages, citing them, and to return an empty answer when they are insufficient.
+
+Retrieval is implemented by \textit{semantic vector search}.
+Each document is split into chunks, and each chunk is mapped to a dense embedding vector by an embedding model, such that semantically similar texts lie close together under cosine distance.
+A question is embedded the same way, and the chunks whose embeddings are nearest the question embedding are retrieved.
+The system embeds chunks and queries through Gemini's embedding endpoint, using distinct task types for documents and for queries so the embeddings are optimized for retrieval; the embedding dimension is fixed at 768 to match the database schema.
+
+The embeddings and their search must be stored somewhere.
+The system stores them in PostgreSQL~\cite{postgresql} using the pgvector extension~\cite{pgvector}, which adds a native \texttt{vector} column type and approximate-nearest-neighbor indexes.
+Chunk similarity is expressed directly in \gls{SQL}: the retrieval query orders chunks by the cosine-distance operator \texttt{embedding <=> query} and converts it to a similarity score, backed by an \gls{HNSW} index for sublinear search.
+The main alternative is a dedicated vector database such as a standalone similarity-search service.
+A dedicated store can offer richer indexing options at very large scale, but it would introduce a second datastore to deploy, back up, and keep consistent with the relational data.
+Integrating vectors into the existing PostgreSQL instance keeps the knowledge corpus, the canonical admission records, and the chat state in one transactional database, which matches the system's scale (hundreds of documents and chunks, not billions) and the conflict-tolerance requirement NFR-02, where vector chunks and structured records are queried together.
+
+\section{Agentic pipelines}
+\label{section:3.3}
+
+The advisory consultation is not a single \gls{LLM} call but a sequence of distinct reasoning stages --- completing the profile, retrieving candidate programs, checking source conflicts, ranking by eligibility, applying admission-regulation policy, and explaining the result.
+Coordinating such stages is the role of an \textit{agentic pipeline}.
+A common implementation is a function-calling loop, in which a single model is given a set of tools and decides at each step which tool to call next until it judges the task complete.
+This pattern is flexible, but the control flow is determined by the model at run time, which makes individual runs hard to reproduce and to trace --- a poor fit for a system that must explain why a recommendation changed and must expose a per-stage trace to operators.
+
+The system instead uses LangGraph~\cite{langgraph, langgraph_docs}, a library for expressing an agent as an explicit state graph: nodes are functions that read and write a shared typed state, and edges fix the order in which nodes run.
+The advisory pipeline is wired as a fixed linear graph over the six stages, with one shared state object passed from node to node.
+A fixed graph is the deliberate choice for three reasons that map onto Chapter~\ref{chapter:Related_works}'s requirements.
+First, \textit{determinism}: the same profile produces the same stage sequence, so a correction can re-run the pipeline and the change in output is attributable to the changed input (UC-04, NFR-02).
+Second, \textit{traceability}: because the stages are fixed and named, each one can be wrapped to emit a trace event, which is what populates the operator's debug panel (the observability use case in Section~\ref{subsection:2.2.1}).
+Third, \textit{separation of concerns}: each stage is an independently testable function with a single responsibility, which supports the testability requirement NFR-05.
+The cost of a fixed graph is reduced flexibility --- it cannot improvise a new stage order for an unusual query --- but the advisory task has a stable shape, so this cost is acceptable.
+A survey of \gls{LLM}-based autonomous agents~\cite{wang2024agentsurvey} frames this as a spectrum between fully autonomous tool-use loops and structured, controllable workflows; this system sits deliberately at the structured end.
+
+\section{Document processing}
+\label{section:3.4}
+
+The ingestion pipeline must turn heterogeneous official sources --- \gls{HTML} admission pages and \gls{PDF} proposal documents, some of them scanned images --- into text that can be parsed and embedded.
+For born-digital \gls{PDF}s the system extracts the embedded text layer using pdfplumber~\cite{pdfplumber}, which also recovers table structure; for rendering pages to images it uses PyMuPDF~\cite{pymupdf}.
+
+Scanned documents have no text layer and require \textit{optical character recognition} (\gls{OCR}).
+Rather than adding a separate \gls{OCR} engine, the system reuses the multimodal inference gateway: a page without a usable text layer is rendered to a PNG image at roughly 200 dots per inch and sent to the Gemini model with a transcription prompt.
+Extraction is \textit{hybrid and per page}: a page whose text layer is long enough is used directly, and only image-only pages incur an \gls{OCR} call, which keeps cost proportional to the number of scanned pages.
+
+A failure mode specific to model-based \gls{OCR} motivates an explicit safeguard.
+When transcribing a page with merged table cells, the model can fall into a repetition loop and emit the same character indefinitely --- in one observed case a single page produced on the order of a million dash characters.
+The system detects such \textit{degenerate output} with two heuristics: an absolute ceiling on characters per page, and a check on whether one character dominates a large fraction of the non-whitespace output.
+A degenerate page is retried once at a higher decoding temperature to break the greedy loop; if it remains degenerate the page is marked failed while the rest of the document is still ingested.
+The rationale and the controlling thresholds are revisited as a contribution in Section~\ref{section:5.3}.
+
+\section{Web stack}
+\label{section:3.5}
+
+The user-facing layer is a web application that must acknowledge a student message immediately and run the advisory pipeline without blocking the request (NFR-04).
+The application is built on FastAPI~\cite{fastapi}, an asynchronous Python web framework, served by the Uvicorn \gls{ASGI} server~\cite{uvicorn}.
+The chat interface is rendered server-side with the Jinja2 template engine~\cite{jinja2} and progressively updated by client-side JavaScript that polls for run completion and renders the stage trace.
+
+Because a full advisory run issues several \gls{LLM} calls and database queries and can take tens of seconds, it cannot run inside the request that triggered it.
+The message endpoint instead creates a run record, submits the work to a background thread pool, and returns immediately; the pipeline executes on a worker thread and writes its result and trace to the database, which the interface retrieves by polling.
+A background thread pool is sufficient here because the workload is a small number of long, \gls{API}-bound tasks rather than thousands of concurrent connections; a dedicated task queue with a separate broker would add operational components disproportionate to that scale.
+The data-validation layer throughout the application uses Pydantic~\cite{pydantic}, whose typed models define the inference requests and results, the agent state, and the chat schemas, giving every boundary in the system a validated, typed contract.
+
+This chapter reviewed the technologies underpinning the system and tied each to a requirement and an alternative: hosted multimodal \gls{LLM}s with structured output for the reasoning and \gls{OCR} steps, \gls{RAG} over pgvector for grounded knowledge answering, a fixed LangGraph pipeline for deterministic and traceable advising, a hybrid text-and-\gls{OCR} extractor for heterogeneous documents, and an asynchronous FastAPI stack for a responsive interface.
+Chapter~\ref{chapter:Experiment} applies these technologies, presenting the system's design, implementation, and evaluation.
+
+\end{document}

@@ -1,0 +1,33 @@
+@startuml seq_knowledge_qa
+skinparam shadowing false
+skinparam defaultFontName Arial
+
+actor Student as user
+participant "Conversation\nService" as conv
+participant "KnowledgeQA\nService" as qa
+participant "GeminiEmbedder" as embed
+participant "KnowledgeChunk\nRepository" as repo
+database "PostgreSQL\n(pgvector)" as db
+participant "Inference\nGateway" as gw
+
+user -> conv : "Học phí UET bao nhiêu?"
+conv -> qa : answer(question, school=VNU-UET,\ntopic=tuition)
+qa -> embed : embed([question],\nRETRIEVAL_QUERY)
+embed --> qa : query vector (768-d)
+qa -> repo : vector_search(embedding,\nschool, topic, top_k)
+repo -> db : cosine search on\nknowledge_chunks (HNSW)
+db --> repo : scored chunks
+qa -> repo : vector_search(school=MOET)\n(national augmentation)
+repo --> qa : national chunks (own budget)
+
+alt top score < min_score
+  qa --> conv : KnowledgeQAResult(has_data=false)
+  conv --> user : honest "no data" reply
+else grounded generation
+  qa -> gw : run(knowledge_qa, JSON mode,\nnumbered chunks + question)
+  gw --> qa : {"answer", "used_source_ids"}
+  qa -> qa : resolve citations\n(dedupe by source URL)
+  qa --> conv : KnowledgeQAResult(answer,\ncitations, confidence)
+  conv --> user : answer + cited sources
+end
+@enduml

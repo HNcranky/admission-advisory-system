@@ -1,0 +1,39 @@
+\documentclass[../main.tex]{subfiles}
+\begin{document}
+
+Chapter~\ref{chapter:SolutionAndContribution} presented the system's contributions.
+This chapter assesses the work as a whole and sets out what remains to be done.
+
+\section{Conclusion}
+
+This thesis set out to close three gaps that existing Vietnamese admission-information channels leave open: contradictory official data that no tool reconciles, the absence of grounded yet personalized advice, and the inaccessibility of heterogeneous and scanned source formats.
+The result is an end-to-end system that ingests official sources into a canonical, conflict-aware store and serves a Vietnamese-language advisory chat over that store.
+
+Measured against the requirements derived in Chapter~\ref{chapter:Related_works}, the system achieves its core goals.
+It collects a student profile incrementally and withholds recommendations until the critical information is present.
+It answers factual questions only from ingested documents, with citations, and declines honestly when the corpus is insufficient, rather than fabricating figures as a general-purpose chatbot would.
+It preserves contradictory source values rather than overwriting them, and it discloses the disagreement in its recommendations.
+It stays available through model outages by routing every model call through a gateway that distinguishes hard from soft failures and falls back deterministically.
+These behaviors are backed by a substantial, well-tested implementation --- roughly 28{,}000 lines of Python, 856 automated tests with 854 passing, and a populated data store drawn from real official sources --- as quantified in Chapter~\ref{chapter:Experiment}.
+Relative to the channels surveyed in Chapter~\ref{chapter:Related_works}, the distinguishing achievement is conflict awareness: where aggregator portals and institutional platforms silently pick one value, this system surfaces the conflict and tells the student to verify it.
+
+The system also has clear limits.
+Of the 25 conversational edge cases used for evaluation, four are only partially handled and four are not yet met.
+These eight cases concentrate on one weakness: location and tuition preferences are stored as flat strings and are not consumed by the retrieval and reasoning stages, so a student's stated region or budget does not yet shape or expand the search the way it should.
+The configured data also covers only a few universities, so the system is a working demonstration on real data rather than a comprehensive national service.
+
+\section{Future work}
+\label{section:6.2}
+
+The most valuable next step follows directly from the evaluation.
+Replacing the flat location and tuition fields with structured soft preferences, and threading them through retrieval and reasoning, would close the cluster of unmet edge cases (EC-07, EC-08, EC-11, EC-19, EC-20, and EC-25) in a single coherent change: budget would filter and rank candidates explicitly, a stated region would constrain the search and a relaxed one would expand it, and a removed major would be dropped from the profile.
+
+A second direction is breadth of coverage.
+Because the ingestion pipeline is configuration-driven, adding a university is largely a matter of providing its source configuration and normalization dictionaries; extending coverage toward the full set of major Vietnamese universities would turn the demonstration into a generally useful tool.
+
+A third direction is production hardening.
+The current deployment is a single-node Docker Compose setup suitable for development and demonstration; a production service would need authenticated operator access, scheduled re-ingestion to keep data fresh through the admission season, monitoring of the inference quota and fallback rates, and load testing of the background-execution model under concurrent students.
+
+Taken together, these directions would extend a system that already demonstrates conflict-aware, grounded admission advising on real data into one that could serve Vietnamese students broadly and reliably.
+
+\end{document}
