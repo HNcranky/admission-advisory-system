@@ -31,6 +31,7 @@ def run_knowledge_fanout(knowledge_qa, intent, content, school_fallback=None, co
 
     Each call swallows its own error → a no-data KnowledgeBlock; siblings survive.
     Block order matches the original (school, topic) iteration order.
+    The query is embedded once and shared across all calls (see spec §1c).
     """
     tasks = [
         (school, topic)
@@ -38,12 +39,21 @@ def run_knowledge_fanout(knowledge_qa, intent, content, school_fallback=None, co
         for topic in _resolve_topics(intent)
     ]
 
+    # Embed the query once for the whole fan-out. On failure, leave it None so
+    # each answer() embeds internally (resilience over the micro-optimization).
+    query_vector = None
+    try:
+        query_vector = knowledge_qa.embed_query(content)
+    except Exception as exc:
+        logger.warning("knowledge fan-out query embed failed, per-call fallback: %r", exc)
+
     def _answer_one(task):
         school, topic = task
         try:
             return knowledge_qa.answer(
                 question=content, school=school, topic=topic,
                 conversation_context=conversation_context,
+                query_vector=query_vector,
             )
         except Exception as exc:
             logger.warning(

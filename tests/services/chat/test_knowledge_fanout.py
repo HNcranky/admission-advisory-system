@@ -12,11 +12,35 @@ class FakeKnowledgeQA:
         self._raise_for = raise_for or set()
         self.calls = []
 
-    def answer(self, question, school, topic, conversation_context=""):
+    def answer(self, question, school, topic, conversation_context="", query_vector=None):
         self.calls.append({"question": question, "school": school, "topic": topic})
         if school in self._raise_for:
             raise RuntimeError("boom")
         return self._by_school.get(school, KnowledgeQAResult(has_data=False, confidence=0.0))
+
+
+class _EmbedCountingQA(FakeKnowledgeQA):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.embed_calls = 0
+        self.vectors_seen = []
+
+    def embed_query(self, question):
+        self.embed_calls += 1
+        return [0.5, 0.5]
+
+    def answer(self, question, school, topic, conversation_context="", query_vector=None):
+        self.vectors_seen.append(query_vector)
+        return super().answer(question, school, topic, conversation_context)
+
+
+def test_fanout_embeds_query_once_and_shares_vector():
+    qa = _EmbedCountingQA()
+    intent = IntentResult(route="HYBRID", schools=["VNU-UET", "HUST"], topics=["tuition"])
+    run_knowledge_fanout(qa, intent, "so sánh học phí", school_fallback=None)
+    assert qa.embed_calls == 1                       # one embed for the whole fan-out
+    assert len(qa.vectors_seen) == 2                 # but both tasks ran
+    assert all(v == [0.5, 0.5] for v in qa.vectors_seen)
 
 
 def test_fanout_calls_once_per_school_topic_pair():
@@ -71,7 +95,7 @@ class _CtxRecordingQA:
     def __init__(self):
         self.last_ctx = None
 
-    def answer(self, question, school, topic, conversation_context=""):
+    def answer(self, question, school, topic, conversation_context="", query_vector=None):
         self.last_ctx = conversation_context
         return KnowledgeQAResult(has_data=False, confidence=0.0)
 
@@ -107,7 +131,7 @@ class _ConcurrentQA:
         self._active = 0
         self.max_concurrent = 0
 
-    def answer(self, question, school, topic, conversation_context=""):
+    def answer(self, question, school, topic, conversation_context="", query_vector=None):
         with self._lock:
             self._active += 1
             self.max_concurrent = max(self.max_concurrent, self._active)

@@ -58,7 +58,7 @@ class FakeKnowledgeQA:
         self._raise = raise_exc
         self.calls = []
 
-    def answer(self, question, school, topic, conversation_context=""):
+    def answer(self, question, school, topic, conversation_context="", query_vector=None):
         self.calls.append({"question": question, "school": school, "topic": topic})
         if self._raise:
             raise RuntimeError("simulated knowledge-qa failure")

@@ -19,7 +19,7 @@ class FakeKnowledgeQA:
     def __init__(self, by_school=None):
         self._by_school = by_school or {}
 
-    def answer(self, question, school, topic, conversation_context=""):
+    def answer(self, question, school, topic, conversation_context="", query_vector=None):
         return self._by_school.get(school, KnowledgeQAResult(has_data=False, confidence=0.0))
 
 

@@ -14,7 +14,7 @@ class FakeKnowledgeQA:
         self._delay = delay
         self.calls = []
 
-    def answer(self, question, school, topic, conversation_context=""):
+    def answer(self, question, school, topic, conversation_context="", query_vector=None):
         self.calls.append({"school": school, "topic": topic})
         if self._delay:
             time.sleep(self._delay)
