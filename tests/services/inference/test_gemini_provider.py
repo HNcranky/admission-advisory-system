@@ -272,3 +272,23 @@ def test_max_tokens_none_leaves_config_unbounded():
     provider = GeminiProvider(pool=pool)
     provider.generate(_request(), _policy())  # _policy() → max_tokens None
     assert captured["config"].max_output_tokens is None
+
+
+# --- thinking budget -----------------------------------------------------------
+
+def test_thinking_budget_sets_thinking_config():
+    captured = {}
+    pool = _pool({"k1": FakeClient(text='{"ok": true}', captured=captured)})
+    provider = GeminiProvider(pool=pool)
+    policy = InferencePolicy(agent_name="qa", primary_model="gemini-2.5-flash", thinking_budget=0)
+    provider.generate(_request(), policy)
+    assert captured["config"].thinking_config is not None
+    assert captured["config"].thinking_config.thinking_budget == 0
+
+
+def test_no_thinking_budget_leaves_thinking_config_unset():
+    captured = {}
+    pool = _pool({"k1": FakeClient(text='{"ok": true}', captured=captured)})
+    provider = GeminiProvider(pool=pool)
+    provider.generate(_request(), _policy())  # _policy() → thinking_budget None
+    assert captured["config"].thinking_config is None

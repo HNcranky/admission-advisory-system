@@ -44,15 +44,22 @@ class GeminiProvider:
             ] + [request.user_prompt]
         else:
             contents = request.user_prompt
+
+        config_kwargs = dict(
+            system_instruction=request.system_prompt,
+            temperature=request.temperature,
+            response_mime_type="application/json" if json_mode else None,
+            max_output_tokens=policy.max_tokens,
+        )
+        if policy.thinking_budget is not None:
+            config_kwargs["thinking_config"] = types.ThinkingConfig(
+                thinking_budget=policy.thinking_budget
+            )
+
         return client.models.generate_content(
             model=policy.primary_model,
             contents=contents,
-            config=types.GenerateContentConfig(
-                system_instruction=request.system_prompt,
-                temperature=request.temperature,
-                response_mime_type="application/json" if json_mode else None,
-                max_output_tokens=policy.max_tokens,
-            ),
+            config=types.GenerateContentConfig(**config_kwargs),
         )
 
     def _build_result(self, response, request, policy):
