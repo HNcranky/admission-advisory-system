@@ -60,8 +60,8 @@ def test_package_evidence_keeps_options_when_db_enrichment_missing(monkeypatch):
         def execute(self, *args, **kwargs):
             return None
 
-        def fetchone(self):
-            return None
+        def fetchall(self):
+            return []
 
     class CursorContext:
         def __enter__(self):
@@ -76,3 +76,46 @@ def test_package_evidence_keeps_options_when_db_enrichment_missing(monkeypatch):
 
     assert len(options) == 2
     assert all(option.fetched_at is None for option in options)
+
+
+def test_package_evidence_batches_db_lookup_into_one_query(monkeypatch):
+    candidates = [
+        candidate("https://uet.vnu.edu.vn/a", 120),
+        candidate("https://vnu.edu.vn/b.pdf", 150),
+    ]
+    record = detect_quota_conflicts(candidates)[0]
+
+    counts = {"cursor": 0, "execute": 0}
+
+    class Cursor:
+        def execute(self, sql, params=None):
+            counts["execute"] += 1
+            assert "= ANY(" in sql  # batched, not per-option
+
+        def fetchall(self):
+            return [
+                ("https://uet.vnu.edu.vn/a", "2026-01-01"),
+                ("https://vnu.edu.vn/b.pdf", "2026-01-02"),
+            ]
+
+    class CursorContext:
+        def __enter__(self):
+            counts["cursor"] += 1
+            return Cursor()
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    monkeypatch.setattr(
+        "services.conflict.evidence_agent.get_cursor",
+        lambda commit=False: CursorContext(),
+    )
+
+    options = package_evidence(record, candidates)
+
+    assert counts["cursor"] == 1   # one connection for the whole record
+    assert counts["execute"] == 1  # one query, not one per option
+    assert {o.source_url: o.fetched_at for o in options} == {
+        "https://uet.vnu.edu.vn/a": "2026-01-01",
+        "https://vnu.edu.vn/b.pdf": "2026-01-02",
+    }
