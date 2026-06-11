@@ -7,11 +7,15 @@ from pydantic import ValidationError
 from ingestion.knowledge.registry.knowledge_registry import KnowledgeRegistry
 
 
-def test_default_seed_loads_three_schools_each_with_sources():
+def test_default_seed_loads_registry_schools_each_with_sources():
+    # The curated http registry seed covers HUST and VNU-UET. NEU is sourced from
+    # local PDFs (data/knowledge/pdf_scanned/) instead — its official documents are
+    # scanned and its public URLs were broken — so it is intentionally not in the
+    # registry seed and is ingested via `pipeline --local-dir`.
     reg = KnowledgeRegistry()
     schools = reg.schools()
-    assert set(schools) >= {"HUST", "NEU", "VNU-UET"}
-    for school in ("HUST", "NEU", "VNU-UET"):
+    assert set(schools) >= {"HUST", "VNU-UET"}
+    for school in ("HUST", "VNU-UET"):
         sources = reg.get_sources_by_school(school)
         assert len(sources) >= 1, f"{school} has no sources"
 
