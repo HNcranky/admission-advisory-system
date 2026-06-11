@@ -20,13 +20,6 @@ def build_default_gateway() -> LLMGateway:
                 "allow_fallback": True,
                 "fallback_model": "gemini-2.5-flash-lite",
             },
-            "resolution_agent": {
-                "output_mode": "json",
-                "max_retries": 1,
-                "allow_fallback": True,
-                "fallback_model": "gemini-2.5-flash",
-                "max_tokens": 256,
-            },
             "explanation_agent": {"output_mode": "free_text", "max_retries": 1},
             "knowledge_qa_agent": {
                 "primary_model": "gemini-2.5-flash",
