@@ -78,6 +78,17 @@ class KnowledgeQAService:
             return KnowledgeQAResult(has_data=False, confidence=confidence)
         return self._generate(question, chunks, confidence, conversation_context)
 
+    def generate_from_chunks(
+        self, question: str, chunks, conversation_context: str = ""
+    ) -> KnowledgeQAResult:
+        """Eval hook: run only the model-dependent generation step on a fixed set
+        of chunks, bypassing retrieval. Mirrors the post-retrieval branch of
+        answer(), so what it measures is exactly what production runs."""
+        confidence = chunks[0].score if chunks else 0.0
+        if not chunks:
+            return KnowledgeQAResult(has_data=False, confidence=confidence)
+        return self._generate(question, chunks, confidence, conversation_context)
+
     def national_chunks(self, query_vector, topic):
         """National-scope (Bộ GD&ĐT) chunks for a topic, score-filtered. The result
         depends only on the topic, not the school, so the fan-out can compute this
