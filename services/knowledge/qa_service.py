@@ -78,6 +78,16 @@ class KnowledgeQAService:
             return KnowledgeQAResult(has_data=False, confidence=confidence)
         return self._generate(question, chunks, confidence, conversation_context)
 
+    def retrieve(self, question: str, school, topic):
+        """Production-equivalent retrieval (embed → vector_search → national
+        augment), exposed so the eval curation can freeze the same chunks
+        production would surface. Mirrors answer()'s retrieval branch."""
+        embedding = self.embed_query(question)
+        chunks = self._chunk_repository.vector_search(
+            embedding, school=school, topic=topic, limit=self._top_k
+        )
+        return self._augment_with_national(embedding, school, topic, chunks)
+
     def generate_from_chunks(
         self, question: str, chunks, conversation_context: str = ""
     ) -> KnowledgeQAResult:
