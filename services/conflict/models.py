@@ -44,4 +44,3 @@ class ResolutionOutcome(BaseModel):
     rationale: str
     decision_axes: List[str] = Field(default_factory=list)
     uncertainty_reason: Optional[str] = None
-    used_llm_tiebreaker: bool = False

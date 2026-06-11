@@ -91,7 +91,6 @@ def test_cutoff_decision_changing_is_unresolved_marks_uncertain_no_llm():
     outcome = output.resolution_outcomes[0]
     assert outcome.field_name == "cutoff_score"
     assert outcome.status == "unresolved"
-    assert outcome.used_llm_tiebreaker is False
     assert "26.2" in outcome.rationale and "26.8" in outcome.rationale
     assert "cutoff_score" in output.retrieved_programs[0].data_uncertain_fields
     assert output.conflicts                                # nuôi policy flag retrieval_conflicts_detected
