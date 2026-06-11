@@ -1,0 +1,45 @@
+{
+  "_comment": "Seed questions for golden-set curation. school slugs MUST match the corpus exactly (KNOWN_SCHOOLS = HUST, NEU, VNU-UET; null = national/any). topic is a soft filter (NULL-topic official PDFs match any topic). ~5 abstain seeds ask for facts NOT in the corpus.",
+  "seeds": [
+    {"question": "Chỉ tiêu tuyển sinh ngành Khoa học Máy tính của HUST năm 2025 là bao nhiêu?", "school": "HUST", "topic": "quota", "abstain": false},
+    {"question": "HUST tuyển bao nhiêu chỉ tiêu cho ngành Kỹ thuật Điện tử - Viễn thông?", "school": "HUST", "topic": "quota", "abstain": false},
+    {"question": "Tổng chỉ tiêu tuyển sinh đại học chính quy của HUST năm nay là bao nhiêu?", "school": "HUST", "topic": "quota", "abstain": false},
+    {"question": "HUST có những phương thức xét tuyển nào?", "school": "HUST", "topic": "admission_method", "abstain": false},
+    {"question": "Điều kiện để xét tuyển tài năng vào HUST là gì?", "school": "HUST", "topic": "admission_method", "abstain": false},
+    {"question": "HUST có tổ chức kỳ thi đánh giá tư duy không và dùng để xét tuyển ngành nào?", "school": "HUST", "topic": "admission_method", "abstain": false},
+    {"question": "Điểm chuẩn ngành Khoa học Máy tính của HUST năm 2024 là bao nhiêu?", "school": "HUST", "topic": "cutoff", "abstain": false},
+    {"question": "Điểm chuẩn theo phương thức xét điểm thi tốt nghiệp của HUST khoảng bao nhiêu?", "school": "HUST", "topic": "cutoff", "abstain": false},
+    {"question": "Học phí chương trình chuẩn của HUST một năm khoảng bao nhiêu?", "school": "HUST", "topic": "tuition", "abstain": false},
+    {"question": "Học phí các chương trình tiên tiến của HUST có cao hơn chương trình chuẩn không?", "school": "HUST", "topic": "tuition", "abstain": false},
+    {"question": "HUST có chính sách học bổng nào cho sinh viên có thành tích xuất sắc không?", "school": "HUST", "topic": "scholarship", "abstain": false},
+    {"question": "Đối tượng nào được ưu tiên xét tuyển thẳng vào HUST?", "school": "HUST", "topic": "admission_policy", "abstain": false},
+
+    {"question": "Chỉ tiêu ngành Công nghệ Thông tin của VNU-UET năm nay là bao nhiêu?", "school": "VNU-UET", "topic": "quota", "abstain": false},
+    {"question": "VNU-UET tuyển bao nhiêu chỉ tiêu cho ngành Trí tuệ nhân tạo?", "school": "VNU-UET", "topic": "quota", "abstain": false},
+    {"question": "VNU-UET sử dụng những phương thức xét tuyển nào?", "school": "VNU-UET", "topic": "admission_method", "abstain": false},
+    {"question": "VNU-UET có xét tuyển bằng kết quả thi đánh giá năng lực của ĐHQG Hà Nội không?", "school": "VNU-UET", "topic": "admission_method", "abstain": false},
+    {"question": "Điểm chuẩn ngành Công nghệ Thông tin của VNU-UET năm 2024 là bao nhiêu?", "school": "VNU-UET", "topic": "cutoff", "abstain": false},
+    {"question": "Học phí ngành Công nghệ Thông tin của VNU-UET một năm khoảng bao nhiêu?", "school": "VNU-UET", "topic": "tuition", "abstain": false},
+    {"question": "VNU-UET có chương trình chất lượng cao không và học phí ra sao?", "school": "VNU-UET", "topic": "tuition", "abstain": false},
+    {"question": "VNU-UET có học bổng cho tân sinh viên đạt điểm đầu vào cao không?", "school": "VNU-UET", "topic": "scholarship", "abstain": false},
+    {"question": "Tổ hợp xét tuyển ngành Khoa học Máy tính của VNU-UET gồm những môn nào?", "school": "VNU-UET", "topic": "admission_method", "abstain": false},
+
+    {"question": "Chỉ tiêu tuyển sinh ngành Kinh tế của NEU năm nay là bao nhiêu?", "school": "NEU", "topic": "quota", "abstain": false},
+    {"question": "Tổng chỉ tiêu tuyển sinh đại học chính quy của NEU là bao nhiêu?", "school": "NEU", "topic": "quota", "abstain": false},
+    {"question": "NEU có những phương thức xét tuyển nào?", "school": "NEU", "topic": "admission_method", "abstain": false},
+    {"question": "NEU có xét tuyển kết hợp chứng chỉ tiếng Anh quốc tế không?", "school": "NEU", "topic": "admission_method", "abstain": false},
+    {"question": "Điểm chuẩn ngành Marketing của NEU năm 2024 là bao nhiêu?", "school": "NEU", "topic": "cutoff", "abstain": false},
+    {"question": "Học phí chương trình chuẩn của NEU một năm khoảng bao nhiêu?", "school": "NEU", "topic": "tuition", "abstain": false},
+    {"question": "NEU có chương trình đào tạo bằng tiếng Anh không và học phí thế nào?", "school": "NEU", "topic": "tuition", "abstain": false},
+    {"question": "NEU có chính sách học bổng khuyến khích học tập cho sinh viên không?", "school": "NEU", "topic": "scholarship", "abstain": false},
+
+    {"question": "Quy chế tuyển sinh đại học của Bộ Giáo dục và Đào tạo quy định thế nào về điểm ưu tiên khu vực?", "school": null, "topic": "admission_policy", "abstain": false},
+    {"question": "Theo quy định chung, thí sinh được đăng ký tối đa bao nhiêu nguyện vọng xét tuyển?", "school": null, "topic": "admission_policy", "abstain": false},
+
+    {"question": "HUST có ký túc xá miễn phí cho toàn bộ sinh viên năm nhất không?", "school": "HUST", "topic": "scholarship", "abstain": true},
+    {"question": "VNU-UET có cam kết bố trí việc làm cho 100% sinh viên sau khi tốt nghiệp không?", "school": "VNU-UET", "topic": "career", "abstain": true},
+    {"question": "NEU có chương trình liên kết đào tạo với Đại học Harvard không?", "school": "NEU", "topic": "program_overview", "abstain": true},
+    {"question": "HUST có tuyển sinh ngành Y khoa hệ bác sĩ đa khoa không?", "school": "HUST", "topic": "quota", "abstain": true},
+    {"question": "VNU-UET có miễn hoàn toàn học phí cho sinh viên ngành Trí tuệ nhân tạo không?", "school": "VNU-UET", "topic": "tuition", "abstain": true}
+  ]
+}

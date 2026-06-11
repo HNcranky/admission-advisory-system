@@ -244,3 +244,6 @@ latex/main.pdf
 # Local diagram toolchain (PlantUML jar, ~22 MB)
 tools/plantuml.jar
 
+
+# Curation scratch artifact (regenerated; promote reviewed copy to golden_set.json)
+eval/knowledge_qa/golden_set.candidate.json
