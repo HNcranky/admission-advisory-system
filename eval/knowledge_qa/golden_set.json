@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "hust-quota-cntt-2026",
+      "question": "Chỉ tiêu tuyển sinh ngành Khoa học Máy tính của HUST năm 2026 là bao nhiêu?",
+      "school": "hust",
+      "topic": "quota",
+      "chunks": [
+        {
+          "chunk_text": "Năm 2026, ngành Khoa học Máy tính (mã IT1) của Đại học Bách khoa Hà Nội tuyển 300 chỉ tiêu theo phương thức xét điểm thi tốt nghiệp THPT.",
+          "score": 0.83,
+          "school": "hust",
+          "topic": "quota",
+          "source_url": "https://hust.edu.vn/tuyensinh-2026"
+        },
+        {
+          "chunk_text": "Học phí chương trình chuẩn năm học 2026 dao động 24-30 triệu đồng/năm.",
+          "score": 0.55,
+          "school": "hust",
+          "topic": "tuition",
+          "source_url": "https://hust.edu.vn/hocphi-2026"
+        }
+      ],
+      "expected_answer_points": ["300 chỉ tiêu"],
+      "expected_source_ids": [1],
+      "abstain": false
+    },
+    {
+      "id": "hust-scholarship-abstain",
+      "question": "Trường có học bổng toàn phần cho thủ khoa đầu vào không?",
+      "school": "hust",
+      "topic": "scholarship",
+      "chunks": [
+        {
+          "chunk_text": "Năm 2026, ngành Khoa học Máy tính (mã IT1) của Đại học Bách khoa Hà Nội tuyển 300 chỉ tiêu theo phương thức xét điểm thi tốt nghiệp THPT.",
+          "score": 0.42,
+          "school": "hust",
+          "topic": "quota",
+          "source_url": "https://hust.edu.vn/tuyensinh-2026"
+        }
+      ],
+      "expected_answer_points": [],
+      "expected_source_ids": [],
+      "abstain": true
+    }
+  ]
+}
