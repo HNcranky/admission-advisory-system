@@ -7,7 +7,18 @@ from ingestion.models.pipeline_models import ParsedContent, DocumentType
 logger = logging.getLogger(__name__)
 
 
-def parse_html(content: bytes, url: str = "") -> ParsedContent:
+class ContentSelectorNotFound(Exception):
+    """Raised when a caller-supplied CSS selector matches no element."""
+
+    def __init__(self, selector: str, url: str = ""):
+        self.selector = selector
+        self.url = url
+        super().__init__(
+            f"CSS selector {selector!r} matched no element on {url or '<html>'}"
+        )
+
+
+def parse_html(content: bytes, url: str = "", selector: str | None = None) -> ParsedContent:
     """
     Parse HTML content into structured ParsedContent.
 
@@ -40,7 +51,12 @@ def parse_html(content: bytes, url: str = "") -> ParsedContent:
         title = title_tag.get_text(strip=True)
 
                                                                   
-    content_tag = _find_content_area(soup)
+    if selector is not None:
+        content_tag = soup.select_one(selector)
+        if content_tag is None:
+            raise ContentSelectorNotFound(selector, url)
+    else:
+        content_tag = _find_content_area(soup)
 
                                                                   
     headings = _extract_headings(content_tag)
