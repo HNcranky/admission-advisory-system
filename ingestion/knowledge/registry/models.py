@@ -19,6 +19,7 @@ KNOWLEDGE_DOCUMENT_TYPES = {
     "program_overview_page",
     "career_page",
     "dormitory_page",
+    "exam_guide",
 }
 
 

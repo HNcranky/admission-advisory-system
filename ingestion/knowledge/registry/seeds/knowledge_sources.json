@@ -45,5 +45,41 @@
     "document_type": "tuition_page",
     "topic": "tuition",
     "year": 2025
+  },
+  {
+    "school": "MOET",
+    "source_url": "https://ts.hust.edu.vn/tin-tuc/gioi-thieu-ve-ky-thi-danh-gia-tu-duy-tsa",
+    "document_type": "exam_guide",
+    "topic": "admission_policy",
+    "fetch_strategy": "http",
+    "selector": "#content",
+    "year": 2026
+  },
+  {
+    "school": "MOET",
+    "source_url": "https://www.hsa.edu.vn/ky-thi/ky-thi-dgnl-hsa",
+    "document_type": "exam_guide",
+    "topic": "admission_policy",
+    "fetch_strategy": "http",
+    "selector": ".container > article:nth-child(1)",
+    "year": 2026
+  },
+  {
+    "school": "MOET",
+    "source_url": "https://ts.hust.edu.vn/tin-tuc/huong-dan-dang-ky-xet-tuyen-tai-nang-2026",
+    "document_type": "exam_guide",
+    "topic": "admission_policy",
+    "fetch_strategy": "http",
+    "selector": "#content",
+    "year": 2026
+  },
+  {
+    "school": "MOET",
+    "source_url": "https://www.hsa.edu.vn/lich-thi/lich-thi-hsa",
+    "document_type": "exam_guide",
+    "topic": "admission_policy",
+    "fetch_strategy": "http",
+    "selector": ".container > article:nth-child(1)",
+    "year": 2026
   }
 ]

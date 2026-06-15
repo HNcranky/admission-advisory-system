@@ -1,6 +1,6 @@
 import logging
 from typing import List, Dict
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup, NavigableString, Tag
 
 from ingestion.models.pipeline_models import ParsedContent, DocumentType
 
@@ -70,7 +70,12 @@ def parse_html(content: bytes, url: str = "", selector: str | None = None) -> Pa
                                                                   
     images = _extract_images(content_tag)
 
-                                                                  
+    # Replace each <table> with its markdown equivalent so the text field
+    # preserves tabular structure for RAG (same intent as PDF OCR's "Bảng → bảng markdown").
+    for table in content_tag.find_all("table"):
+        md = _table_to_markdown(table)
+        table.replace_with(NavigableString(f"\n\n{md}\n\n") if md else "")
+
     text = content_tag.get_text(separator="\n", strip=True)
 
     parsed = ParsedContent(
@@ -115,6 +120,27 @@ def _find_content_area(soup: BeautifulSoup) -> Tag:
 
                     
     return soup.body or soup
+
+
+def _table_to_markdown(table: Tag) -> str:
+    """Convert an HTML <table> to a GitHub-flavoured markdown table string."""
+    rows: list[list[str]] = []
+    for tr in table.find_all("tr"):
+        cells = [
+            td.get_text(" ", strip=True).replace("|", "\\|")
+            for td in tr.find_all(["td", "th"])
+        ]
+        if cells:
+            rows.append(cells)
+    if not rows:
+        return ""
+    max_cols = max(len(r) for r in rows)
+    rows = [r + [""] * (max_cols - len(r)) for r in rows]
+    sep = "| " + " | ".join(["---"] * max_cols) + " |"
+    lines = ["| " + " | ".join(rows[0]) + " |", sep]
+    for row in rows[1:]:
+        lines.append("| " + " | ".join(row) + " |")
+    return "\n".join(lines)
 
 
 def _extract_headings(tag: Tag) -> List[str]:
