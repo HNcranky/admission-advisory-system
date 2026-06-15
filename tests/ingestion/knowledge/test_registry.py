@@ -48,3 +48,24 @@ def test_invalid_entry_in_seed_raises(tmp_path):
     ]), encoding="utf-8")
     with pytest.raises(ValidationError):
         KnowledgeRegistry(seed_path=seed)
+
+
+def test_source_accepts_optional_selector(tmp_path):
+    seed = tmp_path / "seed.json"
+    seed.write_text(json.dumps([
+        {"school": "MOET", "source_url": "https://x",
+         "document_type": "faq", "topic": "admission_policy",
+         "fetch_strategy": "http", "selector": "#content"},
+    ]), encoding="utf-8")
+    reg = KnowledgeRegistry(seed_path=seed)
+    assert reg.all_sources()[0].selector == "#content"
+
+
+def test_source_selector_defaults_none(tmp_path):
+    seed = tmp_path / "seed.json"
+    seed.write_text(json.dumps([
+        {"school": "X", "source_url": "https://x",
+         "document_type": "tuition_page", "topic": "tuition"},
+    ]), encoding="utf-8")
+    reg = KnowledgeRegistry(seed_path=seed)
+    assert reg.all_sources()[0].selector is None

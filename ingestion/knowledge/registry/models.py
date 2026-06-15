@@ -31,6 +31,7 @@ class KnowledgeSource(BaseModel):
     program: str | None = None
     year: int | None = None
     active: bool = True
+    selector: str | None = None
 
     @field_validator("topic")
     @classmethod
