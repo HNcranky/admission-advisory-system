@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from ingestion.fetchers.http_fetcher import http_fetch
-from ingestion.parsers.html_parser import parse_html
+from ingestion.parsers.html_parser import ContentSelectorNotFound, parse_html
 from ingestion.knowledge.local_metadata import (
     build_gateway_classifier,
     load_overrides,
@@ -72,11 +72,13 @@ class KnowledgePipeline:
         self.chunk_repo = chunk_repo if chunk_repo is not None else KnowledgeChunkRepository()
         self.fetch = fetch if fetch is not None else http_fetch
 
-    def _extract_text(self, fetch_result, url: str) -> str:
+    def _extract_text(self, fetch_result, url: str, selector: str | None = None) -> str:
         ctype = (fetch_result.content_type or "").lower()
         if "pdf" in ctype or url.lower().endswith(".pdf"):
+            if selector is not None:
+                logger.warning("selector %r ignored for PDF source %s", selector, url)
             return pages_to_marked_text(extract_pages(fetch_result.raw_content))
-        return parse_html(fetch_result.raw_content, url).text
+        return parse_html(fetch_result.raw_content, url, selector=selector).text
 
     def _chunk_embed_upsert(self, doc_id, text, *, school, topic, program,
                             year, document_type, source_url):
@@ -135,7 +137,14 @@ class KnowledgePipeline:
             logger.info("Unchanged, skipping %s", source.source_url)
             return KnowledgeIngestResult(source_url=source.source_url, skipped=True)
 
-        text = self._extract_text(fr, source.source_url)
+        try:
+            text = self._extract_text(fr, source.source_url, source.selector)
+        except ContentSelectorNotFound:
+            logger.warning(
+                "selector %r not found on %s — skipping (fix selector and re-run)",
+                source.selector, source.source_url,
+            )
+            return KnowledgeIngestResult(source_url=source.source_url, skipped=True)
         doc_id = self.doc_repo.get_or_create_document(KnowledgeDocument(
             school=source.school,
             document_type=source.document_type,
