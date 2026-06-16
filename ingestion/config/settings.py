@@ -98,6 +98,10 @@ ADVISORY_RUN_QUEUE_MAX = int(os.getenv("ADVISORY_RUN_QUEUE_MAX", 32))
 
 WEB_THREADPOOL_SIZE = int(os.getenv("WEB_THREADPOOL_SIZE", 40))
 
+DB_POOL_ENABLED = os.getenv("DB_POOL_ENABLED", "false").lower() == "true"
+DB_POOL_MIN = int(os.getenv("DB_POOL_MIN", 1))
+DB_POOL_MAX = int(os.getenv("DB_POOL_MAX", 10))
+
 FETCH_TIMEOUT = int(os.getenv("FETCH_TIMEOUT", 30))
 FETCH_MAX_RETRIES = int(os.getenv("FETCH_MAX_RETRIES", 3))
 FETCH_RETRY_BACKOFF = float(os.getenv("FETCH_RETRY_BACKOFF", 1.5))

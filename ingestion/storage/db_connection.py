@@ -1,20 +1,23 @@
-                                    
 """
 Database connection manager.
-Provides a simple connection pool for PostgreSQL.
+Provides a connection factory that optionally uses a shared pool.
 """
 
 import logging
 import psycopg2
 from contextlib import contextmanager
 
-from ingestion.config.settings import DB_CONFIG
+from ingestion.config.settings import DB_CONFIG, DB_POOL_ENABLED
+from services.db.pool import release
 
 logger = logging.getLogger(__name__)
 
 
 def get_connection():
-    """Create a new database connection."""
+    """Return a database connection (pooled or direct depending on DB_POOL_ENABLED)."""
+    if DB_POOL_ENABLED:
+        from services.db.pool import lease
+        return lease(DB_CONFIG)
     return psycopg2.connect(
         host=DB_CONFIG["host"],
         port=DB_CONFIG["port"],
@@ -44,4 +47,4 @@ def get_cursor(commit=True):
         raise
     finally:
         cur.close()
-        conn.close()
+        release(conn)

@@ -2,10 +2,12 @@
 
 Gom từ 4 bản _cursor copy-paste + 2 bản _vector_literal trong services/.
 Hành vi y hệt bản cũ: commit khi commit=True, rollback + re-raise khi lỗi,
-cur.close() rồi conn.close() trong finally.
+cur.close() rồi release(conn) trong finally.
 """
 from contextlib import contextmanager
 from typing import Optional
+
+from services.db.pool import release
 
 
 @contextmanager
@@ -23,7 +25,7 @@ def cursor(connection_factory, commit: bool = False):
         finally:
             cur.close()
     finally:
-        conn.close()
+        release(conn)
 
 
 def vector_literal(embedding) -> Optional[str]:
