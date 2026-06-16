@@ -219,6 +219,65 @@ class ChatSessionRepository:
                 (status, session_token),
             )
 
+    def enqueue_run(self, session_token: str, profile_state, dispatch_args: dict) -> int:
+        """Insert a run in 'queued' status with dispatch_args for the durable poller."""
+        with self._cursor(commit=True) as cur:
+            cur.execute(
+                """
+                INSERT INTO chat_advisory_runs
+                    (session_id, profile_snapshot_json, dispatch_args_json)
+                SELECT id, %s, %s
+                FROM chat_sessions
+                WHERE session_token = %s
+                RETURNING id
+                """,
+                (self._jsonb(profile_state), self._jsonb(dispatch_args), session_token),
+            )
+            run_id = cur.fetchone()[0]
+            cur.execute(
+                """
+                UPDATE chat_sessions
+                SET latest_run_id = %s, status = 'running', updated_at = NOW()
+                WHERE session_token = %s
+                """,
+                (run_id, session_token),
+            )
+        return run_id
+
+    def claim_next_queued_run(self, worker_id: str):
+        """Atomically claim the oldest queued run → 'running'. Returns dict or None."""
+        with self._cursor(commit=True) as cur:
+            cur.execute(
+                """
+                UPDATE chat_advisory_runs r
+                SET status = 'running', started_at = NOW(),
+                    claimed_at = NOW(), worker_id = %s
+                WHERE r.id = (
+                    SELECT id FROM chat_advisory_runs
+                    WHERE status = 'queued'
+                    ORDER BY created_at
+                    FOR UPDATE SKIP LOCKED
+                    LIMIT 1
+                )
+                RETURNING r.id, r.session_id, r.dispatch_args_json
+                """,
+                (worker_id,),
+            )
+            row = cur.fetchone()
+            if row is None:
+                return None
+            run_id, session_id, dispatch_args = row[0], row[1], row[2]
+            cur.execute(
+                "SELECT session_token FROM chat_sessions WHERE id = %s",
+                (session_id,),
+            )
+            token = cur.fetchone()[0]
+        return {
+            "run_id": run_id,
+            "session_token": token,
+            "dispatch_args": dispatch_args or {},
+        }
+
     def reap_stale_runs(self):
         """Mark runs stuck in 'queued'/'running' (orphaned after restart) as 'failed'.
 

@@ -102,6 +102,9 @@ DB_POOL_ENABLED = os.getenv("DB_POOL_ENABLED", "true").lower() == "true"
 DB_POOL_MIN = int(os.getenv("DB_POOL_MIN", 1))
 DB_POOL_MAX = int(os.getenv("DB_POOL_MAX", 10))
 
+ADVISORY_DURABLE_QUEUE = os.getenv("ADVISORY_DURABLE_QUEUE", "false").lower() == "true"
+ADVISORY_QUEUE_POLL_SECONDS = float(os.getenv("ADVISORY_QUEUE_POLL_SECONDS", 1.0))
+
 FETCH_TIMEOUT = int(os.getenv("FETCH_TIMEOUT", 30))
 FETCH_MAX_RETRIES = int(os.getenv("FETCH_MAX_RETRIES", 3))
 FETCH_RETRY_BACKOFF = float(os.getenv("FETCH_RETRY_BACKOFF", 1.5))

@@ -61,6 +61,37 @@ class ConversationService:
         validates + delegates here."""
         if not result.should_start_run:
             return
+
+        from ingestion.config.settings import ADVISORY_DURABLE_QUEUE
+        if ADVISORY_DURABLE_QUEUE:
+            self._start_run_durable(session_token, content, result)
+        else:
+            self._start_run_executor(session_token, content, result)
+
+    def _start_run_durable(self, session_token: str, content: str, result: ConversationTurnResult) -> None:
+        """Enqueue into chat_advisory_runs for the durable poller to pick up."""
+        dispatch_args = self._build_dispatch_args(session_token, content, result)
+        self.repository.enqueue_run(session_token, result.profile_state, dispatch_args)
+
+    def _build_dispatch_args(self, session_token: str, content: str, result: ConversationTurnResult) -> dict:
+        if result.run_kind == "hybrid":
+            return {
+                "run_kind": "hybrid",
+                "content": content,
+                "profile_state": result.profile_state,
+                "intent": result.hybrid_intent or {"route": "HYBRID"},
+            }
+        closing_seed = max(0, self.repository.count_runs(session_token) - 1)
+        return {
+            "run_kind": "advisory",
+            "latest_user_message": content,
+            "profile_state": result.profile_state,
+            "correction_note": result.correction_note,
+            "closing_seed": closing_seed,
+        }
+
+    def _start_run_executor(self, session_token: str, content: str, result: ConversationTurnResult) -> None:
+        """Original in-process executor dispatch path (default when flag is off)."""
         run_id = self.repository.create_run(session_token, result.profile_state)
         if result.run_kind == "hybrid":
             from services.chat.hybrid_dispatcher import get_hybrid_dispatcher

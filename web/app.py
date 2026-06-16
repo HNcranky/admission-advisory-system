@@ -35,4 +35,22 @@ def build_app() -> FastAPI:
         except Exception:
             logger.exception("threadpool sizing skipped")
 
+    @app.on_event("startup")
+    def _start_queue_worker():
+        try:
+            from ingestion.config.settings import ADVISORY_DURABLE_QUEUE
+            if not ADVISORY_DURABLE_QUEUE:
+                return
+            import os
+            import socket
+            import threading
+            from services.chat.run_queue_worker import RunQueueWorker
+            worker_id = f"{socket.gethostname()}-{os.getpid()}"
+            worker = RunQueueWorker(worker_id=worker_id)
+            app.state.queue_worker = worker
+            threading.Thread(target=worker.run_forever, daemon=True).start()
+            logger.info("durable queue worker started: %s", worker_id)
+        except Exception:
+            logger.exception("queue worker startup skipped")
+
     return app
