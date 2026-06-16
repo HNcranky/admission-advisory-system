@@ -42,9 +42,10 @@ Three packages carry the core logic and are described in detail.
 
 \textbf{Advisory pipeline.}
 The pipeline is defined in \texttt{graph.py} as a LangGraph state graph over the shared state \texttt{state.py::AgentState}.
-Six nodes are registered and connected in a fixed linear order --- \texttt{profile}, \texttt{retrieve}, \texttt{conflict}, \texttt{reason}, \texttt{policy}, \texttt{explain} --- as shown in Figure~\ref{fig:advisory-graph}.
+That single Pydantic model threads the entire run: it carries the parsed \texttt{student\_profile} and \texttt{retrieval\_filters} the early stages write, the \texttt{retrieved\_programs}, \texttt{conflict\_records}, and \texttt{resolution\_outcomes} the middle stages attach, the \texttt{eligibility\_checks} and \texttt{ranked\_recommendations} the reasoning stage produces, and a \texttt{trace\_run\_id} that ties every stage's event to one run.
+Six nodes are registered and connected in a fixed linear order --- \texttt{profile}, \texttt{retrieve}, \texttt{conflict}, \texttt{reason}, \texttt{policy}, \texttt{explain} --- as shown in Figure~\ref{fig:advisory-graph} and in the wiring excerpt of Listing~\ref{lst:graph}.
 Each node is a thin function in the \texttt{agents} package that reads fields from the state, calls a service for the real work, writes its results back, and returns the state; for example, the reasoning node calls \texttt{reason\_candidates} and stores the resulting eligibility checks and ranked recommendations.
-Every node is wrapped by a tracing decorator that records a per-stage event, so the fixed structure of the graph is exactly what makes the pipeline observable.
+Every node is wrapped by a \texttt{traced(...)} decorator (from \texttt{services/tracing}) that records a per-stage event, so the fixed structure of the graph is exactly what makes the pipeline observable: because the edges are static rather than chosen at runtime, the stage sequence is identical on every run and each stage maps to one predictable trace event.
 
 \begin{figure}[H]
     \centering
@@ -53,14 +54,35 @@ Every node is wrapped by a tracing decorator that records a per-stage event, so 
     \label{fig:advisory-graph}
 \end{figure}
 
+The wiring, reproduced verbatim from \texttt{graph.py} in Listing~\ref{lst:graph}, makes the determinism explicit: each \texttt{add\_node} call wraps an agent function in the \texttt{traced(stage, sequence, extractor)} decorator before registering it, and the six \texttt{add\_edge} calls fix the order, leaving no conditional branch for an \gls{LLM} to choose at runtime.
+
+\begin{lstlisting}[language=Python,caption={Advisory pipeline wiring in \texttt{graph.py}: each node is registered through the tracing decorator and the edges fix a linear order},label=lst:graph]
+builder.add_node("profile",  traced("profile",  0, extract_profile)(profile_agent))
+builder.add_node("retrieve", traced("retrieve", 1, extract_candidates)(retrieval_agent))
+builder.add_node("conflict", traced("conflict", 2, extract_conflicts)(conflict_agent))
+builder.add_node("reason",   traced("reason",   3, extract_reasoning)(reasoning_agent))
+builder.add_node("policy",   traced("policy",   4, extract_policy)(policy_agent))
+builder.add_node("explain",  traced("explain",  5, extract_explanation)(explanation_agent))
+
+builder.set_entry_point("profile")
+builder.add_edge("profile", "retrieve")
+builder.add_edge("retrieve", "conflict")
+builder.add_edge("conflict", "reason")
+builder.add_edge("reason", "policy")
+builder.add_edge("policy", "explain")
+
+graph = builder.compile()
+\end{lstlisting}
+
 \textbf{Inference gateway.}
 All \gls{LLM} access is funneled through \texttt{services/inference/gateway.py}.
 A call site builds an \texttt{InferenceRequest} and receives an \texttt{InferenceResult}; the gateway resolves a per-agent policy from the model \texttt{registry.py} (primary model, optional fallback model, retry budget) and delegates the actual call to a provider in \texttt{providers/gemini\_provider.py}.
+The policy fields are resolved by the calling agent's name, so a high-volume step such as intent classification can run with \texttt{allow\_fallback} off and degrade to deterministic keywords, while a harder-to-reconstruct step can be granted a secondary model --- the resilience budget is allocated per call site rather than globally.
 This single choke point is where the retry, fallback, and failure-type logic of Section~\ref{section:5.2} lives, so every reasoning step in the system inherits the same resilience without repeating it.
 
 \textbf{Ingestion pipeline.}
 The ingestion layer is orchestrated by \texttt{ingestion/pipeline/ingestion\_pipeline.py}, which runs each source through five steps: fetch (dispatched by strategy), route (predict the document type), parse (dispatch the matching parser), extract (pull admission facts from parsed text and tables), and normalize (map raw facts to canonical records using per-school dictionaries).
-Normalized records are persisted by \texttt{storage/db\_writer.py}.
+Normalized records are persisted by \texttt{storage/db\_writer.py}, which upserts each record with an \texttt{ON CONFLICT} key that includes the source \gls{URL} (\texttt{(school\_id, admission\_year, program\_id, admission\_method, source\_url)}), so a re-fetch refreshes the same publication in place while two officially disagreeing sources remain two distinct rows.
 The pipeline can run for one source, for all sources of a school, or for an ad-hoc \gls{URL}, matching the operator use cases of Section~\ref{subsection:2.2.2}.
 
 \section{Detailed design}
