@@ -9,6 +9,7 @@ from agents.models import (
 )
 from services.conflict.models import ResolutionOutcome
 from services.conflict.source_labels import label_for_source
+from services.formatting import fmt_num as _fmt_num, program_label as _program_label
 from services.profile.admission_methods import method_display
 
 
@@ -87,18 +88,6 @@ def _field_label(name: str) -> str:
     return _FIELD_LABELS.get(name, name)
 
 
-def _fmt_num(value: Any) -> str:
-    """27.0 -> '27', 25.75 -> '25.75'."""
-    if isinstance(value, float) and value.is_integer():
-        return str(int(value))
-    return str(value)
-
-
-def _program_label(candidate: CandidateProgram) -> str:
-    """Tên ngành hiển thị: program_name_raw (tên thực của trường) ưu tiên,
-    fallback program_name (canonical) khi raw rỗng/null."""
-    raw = (candidate.program_name_raw or "").strip()
-    return raw or candidate.program_name
 
 
 def _cutoff_reference_line(assessment) -> str:
