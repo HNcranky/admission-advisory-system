@@ -45,12 +45,9 @@ in-process `ThreadPoolExecutor` the earlier draft described.
 
 Command: `docker exec advisory-db psql -U postgres -d admission -c "SELECT school_id, COUNT(*) ..."`
 
-<!-- TODO-VERIFY 2026-06-16: every count in the table below is the 2026-06-08 baseline.
-     The dev Postgres (Docker) was not running in this measurement environment, so these
-     were NOT re-measured. Re-run the psql commands above once `docker compose up -d --wait db`
-     succeeds, and update before the submission pass. Chapter plans citing these numbers
-     should carry a matching % TODO-VERIFY. -->
-
+Re-measured **2026-06-17** with the Docker dev DB up (`advisory-db`, healthy):
+every count below is unchanged from the 2026-06-08 baseline and is now confirmed.
+(Note: `knowledge_documents` groups by column `school`, not `school_id`.)
 
 | Table | Count |
 |---|---|
@@ -75,22 +72,25 @@ entered via the knowledge-corpus path, not the canonical ingestion registry.
 
 ## Test suite
 
-Command: `python -m pytest --collect-only -q` → **1011 tests collected** (2026-06-16).
-Test files: 167. Breakdown by directory: services 81, ingestion 52, web 8,
-integration 6, agents 7, e2e 4 (+ fixtures, conftest).
+Command: `python -m pytest --collect-only -q` → **1011 tests collected** at
+committed HEAD (2026-06-17). Test files: 167. Breakdown by directory: services 81,
+ingestion 52, web 8, integration 6, agents 7, e2e 4 (+ fixtures, conftest).
 Isolation: `tests/conftest.py::_isolate_test_db` redirects the whole suite to
 an auto-created `admission_test` database; dev data untouched.
+(The working tree carries an uncommitted `services/db/pool.py` refactor that adds
+one test to `tests/services/db/test_pool.py`, so a dirty checkout collects 1012;
+the thesis cites the committed-HEAD figure of 1011.)
 
-<!-- TODO-VERIFY 2026-06-16: full-suite pass/fail not re-run — Docker DB unavailable
-     in this environment. Collection count (1011) is current; the passed/failed/skipped
-     figures below are the 2026-06-08 baseline against 856 collected and MUST be re-run
-     (`docker compose up -d --wait db; python -m pytest -q`) before the submission pass. -->
-Full-suite result (`python -m pytest -q`, 2026-06-08 baseline, 445.76 s):
-**854 passed, 1 failed, 1 skipped** (of 856 collected — stale, see TODO above).
-- The 1 failure is the known deferred issue
-  `tests/ingestion/knowledge/test_registry.py::test_default_seed_loads_three_schools_each_with_sources`
-  — the default `KnowledgeRegistry` seed has no NEU sources (NEU documents
-  were ingested via the local-directory path instead).
+Full-suite result re-run **2026-06-17** with the Docker DB up, against committed
+HEAD (`git stash` of the uncommitted pool.py work), `python -m pytest -q`,
+≈22 s (two clean runs: 21.79 s, 24.02 s):
+**1009 passed, 1 skipped, 1 error** (of 1011 collected). The old NEU-seed failure
+no longer occurs (`test_default_seed_loads_three_schools_each_with_sources` now passes).
+- The 1 error is `tests/web/test_trace_endpoint_integration.py::test_trace_endpoint_returns_mixed_states_after_two_stages_complete`.
+  It **passes in isolation** (verified) and errors only under full-suite execution —
+  a test-ordering / shared connection-pool-state interaction, not a runtime defect.
+  The uncommitted `services/db/pool.py` refactor resolves it: with that work applied
+  the dirty tree runs **1011 passed, 1 skipped, 0 errors** (1012 collected).
 - The 1 skip is `tests/e2e/test_real_conflict_resolution.py` — requires
   `DATABASE_URL` + a real dataset dump fixture not in the repo.
 

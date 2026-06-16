@@ -170,7 +170,6 @@ Raising instead leaves the document outside the corpus, where a later run --- af
 
 \textbf{Result.}
 The pipeline ingests both structured and unstructured official sources end to end.
-% TODO-VERIFY 2026-06-16: store counts below are the 2026-06-08 baseline (FACTS.md); dev Postgres was unavailable for re-measurement. Re-run `docker compose up -d --wait db` then the psql counts in FACTS.md before the submission pass.
 The canonical store holds 136 admission records and 699 cutoff records for HUST and 20 admission records and 16 cutoff records for VNU-UET, and the knowledge corpus holds 18 documents and 406 chunks drawn from HUST, NEU, VNU-UET, and national \gls{MOET} regulations, as reported in Section~\ref{section:4.3}.
 The degenerate-output safeguard is what makes the scanned subset of that corpus ingestible: without it, a single repetition-loop page would either bloat the store with megabytes of junk or abort the document; with it, the bad page is isolated and the rest of the document is preserved.
 

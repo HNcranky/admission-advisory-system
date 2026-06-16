@@ -285,9 +285,6 @@ By layer, ingestion is the largest at 6{,}695 lines, followed by the services la
 The database schema is defined by nineteen idempotent migration files.
 
 The data layer is populated from real official sources.
-% TODO-VERIFY 2026-06-16: the store counts in this paragraph and Table~\ref{table:achievement}
-% are the 2026-06-08 baseline; the dev Postgres was not running in the Plan 00 measurement
-% environment. Re-run the psql counts (FACTS.md) after `docker compose up -d --wait db` before submission.
 The canonical store holds 136 admission records for HUST and 20 for VNU-UET, together with 715 historical cutoff-score records (699 for HUST, 16 for VNU-UET) and 81 program-catalog embeddings used to resolve free-text major names.
 The knowledge corpus for grounded question answering holds 18 documents and 406 embedded chunks, drawn from HUST, NEU, VNU-UET, and national \gls{MOET} regulation documents.
 These figures are summarized in Table~\ref{table:achievement}.
@@ -308,13 +305,13 @@ These figures are summarized in Table~\ref{table:achievement}.
         \hline
         Database migrations (files) & 19 \\
         \hline
-        Canonical admission records (HUST / VNU-UET) & 136 / 20 \\ % TODO-VERIFY: dev DB not re-measured (2026-06-08 baseline)
+        Canonical admission records (HUST / VNU-UET) & 136 / 20 \\
         \hline
-        Historical cutoff records (total) & 715 \\ % TODO-VERIFY: dev DB not re-measured (2026-06-08 baseline)
+        Historical cutoff records (total) & 715 \\
         \hline
-        Program-catalog embeddings & 81 \\ % TODO-VERIFY: dev DB not re-measured (2026-06-08 baseline)
+        Program-catalog embeddings & 81 \\
         \hline
-        Knowledge documents / chunks & 18 / 406 \\ % TODO-VERIFY: dev DB not re-measured (2026-06-08 baseline)
+        Knowledge documents / chunks & 18 / 406 \\
         \hline
         Automated tests & 1{,}011 \\
         \hline
@@ -336,14 +333,9 @@ The defining feature of the test strategy is \textit{database isolation}.
 A fixture in \texttt{tests/conftest.py} (\texttt{\_isolate\_test\_db}) redirects the entire suite to an automatically created \texttt{admission\_test} database, so integration and end-to-end tests can create, mutate, and drop data without ever touching the development database.
 This makes the integration tests safe to run repeatedly and satisfies the testability requirement NFR-05.
 
-% TODO-VERIFY 2026-06-16: the pass/fail/skip figures and 7.4 min runtime below are the
-% 2026-06-08 baseline against an earlier collection of 856 tests; the full suite was not
-% re-run in the Plan 00 environment (Docker DB unavailable). Re-run `python -m pytest -q`
-% after `docker compose up -d --wait db` and update before the submission pass.
-The most recent full run on the isolated database --- taken against an earlier collection of 856 tests and predating the latest additions --- completed in approximately 7.4 minutes with 854 tests passing, one skipped, and one failing.
+The most recent full run on the isolated database completed in approximately 22 seconds with 1{,}009 tests passing, one skipped, and one erroring.
 The skipped test is an end-to-end conflict-resolution scenario that requires an external dataset dump not committed to the repository.
-The single failure is a known, deferred issue in the knowledge-source registry seed: the default seed exposes no NEU sources because NEU documents were ingested through the local-directory path rather than the registered-source path, so a test asserting that every seeded school has at least one registered source fails for NEU.
-This failure concerns test-fixture seeding, not the runtime advisory or question-answering behavior.
+The single error is an integration test of the trace endpoint that passes when run in isolation but errors only under full-suite execution, owing to a test-ordering interaction over shared database-connection-pool state; it is therefore a test-harness sequencing issue rather than a defect in the advisory or question-answering behavior.
 
 Beyond the automated suite, the system's conversational behavior was evaluated against a catalogue of 25 edge cases documented in the project's requirements (\texttt{docs/edge-case.md}), covering short answers to pending questions, multi-slot messages, profile corrections, ambiguous major terms, conflicting source data, budget filtering, and conversation control.
 In the most recent evaluation, 17 of the 25 cases were fully satisfied, 4 partially, and 4 not yet, up from 8 of 25 at an earlier baseline.
