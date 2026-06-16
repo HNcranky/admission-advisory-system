@@ -44,6 +44,8 @@ What none of this prior work targets is a setting in which the grounding sources
     \centering
     \caption{Comparison of existing admission-information channels}
     \label{table:channel-comparison}
+    {\footnotesize
+    \setlength{\tabcolsep}{4pt}
     \begin{tabular}{|p{3.4cm}|c|c|c|c|}
         \hline
         \textbf{Channel} & \textbf{Freshness} & \textbf{Personalized} & \textbf{Conflict-aware} & \textbf{Always available} \\
@@ -58,7 +60,7 @@ What none of this prior work targets is a setting in which the grounding sources
         \hline
         Institutional platforms & High & Yes & No & Yes \\
         \hline
-    \end{tabular}
+    \end{tabular}}
 \end{table}
 
 Three gaps recur across every channel.
@@ -102,7 +104,7 @@ The consultation ends with ranked program recommendations that include explicit 
 
 \begin{figure}[H]
     \centering
-    \includegraphics[height=8cm]{usecase_advisory.png}
+    \includegraphics[width=\textwidth,keepaspectratio]{usecase_advisory.png}
     \caption{Detailed use case diagram of the advisory consultation}
     \label{fig:usecase-advisory}
 \end{figure}
@@ -116,7 +118,7 @@ A hybrid comparison combines this factual lookup with advisory data, for example
 
 \begin{figure}[H]
     \centering
-    \includegraphics[height=7.5cm]{usecase_knowledge.png}
+    \includegraphics[width=\textwidth,keepaspectratio]{usecase_knowledge.png}
     \caption{Detailed use case diagram of knowledge Q\&A and hybrid comparison}
     \label{fig:usecase-knowledge}
 \end{figure}
@@ -129,7 +131,7 @@ A separate ingestion path loads unstructured documents (tuition pages, curriculu
 
 \begin{figure}[H]
     \centering
-    \includegraphics[height=8cm]{usecase_ingestion.png}
+    \includegraphics[width=\textwidth,keepaspectratio]{usecase_ingestion.png}
     \caption{Detailed use case diagram of data ingestion}
     \label{fig:usecase-ingestion}
 \end{figure}
@@ -141,7 +143,7 @@ Figure~\ref{fig:activity-advisory} shows the end-to-end business process trigger
 
 \begin{figure}[H]
     \centering
-    \includegraphics[height=19cm]{activity_advisory_process.png}
+    \includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{activity_advisory_process.png}
     \caption{Business process for handling a student message}
     \label{fig:activity-advisory}
 \end{figure}

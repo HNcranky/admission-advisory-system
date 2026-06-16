@@ -56,7 +56,7 @@ Every node is wrapped by a \texttt{traced(...)} decorator (from \texttt{services
 
 The wiring, reproduced verbatim from \texttt{graph.py} in Listing~\ref{lst:graph}, makes the determinism explicit: each \texttt{add\_node} call wraps an agent function in the \texttt{traced(stage, sequence, extractor)} decorator before registering it, and the six \texttt{add\_edge} calls fix the order, leaving no conditional branch for an \gls{LLM} to choose at runtime.
 
-\begin{lstlisting}[language=Python,caption={Advisory pipeline wiring in \texttt{graph.py}: each node is registered through the tracing decorator and the edges fix a linear order},label=lst:graph]
+\begin{lstlisting}[language=Python,caption={Advisory pipeline wiring in \texttt{graph.py}: each node is registered through the tracing decorator and the edges fix a linear order},label=lst:graph,basicstyle=\footnotesize\ttfamily,breaklines=true,breakatwhitespace=false,columns=fullflexible,showstringspaces=false]
 builder.add_node("profile",  traced("profile",  0, extract_profile)(profile_agent))
 builder.add_node("retrieve", traced("retrieve", 1, extract_candidates)(retrieval_agent))
 builder.add_node("conflict", traced("conflict", 2, extract_conflicts)(conflict_agent))
@@ -192,7 +192,7 @@ A design convention shared by every repository supports the testability requirem
 The convention is implemented once in a shared helper (\texttt{services/db}) and reused by every repository, shown in Listing~\ref{lst:cursor}: the nested \texttt{try} blocks commit only when the caller asked for it, roll back and re-raise on any exception, and release the connection in a \texttt{finally} that runs on every path.
 This both prevents leaked connections and lets tests substitute a connection factory bound to the isolated test database.
 
-\begin{lstlisting}[language=Python,caption={The shared \texttt{cursor} context manager guaranteeing commit/rollback/cleanup, reused by every repository's \texttt{\_cursor}},label=lst:cursor]
+\begin{lstlisting}[language=Python,caption={The shared \texttt{cursor} context manager guaranteeing commit/rollback/cleanup, reused by every repository's \texttt{\_cursor}},label=lst:cursor,basicstyle=\footnotesize\ttfamily,breaklines=true,breakatwhitespace=false,columns=fullflexible,showstringspaces=false]
 @contextmanager
 def cursor(connection_factory, commit: bool = False):
     conn = connection_factory()
@@ -371,7 +371,7 @@ The web application is then served by Uvicorn.
 Ingestion is run separately through the \gls{CLI} to populate the canonical store and the knowledge corpus.
 The whole bring-up is the short sequence of Listing~\ref{lst:deploy}.
 
-\begin{lstlisting}[language={},caption={One-command database bring-up, schema setup, and application server (from \texttt{QUICKSTART.md})},label=lst:deploy]
+\begin{lstlisting}[language={},caption={One-command database bring-up, schema setup, and application server (from \texttt{QUICKSTART.md})},label=lst:deploy,basicstyle=\footnotesize\ttfamily,breaklines=true,breakatwhitespace=false,columns=fullflexible,showstringspaces=false]
 docker compose up -d --wait db                 # pgvector/pgvector:pg16, waits for healthy
 python -m db.setup_db                           # create DB, apply migrations, seed sources
 python -m ingestion.main --school vnu_uet       # populate the canonical store (offline)
