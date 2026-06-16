@@ -34,6 +34,9 @@ _RE_LABEL_DETAIL = re.compile(r"\bChi\s+tiết\b", re.IGNORECASE)
 
 _RE_SUBJECT_COMBO = re.compile(r"\b(DD\d|[ABCDKV]\d{2})\b")
 
+# "55 - 65" / "24–30" tuition ranges (shared by the li + line fallbacks).
+_TUITION_RANGE_RE = re.compile(r"(\d+(?:[.,]\d+)?)\s*[-–]\s*(\d+(?:[.,]\d+)?)")
+
 
 def _safe_decode_html(content: bytes) -> str:
     try:
@@ -95,19 +98,13 @@ def _extract_tuition_from_li(li: Tag) -> Optional[str]:
     strong = li.find("strong")
     if strong:
         strong_text = strong.get_text(" ", strip=True)
-        range_match = re.search(
-            r"(\d+(?:[.,]\d+)?)\s*[-–]\s*(\d+(?:[.,]\d+)?)",
-            strong_text,
-        )
+        range_match = _TUITION_RANGE_RE.search(strong_text)
         if range_match:
             return f"{range_match.group(1)}-{range_match.group(2)}"
         if strong_text:
             return strong_text
 
-    range_match = re.search(
-        r"(\d+(?:[.,]\d+)?)\s*[-–]\s*(\d+(?:[.,]\d+)?)",
-        li_text,
-    )
+    range_match = _TUITION_RANGE_RE.search(li_text)
     if range_match:
         return f"{range_match.group(1)}-{range_match.group(2)}"
 
@@ -118,44 +115,49 @@ def _extract_tuition_from_li(li: Tag) -> Optional[str]:
     return li_text or None
 
 
-def _extract_tuition_value(
-    soup: BeautifulSoup,
-    lines: List[str],
-    target_program_code: Optional[str] = None,
-) -> str:
-    """
-    Extract tuition from the "Hoc phi" list item, preferring <strong> content.
-    Expected structure: <li>Hoc phi: <strong>55 - 65</strong></li>
-    """
+def _tuition_from_tab1(
+    soup: BeautifulSoup, target_program_code: Optional[str] = None
+) -> Optional[str]:
+    """Fallback 1: the structured "#tab_1 ... ul" tuition list, preferring the
+    li that matches the target program code, then any li in that list."""
     tab1_ul = soup.select_one("#tab_1 > div > div.wrap_view > ul")
-    if tab1_ul:
-        li_nodes = tab1_ul.find_all("li", recursive=False)
-        if not li_nodes:
-            li_nodes = tab1_ul.find_all("li")
+    if not tab1_ul:
+        return None
 
-        if target_program_code:
-            normalized_code = target_program_code.upper()
-            matched = []
-            for li in li_nodes:
-                li_text = li.get_text(" ", strip=True)
-                if re.search(rf"\b{re.escape(normalized_code)}\b", li_text.upper()):
-                    matched.append(li)
-            for li in matched:
-                tuition = _extract_tuition_from_li(li)
-                if tuition:
-                    return tuition
+    li_nodes = tab1_ul.find_all("li", recursive=False)
+    if not li_nodes:
+        li_nodes = tab1_ul.find_all("li")
 
+    if target_program_code:
+        normalized_code = target_program_code.upper()
+        matched = []
         for li in li_nodes:
+            li_text = li.get_text(" ", strip=True)
+            if re.search(rf"\b{re.escape(normalized_code)}\b", li_text.upper()):
+                matched.append(li)
+        for li in matched:
             tuition = _extract_tuition_from_li(li)
             if tuition:
                 return tuition
 
+    for li in li_nodes:
+        tuition = _extract_tuition_from_li(li)
+        if tuition:
+            return tuition
+    return None
+
+
+def _tuition_from_all_lis(soup: BeautifulSoup) -> Optional[str]:
+    """Fallback 2: any <li> anywhere in the page that mentions tuition."""
     for li in soup.find_all("li"):
         tuition = _extract_tuition_from_li(li)
         if tuition:
             return tuition
+    return None
 
 
+def _tuition_from_lines(lines: List[str]) -> Optional[str]:
+    """Fallback 3: a plain-text line mentioning tuition (range > colon > whole)."""
     for line in lines:
         normalized = _normalize_for_match(line)
         if not any(
@@ -168,10 +170,7 @@ def _extract_tuition_value(
         if not cleaned:
             continue
 
-        range_match = re.search(
-            r"(\d+(?:[.,]\d+)?)\s*[-–]\s*(\d+(?:[.,]\d+)?)",
-            cleaned,
-        )
+        range_match = _TUITION_RANGE_RE.search(cleaned)
         if range_match:
             return f"{range_match.group(1)}-{range_match.group(2)}"
         if ":" in cleaned:
@@ -179,8 +178,11 @@ def _extract_tuition_value(
             if value:
                 return value
         return cleaned
+    return None
 
 
+def _tuition_from_segment(lines: List[str]) -> Optional[str]:
+    """Fallback 4: a tuition keyword + up to 160 trailing chars anywhere."""
     full_text = "\n".join(lines)
     segment_match = re.search(
         r"(?is)(học\s*phí|hoc\s*phi|chi\s*phí|chi\s*phi)[^\n]{0,160}",
@@ -190,8 +192,27 @@ def _extract_tuition_value(
         segment = segment_match.group(0).strip()
         if segment:
             return segment
+    return None
 
-    return "Không thông tin"
+
+def _extract_tuition_value(
+    soup: BeautifulSoup,
+    lines: List[str],
+    target_program_code: Optional[str] = None,
+) -> str:
+    """
+    Extract tuition from the "Hoc phi" list item, preferring <strong> content.
+    Expected structure: <li>Hoc phi: <strong>55 - 65</strong></li>
+
+    Tries each fallback strategy in order; sentinel when none match.
+    """
+    return (
+        _tuition_from_tab1(soup, target_program_code)
+        or _tuition_from_all_lis(soup)
+        or _tuition_from_lines(lines)
+        or _tuition_from_segment(lines)
+        or "Không thông tin"
+    )
 
 
 class HustProgramParser(BaseSpecializedParser):
