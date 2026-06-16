@@ -1,7 +1,7 @@
 \documentclass[../main.tex]{subfiles}
 \begin{document}
 
-% Target length: <= 10 pages.
+% Target length: 13--15 pages.
 
 Chapter~\ref{chapter:Related_works} derived the system's functional and non-functional requirements.
 This chapter reviews the theoretical background and the technologies chosen to meet them.
@@ -25,6 +25,10 @@ Within this prompting paradigm three techniques recur, ordered by how much reaso
 The first is \textit{role and instruction prompting}: each call sends a system prompt that fixes the model's role (for example, an intent classifier for Vietnamese admission advising) and a user prompt that carries the task input; the intent-routing step uses this form alone.
 The second is \textit{few-shot prompting}: a small number of worked exemplars are included so the model infers the output format and the decision boundary from demonstration, which the system uses where a task's expected output is easier to show than to specify exhaustively.
 The third is \textit{chain-of-thought} prompting, in which the model is asked to produce intermediate reasoning steps before its final answer, improving accuracy on multi-step problems~\cite{wei2022cot}; the conflict tie-breaking and final explanation steps benefit from this style because both must justify a decision rather than only state it.
+
+Because the model defines a probability distribution over the next token, producing text requires a \textit{decoding} strategy that turns those distributions into a concrete sequence.
+Greedy decoding always takes the most probable token, which is stable but can lock the model into a repetitive cycle, whereas sampling with a \textit{temperature} parameter draws from the distribution, with higher temperature flattening it toward more varied output.
+The system leaves decoding at the provider's defaults for most calls but deliberately raises the temperature when retrying a degenerate transcription, exploiting exactly this property to break a repetition loop --- a mechanism returned to in Section~\ref{section:3.4} and Section~\ref{section:5.3}.
 
 A bare \gls{LLM}, however prompted, remains prone to \textit{hallucination}: it can state fluent but false facts that were never in its input, a failure mode surveyed across natural-language generation tasks~\cite{ji2023hallucination}.
 For an advisory system whose output must reflect official admission data, hallucination is the central risk, and two design decisions in this chapter exist to contain it.
@@ -56,6 +60,10 @@ Using these representations to retrieve answer passages for a question is the de
 Each ingested document is therefore split into chunks, and each chunk is mapped to a dense embedding vector; a question is embedded the same way, and the chunks whose embeddings are nearest the question embedding are returned.
 The system embeds chunks and queries through Gemini's embedding endpoint, using distinct task types --- \texttt{RETRIEVAL\_DOCUMENT} for chunks and \texttt{RETRIEVAL\_QUERY} for questions --- so the two are optimized for asymmetric retrieval; the embedding dimension is fixed at 768 to match the database schema.
 
+How a document is divided into chunks fixes the granularity of everything downstream, so it is a retrieval decision rather than a mere preprocessing detail.
+The chunker in \texttt{ingestion/knowledge/chunker.py} cuts text at blank-line block boundaries, falls back to sentence boundaries only when a single block exceeds a target size, and overlaps consecutive chunks by a fixed margin so that a passage straddling a cut is not lost to either neighbor.
+Chunk size is a trade-off: chunks that are too large dilute a query's match with unrelated text and blur the chunk's embedding toward an average meaning, while chunks that are too small fragment a single answer across several retrievals; aligning cuts to natural block boundaries keeps each chunk a coherent unit of meaning at a size suited to the embedding model.
+
 Proximity is measured by \textit{cosine similarity}.
 For two embedding vectors $\mathbf{u}$ and $\mathbf{v}$ it is the cosine of the angle between them, $\cos(\mathbf{u},\mathbf{v}) = \frac{\mathbf{u}\cdot\mathbf{v}}{\lVert\mathbf{u}\rVert\,\lVert\mathbf{v}\rVert}$, which is $1$ for identical direction and $0$ for orthogonal vectors; the corresponding \textit{cosine distance} is $1-\cos(\mathbf{u},\mathbf{v})$.
 This is exactly the quantity computed in the retrieval \gls{SQL}: in \texttt{services/knowledge/repository.py} chunks are ordered by the pgvector cosine-distance operator \texttt{embedding <=> query} and the score reported to the caller is \texttt{1 - (embedding <=> query)}, recovering cosine similarity.
@@ -83,6 +91,8 @@ That non-determinism is a poor fit for this system's requirements: a consultatio
 
 The system instead uses LangGraph~\cite{langgraph, langgraph_docs}, a library for expressing an agent as an explicit state graph: nodes are functions that read and write a shared typed state, and edges fix the order in which nodes run.
 The advisory pipeline is wired as a fixed linear graph over the six stages, with one shared state object passed from node to node.
+That state object, \texttt{AgentState} in \texttt{state.py}, is a single Pydantic model whose fields each stage fills in turn: the profile stage populates the student profile, the retrieval stage appends candidate programs, the conflict stage adds conflict and resolution records, and the later stages add eligibility checks, ranked recommendations, a policy decision, and the final explanation.
+Because every stage is wrapped by a tracing decorator that records the state it produced under a run identifier, the same fixed structure that orders the computation also yields the per-stage trace, so observability is a by-product of the design rather than a separate instrumentation effort.
 A fixed graph is the deliberate choice for three reasons that map onto Chapter~\ref{chapter:Related_works}'s requirements.
 First, \textit{determinism}: the same profile produces the same stage sequence, so a correction can re-run the pipeline and the change in output is attributable to the changed input (UC-04, NFR-02).
 Second, \textit{traceability}: because the stages are fixed and named, each one can be wrapped to emit a trace event, which is what populates the operator's debug panel (the observability use case in Section~\ref{subsection:2.2.1}).
