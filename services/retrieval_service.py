@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 from agents.models import CandidateProgram, CutoffEntry, Evidence, StudentProfile
 from ingestion.storage.db_connection import get_cursor
+from services.cutoff.repository import CutoffRepository
 from services.mock_retrieval import (
     build_mock_conflict_candidates,
     mock_conflicts_enabled,
@@ -56,47 +57,26 @@ def build_retrieval_filters(profile: StudentProfile, admission_year: int) -> Dic
 
 def fetch_cutoff_history(
     pairs: Set[Tuple[str, Optional[str]]],
+    _repo: Optional[CutoffRepository] = None,
 ) -> Dict[Tuple[str, str], List[CutoffEntry]]:
     """Batch-load lịch sử điểm chuẩn cho các cặp (school_id, program_id).
 
     Degrade graceful (EC-18 nền): bảng chưa migrate / DB lỗi / row lệch cột →
-    log warning + trả {}; KHÔNG bao giờ làm fail retrieval.
+    log warning + trả {}; KHÔNG bao giờ làm fail retrieval. SQL nằm trong
+    CutoffRepository (audit §4.5); hàm này giữ chữ ký + lớp degrade.
     """
     clean_pairs = {(s, p) for (s, p) in pairs if s and p}
     if not clean_pairs:
         return {}
 
-    sql = """
-        SELECT school_id, program_id, cutoff_year, admission_method,
-               score_scale, cutoff_score, source_url, source_trust_level, note
-        FROM cutoff_records
-        WHERE (school_id, program_id) IN %s
-        ORDER BY cutoff_year DESC, source_trust_level DESC NULLS LAST
-    """
-    history: Dict[Tuple[str, str], List[CutoffEntry]] = {}
+    repo = _repo or CutoffRepository()
     try:
-        with get_cursor(commit=False) as cur:
-            cur.execute(sql, (tuple(clean_pairs),))
-            for row in cur.fetchall():
-                (school_id, program_id, cutoff_year, admission_method,
-                 score_scale, cutoff_score, source_url, trust_level, note) = row
-                history.setdefault((school_id, program_id), []).append(
-                    CutoffEntry(
-                        cutoff_year=cutoff_year,
-                        admission_method=admission_method,
-                        cutoff_score=float(cutoff_score),
-                        score_scale=float(score_scale) if score_scale is not None else None,
-                        source_url=source_url or "",
-                        trust_level=trust_level,
-                        note=note,
-                    )
-                )
+        return repo.fetch_cutoff_history(clean_pairs)
     except Exception as exc:
         logger.warning(
             "fetch_cutoff_history thất bại — tiếp tục KHÔNG có dữ liệu điểm chuẩn: %r", exc
         )
         return {}
-    return history
 
 
 def fetch_candidates(filters: Dict[str, Any], limit: int = 100) -> List[CandidateProgram]:

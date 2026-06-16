@@ -1,8 +1,8 @@
 from typing import Dict, List, Optional
 
 from agents.models import CandidateProgram
-from ingestion.storage.db_connection import get_cursor
 from services.conflict.models import ConflictRecord, EvidenceOption
+from services.conflict.repository import ConflictEvidenceRepository
 
 
 def _candidate_by_source(candidates: List[CandidateProgram]) -> Dict[str, CandidateProgram]:
@@ -19,30 +19,10 @@ def _is_mock_source(source_url: str, candidate: Optional[CandidateProgram]) -> b
     )
 
 
-def _batch_fetched_at(source_urls: List[str], record: ConflictRecord) -> Dict[str, object]:
-    """One query mapping source_url -> fetched_at for this record's school/year.
-
-    Drops the per-option LIMIT 1, so a source_url with several canonical rows can
-    return several rows; the first wins (fetched_at is a property of the source
-    document, consistent across that URL's rows)."""
-    sql = """
-        SELECT car.source_url, NULL::timestamptz AS fetched_at
-        FROM canonical_admission_records car
-        WHERE car.source_url = ANY(%s)
-          AND car.school_id = %s
-          AND car.admission_year = %s
-    """
-    mapping: Dict[str, object] = {}
-    with get_cursor(commit=False) as cur:
-        cur.execute(sql, (list(source_urls), record.school_id, record.admission_year))
-        for source_url, fetched_at in cur.fetchall():
-            mapping.setdefault(source_url, fetched_at)  # first row wins per url
-    return mapping
-
-
 def package_evidence(
     record: ConflictRecord,
     raw_candidates: List[CandidateProgram],
+    _evidence_repo: Optional[ConflictEvidenceRepository] = None,
 ) -> List[EvidenceOption]:
     candidates_by_source = _candidate_by_source(raw_candidates)
 
@@ -56,9 +36,12 @@ def package_evidence(
     ]
 
     fetched_map: Dict[str, object] = {}
-    if db_urls:  # all-mock record → no cursor opened at all
+    if db_urls:  # all-mock record → no DB lookup at all
+        repo = _evidence_repo or ConflictEvidenceRepository()
         try:
-            fetched_map = _batch_fetched_at(db_urls, record)
+            fetched_map = repo.fetch_fetched_at_by_source(
+                db_urls, record.school_id, record.admission_year
+            )
         except Exception:
             fetched_map = {}  # DB down → leave options un-enriched, as before
 
