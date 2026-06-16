@@ -1,3 +1,5 @@
+import pytest
+
 from ingestion.knowledge import pdf_pages
 
 
@@ -31,6 +33,40 @@ def test_extract_pages_reads_real_pdf():
     assert len(pages) == 1
     assert pages[0][0] == 1
     assert "Hello" in pages[0][1]
+
+
+def test_extract_pages_renders_pdf_table_as_markdown():
+    pdf_bytes = _one_page_pdf_with_table()
+    pages = pdf_pages.extract_pages(pdf_bytes)
+    assert len(pages) == 1
+    text = pages[0][1]
+    # separator line proves markdown table format, not plain dump
+    assert "| --- |" in text
+    # header row
+    assert "| Nganh |" in text
+    # data rows
+    assert "| CNTT |" in text
+    assert "| Dien tu |" in text
+
+
+def _one_page_pdf_with_table() -> bytes:
+    pytest.importorskip("reportlab")
+    from io import BytesIO
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+
+    buf = BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4)
+    data = [
+        ["Nganh", "Chi tieu", "Diem chuan"],
+        ["CNTT", "200", "28.5"],
+        ["Dien tu", "150", "27.0"],
+    ]
+    tbl = Table(data)
+    tbl.setStyle(TableStyle([("GRID", (0, 0), (-1, -1), 1, colors.black)]))
+    doc.build([tbl])
+    return buf.getvalue()
 
 
 def _one_page_pdf(text: str) -> bytes:

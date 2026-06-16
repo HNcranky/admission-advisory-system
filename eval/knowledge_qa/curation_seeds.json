@@ -1,0 +1,42 @@
+{
+  "_comment": "Seeds tuned to what the knowledge RAG corpus (knowledge_chunks) actually contains: admission methods/policy, tuition, scholarship, MOET regulations, and NEU's Q&A doc (incl. per-program quota tables). Per-program quota/cutoff for HUST/VNU-UET is NOT in this corpus (it lives in canonical_admission_records), so those are avoided for answerable seeds. school slugs MUST match KNOWN_SCHOOLS (HUST/NEU/VNU-UET; null=national). topic is a soft filter (NULL-topic chunks match any topic). ~6 abstain seeds ask for facts genuinely absent from the corpus.",
+  "seeds": [
+    {"question": "Phương thức xét tuyển tài năng (XTTN) của HUST gồm những hình thức nào?", "school": "HUST", "topic": "admission_policy", "abstain": false},
+    {"question": "Đối tượng nào được ưu tiên xét tuyển thẳng vào HUST?", "school": "HUST", "topic": "admission_policy", "abstain": false},
+    {"question": "HUST áp dụng những phương thức xét tuyển nào trong năm 2026?", "school": "HUST", "topic": "admission_policy", "abstain": false},
+    {"question": "Thí sinh đoạt giải học sinh giỏi quốc gia có được xét tuyển thẳng vào HUST không?", "school": "HUST", "topic": "admission_policy", "abstain": false},
+    {"question": "Kỳ thi Đánh giá tư duy được HUST sử dụng để xét tuyển như thế nào?", "school": "HUST", "topic": "admission_policy", "abstain": false},
+    {"question": "Học phí chương trình chuẩn và chương trình tiên tiến của HUST khác nhau thế nào?", "school": "HUST", "topic": "tuition", "abstain": false},
+    {"question": "Mức học phí các chương trình đào tạo tài năng và PFIEV của HUST là bao nhiêu?", "school": "HUST", "topic": "tuition", "abstain": false},
+
+    {"question": "Trường Đại học Công nghệ (VNU-UET) sử dụng những phương thức xét tuyển nào?", "school": "VNU-UET", "topic": "admission_policy", "abstain": false},
+    {"question": "VNU-UET xét tuyển theo kết quả thi đánh giá năng lực HSA của ĐHQGHN như thế nào?", "school": "VNU-UET", "topic": "admission_policy", "abstain": false},
+    {"question": "Thí sinh đạt giải nhì học sinh giỏi cấp ĐHQGHN được cộng bao nhiêu điểm khi xét tuyển vào VNU-UET?", "school": "VNU-UET", "topic": "admission_policy", "abstain": false},
+    {"question": "VNU-UET có tổ chức sơ tuyển khi xét tuyển không?", "school": "VNU-UET", "topic": "admission_policy", "abstain": false},
+    {"question": "Nguồn tuyển sinh đại học chính quy của VNU-UET gồm những đối tượng nào?", "school": "VNU-UET", "topic": "admission_policy", "abstain": false},
+    {"question": "Học phí của VNU-UET năm học 2025-2026 được quy định như thế nào?", "school": "VNU-UET", "topic": "tuition", "abstain": false},
+
+    {"question": "Tổng chỉ tiêu tuyển sinh đại học chính quy của NEU (Đại học Kinh tế Quốc dân) năm 2026 là bao nhiêu?", "school": "NEU", "topic": "quota", "abstain": false},
+    {"question": "NEU áp dụng những phương thức xét tuyển nào năm 2026?", "school": "NEU", "topic": "admission_method", "abstain": false},
+    {"question": "Chỉ tiêu ngành Tài chính - Ngân hàng của NEU là bao nhiêu?", "school": "NEU", "topic": "quota", "abstain": false},
+    {"question": "Sinh viên ngành EDA (EP03) của NEU ra trường có thể làm những công việc gì?", "school": "NEU", "topic": "career", "abstain": false},
+    {"question": "Học ngành Actuary tại NEU có bắt buộc phải là hội viên của hiệp hội Actuary không?", "school": "NEU", "topic": "career", "abstain": false},
+    {"question": "Ngành Kinh tế Đầu tư và ngành Quản lý dự án của NEU khác nhau như thế nào?", "school": "NEU", "topic": "program_overview", "abstain": false},
+    {"question": "Theo NEU, sự bùng nổ của Trí tuệ nhân tạo có làm mất cơ hội việc làm của sinh viên không?", "school": "NEU", "topic": "career", "abstain": false},
+    {"question": "Lệ phí xét tuyển của NEU được quy định như thế nào?", "school": "NEU", "topic": "tuition", "abstain": false},
+    {"question": "Học ngành Kinh tế Đầu tư tại NEU có hỗ trợ sinh viên khởi nghiệp không?", "school": "NEU", "topic": "career", "abstain": false},
+
+    {"question": "Theo quy chế tuyển sinh của Bộ Giáo dục và Đào tạo, chính sách ưu tiên khu vực được áp dụng trong thời gian nào?", "school": null, "topic": "admission_policy", "abstain": false},
+    {"question": "Quy chế của Bộ Giáo dục và Đào tạo quy định thế nào về các kỳ thi riêng do cơ sở đào tạo tự tổ chức để xét tuyển?", "school": null, "topic": "admission_policy", "abstain": false},
+    {"question": "Bộ Giáo dục và Đào tạo quy định việc xét tuyển đối với thí sinh khuyết tật như thế nào?", "school": null, "topic": "admission_policy", "abstain": false},
+    {"question": "Quy chế tuyển sinh của Bộ Giáo dục và Đào tạo nêu những bất cập nào về bảo đảm chất lượng đầu vào?", "school": null, "topic": "admission_policy", "abstain": false},
+    {"question": "Thí sinh được hưởng chính sách ưu tiên khu vực trong những năm nào kể từ khi tốt nghiệp THPT?", "school": null, "topic": "admission_policy", "abstain": false},
+
+    {"question": "HUST có ký túc xá miễn phí cho toàn bộ sinh viên năm nhất không?", "school": "HUST", "topic": "dormitory", "abstain": true},
+    {"question": "VNU-UET có cam kết bố trí việc làm cho 100% sinh viên sau khi tốt nghiệp không?", "school": "VNU-UET", "topic": "career", "abstain": true},
+    {"question": "NEU có chương trình liên kết đào tạo với Đại học Harvard không?", "school": "NEU", "topic": "program_overview", "abstain": true},
+    {"question": "HUST có tuyển sinh ngành Y khoa hệ bác sĩ đa khoa không?", "school": "HUST", "topic": "quota", "abstain": true},
+    {"question": "VNU-UET có đào tạo ngành Y Dược không?", "school": "VNU-UET", "topic": "program_overview", "abstain": true},
+    {"question": "VNU-UET có miễn hoàn toàn học phí cho sinh viên ngành Trí tuệ nhân tạo không?", "school": "VNU-UET", "topic": "tuition", "abstain": true}
+  ]
+}

@@ -7,11 +7,15 @@ from pydantic import ValidationError
 from ingestion.knowledge.registry.knowledge_registry import KnowledgeRegistry
 
 
-def test_default_seed_loads_three_schools_each_with_sources():
+def test_default_seed_loads_registry_schools_each_with_sources():
+    # The curated http registry seed covers HUST and VNU-UET. NEU is sourced from
+    # local PDFs (data/knowledge/pdf_scanned/) instead — its official documents are
+    # scanned and its public URLs were broken — so it is intentionally not in the
+    # registry seed and is ingested via `pipeline --local-dir`.
     reg = KnowledgeRegistry()
     schools = reg.schools()
-    assert set(schools) >= {"HUST", "NEU", "VNU-UET"}
-    for school in ("HUST", "NEU", "VNU-UET"):
+    assert set(schools) >= {"HUST", "VNU-UET"}
+    for school in ("HUST", "VNU-UET"):
         sources = reg.get_sources_by_school(school)
         assert len(sources) >= 1, f"{school} has no sources"
 
@@ -44,3 +48,24 @@ def test_invalid_entry_in_seed_raises(tmp_path):
     ]), encoding="utf-8")
     with pytest.raises(ValidationError):
         KnowledgeRegistry(seed_path=seed)
+
+
+def test_source_accepts_optional_selector(tmp_path):
+    seed = tmp_path / "seed.json"
+    seed.write_text(json.dumps([
+        {"school": "MOET", "source_url": "https://x",
+         "document_type": "faq", "topic": "admission_policy",
+         "fetch_strategy": "http", "selector": "#content"},
+    ]), encoding="utf-8")
+    reg = KnowledgeRegistry(seed_path=seed)
+    assert reg.all_sources()[0].selector == "#content"
+
+
+def test_source_selector_defaults_none(tmp_path):
+    seed = tmp_path / "seed.json"
+    seed.write_text(json.dumps([
+        {"school": "X", "source_url": "https://x",
+         "document_type": "tuition_page", "topic": "tuition"},
+    ]), encoding="utf-8")
+    reg = KnowledgeRegistry(seed_path=seed)
+    assert reg.all_sources()[0].selector is None

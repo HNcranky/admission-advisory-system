@@ -34,6 +34,17 @@ def test_synthesis_agent_is_registered():
     assert policy.fallback_model == "gemini-2.5-flash-lite"
 
 
+def test_knowledge_qa_agent_disables_thinking():
+    gateway = build_default_gateway()
+    assert gateway.registry.resolve("knowledge_qa_agent").thinking_budget == 0
+
+
+def test_synthesis_agent_keeps_default_thinking():
+    gateway = build_default_gateway()
+    # Deferred to Slice 4 eval — must remain unset (default dynamic thinking).
+    assert gateway.registry.resolve("synthesis_agent").thinking_budget is None
+
+
 def test_knowledge_ocr_agent_uses_default_model_with_fallback():
     gateway = build_default_gateway()
     policy = gateway.registry.resolve("knowledge_ocr")
@@ -49,3 +60,10 @@ def test_knowledge_classify_agent_uses_json_mode():
     assert policy.primary_model == "gemini-2.5-flash-lite"
     assert policy.output_mode == "json"
     assert policy.max_retries == 1
+
+
+def test_major_resolver_has_bounded_token_override():
+    policy = build_default_gateway().registry.resolve("major_resolver")
+    assert policy.primary_model == "gemini-2.5-flash-lite"  # cheap model is intended
+    assert policy.max_tokens == 100                          # bounded tiny output
+    assert policy.output_mode == "json"

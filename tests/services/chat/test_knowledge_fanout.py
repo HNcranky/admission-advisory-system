@@ -12,11 +12,91 @@ class FakeKnowledgeQA:
         self._raise_for = raise_for or set()
         self.calls = []
 
-    def answer(self, question, school, topic, conversation_context=""):
+    def answer(self, question, school, topic, conversation_context="", query_vector=None, national=None):
         self.calls.append({"question": question, "school": school, "topic": topic})
         if school in self._raise_for:
             raise RuntimeError("boom")
         return self._by_school.get(school, KnowledgeQAResult(has_data=False, confidence=0.0))
+
+
+class _EmbedCountingQA(FakeKnowledgeQA):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.embed_calls = 0
+        self.vectors_seen = []
+
+    def embed_query(self, question):
+        self.embed_calls += 1
+        return [0.5, 0.5]
+
+    def answer(self, question, school, topic, conversation_context="", query_vector=None, national=None):
+        self.vectors_seen.append(query_vector)
+        return super().answer(question, school, topic, conversation_context)
+
+
+class _NationalCountingQA(FakeKnowledgeQA):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.national_calls = []
+
+    def embed_query(self, question):
+        return [0.5]
+
+    def national_chunks(self, query_vector, topic):
+        self.national_calls.append(topic)
+        return []
+
+    def answer(self, question, school, topic, conversation_context="", query_vector=None, national=None):
+        return super().answer(question, school, topic, conversation_context)
+
+
+class _PrevUserEmbedQA(FakeKnowledgeQA):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.embedded_texts = []
+
+    def embed_query(self, question):
+        self.embedded_texts.append(question)
+        return [0.5]
+
+    def national_chunks(self, query_vector, topic):
+        return []
+
+
+def test_fanout_prepends_prev_user_to_embedded_query():
+    qa = _PrevUserEmbedQA()
+    intent = IntentResult(route="HYBRID", school="HUST", topic="tuition")
+    run_knowledge_fanout(
+        qa, intent, "còn học phí thì sao",
+        conversation_context="Trợ lý: ...", prev_user="HUST xét tuyển thế nào",
+    )
+    assert qa.embedded_texts == ["HUST xét tuyển thế nào\ncòn học phí thì sao"]
+
+
+def test_fanout_standalone_question_embeds_verbatim():
+    qa = _PrevUserEmbedQA()
+    intent = IntentResult(route="HYBRID", school="HUST", topic="tuition")
+    run_knowledge_fanout(
+        qa, intent, "học phí HUST là bao nhiêu", prev_user="ngành CNTT thế nào",
+    )
+    assert qa.embedded_texts == ["học phí HUST là bao nhiêu"]  # has noun → not elliptical
+
+
+def test_fanout_computes_national_once_per_topic():
+    qa = _NationalCountingQA()
+    intent = IntentResult(route="HYBRID", schools=["VNU-UET", "HUST"], topics=["tuition"])
+    run_knowledge_fanout(qa, intent, "so sánh học phí", school_fallback=None)
+    # 2 schools × 1 topic = 2 answer() calls, but national computed once for "tuition"
+    assert qa.national_calls == ["tuition"]
+
+
+def test_fanout_embeds_query_once_and_shares_vector():
+    qa = _EmbedCountingQA()
+    intent = IntentResult(route="HYBRID", schools=["VNU-UET", "HUST"], topics=["tuition"])
+    run_knowledge_fanout(qa, intent, "so sánh học phí", school_fallback=None)
+    assert qa.embed_calls == 1                       # one embed for the whole fan-out
+    assert len(qa.vectors_seen) == 2                 # but both tasks ran
+    assert all(v == [0.5, 0.5] for v in qa.vectors_seen)
 
 
 def test_fanout_calls_once_per_school_topic_pair():
@@ -71,7 +151,7 @@ class _CtxRecordingQA:
     def __init__(self):
         self.last_ctx = None
 
-    def answer(self, question, school, topic, conversation_context=""):
+    def answer(self, question, school, topic, conversation_context="", query_vector=None, national=None):
         self.last_ctx = conversation_context
         return KnowledgeQAResult(has_data=False, confidence=0.0)
 
@@ -107,7 +187,7 @@ class _ConcurrentQA:
         self._active = 0
         self.max_concurrent = 0
 
-    def answer(self, question, school, topic, conversation_context=""):
+    def answer(self, question, school, topic, conversation_context="", query_vector=None, national=None):
         with self._lock:
             self._active += 1
             self.max_concurrent = max(self.max_concurrent, self._active)
@@ -125,3 +205,23 @@ def test_fanout_runs_pairs_concurrently():
     blocks = run_knowledge_fanout(qa, intent, "q")
     assert qa.max_concurrent == 2                      # hai call đồng thời
     assert [b.school for b in blocks] == ["A", "B"]    # thứ tự bảo toàn
+
+
+def test_format_knowledge_blocks_no_data_uses_first_person():
+    from services.chat.knowledge_fanout import format_knowledge_blocks
+    from services.chat.hybrid_models import KnowledgeBlock
+
+    blocks = [KnowledgeBlock(school="hust", topic="tuition", has_data=False)]
+    text = format_knowledge_blocks(blocks)
+
+    assert "Hệ thống chưa có" not in text
+    assert text.startswith("Mình hiện chưa có dữ liệu")
+
+
+def test_no_module_uses_cold_system_phrasing():
+    import pathlib
+
+    root = pathlib.Path(__file__).resolve().parents[3]
+    for rel in ["services/chat/knowledge_fanout.py", "services/chat/conversation_service.py"]:
+        text = (root / rel).read_text(encoding="utf-8")
+        assert "Hệ thống chưa có" not in text, f"{rel} still uses cold 'Hệ thống chưa có'"

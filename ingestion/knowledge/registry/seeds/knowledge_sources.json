@@ -12,27 +12,6 @@
     "topic": "admission_policy"
   },
   {
-    "school": "NEU",
-    "source_url": "https://tuyensinh.neu.edu.vn/hoc-phi",
-    "document_type": "tuition_page",
-    "topic": "tuition",
-    "active": false
-  },
-  {
-    "school": "NEU",
-    "source_url": "https://tuyensinh.neu.edu.vn/chuong-trinh-dao-tao",
-    "document_type": "program_overview_page",
-    "topic": "program_overview",
-    "active": false
-  },
-  {
-    "school": "VNU-UET",
-    "source_url": "https://uet.vnu.edu.vn/hoc-phi/",
-    "document_type": "tuition_page",
-    "topic": "tuition",
-    "active": false
-  },
-  {
     "school": "VNU-UET",
     "source_url": "https://uet.vnu.edu.vn/hoc-bong/",
     "document_type": "scholarship_policy",
@@ -68,35 +47,39 @@
     "year": 2025
   },
   {
-    "school": "NEU",
-    "source_url": "https://stneuedu-my.sharepoint.com/personal/phqldt_neu_edu_vn/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Fphqldt%5Fneu%5Fedu%5Fvn%2FDocuments%2FTh%C3%B4ng%20tin%20Tuy%E1%BB%83n%20sinh%20n%C4%83m%202026%20h%C3%ACnh%20th%E1%BB%A9c%20%C4%91%C3%A0o%20t%E1%BA%A1o%20%C4%90HCQ%2Epdf&parent=%2Fpersonal%2Fphqldt%5Fneu%5Fedu%5Fvn%2FDocuments&ga=1",
-    "document_type": "handbook",
+    "school": "MOET",
+    "source_url": "https://ts.hust.edu.vn/tin-tuc/gioi-thieu-ve-ky-thi-danh-gia-tu-duy-tsa",
+    "document_type": "exam_guide",
     "topic": "admission_policy",
-    "year": 2026,
-    "active": false
+    "fetch_strategy": "http",
+    "selector": "#content",
+    "year": 2026
   },
   {
-    "school": "NEU",
-    "source_url": "https://stneuedu-my.sharepoint.com/personal/phqldt_neu_edu_vn/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Fphqldt%5Fneu%5Fedu%5Fvn%2FDocuments%2FTh%C3%B4ng%20tin%20TS%20n%C4%83m%202026%20h%C3%ACnh%20th%E1%BB%A9c%20%C4%91%C3%A0o%20t%E1%BA%A1o%20Li%C3%AAn%20th%C3%B4ng%20%C4%90HCQ%20v%E1%BB%9Bi%20%C4%91%E1%BB%91i%20t%C6%B0%E1%BB%A3ng%20%C4%91%C3%A3%20c%C3%B3%20b%E1%BA%B1ng%20t%E1%BB%91t%20nghi%E1%BB%87p%20%C4%90HCQ%2Epdf&parent=%2Fpersonal%2Fphqldt%5Fneu%5Fedu%5Fvn%2FDocuments&ga=1",
-    "document_type": "handbook",
+    "school": "MOET",
+    "source_url": "https://www.hsa.edu.vn/ky-thi/ky-thi-dgnl-hsa",
+    "document_type": "exam_guide",
     "topic": "admission_policy",
-    "year": 2026,
-    "active": false
+    "fetch_strategy": "http",
+    "selector": ".container > article:nth-child(1)",
+    "year": 2026
   },
   {
-    "school": "NEU",
-    "source_url": "https://stneuedu-my.sharepoint.com/personal/phqldt_neu_edu_vn/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Fphqldt%5Fneu%5Fedu%5Fvn%2FDocuments%2FTh%C3%B4ng%20tin%20TS%20n%C4%83m%202026%20h%C3%ACnh%20th%E1%BB%A9c%20%C4%91%C3%A0o%20t%E1%BA%A1o%20Li%C3%AAn%20th%C3%B4ng%20%C4%90HCQ%20v%E1%BB%9Bi%20%C4%91%E1%BB%91i%20t%C6%B0%E1%BB%A3ng%20c%C3%B3%20b%E1%BA%B1ng%20t%E1%BB%91t%20nghi%E1%BB%87p%20C%C4%90CQ%2Epdf&parent=%2Fpersonal%2Fphqldt%5Fneu%5Fedu%5Fvn%2FDocuments&ga=1",
-    "document_type": "handbook",
+    "school": "MOET",
+    "source_url": "https://ts.hust.edu.vn/tin-tuc/huong-dan-dang-ky-xet-tuyen-tai-nang-2026",
+    "document_type": "exam_guide",
     "topic": "admission_policy",
-    "year": 2026,
-    "active": false
+    "fetch_strategy": "http",
+    "selector": "#content",
+    "year": 2026
   },
   {
-    "school": "NEU",
-    "source_url": "https://daotao.neu.edu.vn/Resources/Docs/SubDomain/daotao/TuyenSinh2026/Quyet-Dinh-so-503-ngay-07.5.2026-V.v-Ban-hanh-Quy-che-tuyen-sinh-DH-cua-DH-KTQD_compressed.pdf",
-    "document_type": "handbook",
+    "school": "MOET",
+    "source_url": "https://www.hsa.edu.vn/lich-thi/lich-thi-hsa",
+    "document_type": "exam_guide",
     "topic": "admission_policy",
-    "year": 2026,
-    "active": false
+    "fetch_strategy": "http",
+    "selector": ".container > article:nth-child(1)",
+    "year": 2026
   }
 ]

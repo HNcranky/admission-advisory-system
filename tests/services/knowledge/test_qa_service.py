@@ -120,8 +120,8 @@ def test_above_threshold_returns_grounded_answer_with_confidence():
     assert res.answer == "Học phí khoảng 35 triệu/năm."
     assert res.confidence == 0.92
     assert len(gateway.calls) == 1
-    # No used_source_ids in the response → cite every passed chunk.
-    assert len(res.citations) == 2
+    # No used_source_ids → fallback cites only the top-scored chunk.
+    assert len(res.citations) == 1
 
 
 def test_citations_limited_to_used_source_ids():
@@ -138,13 +138,14 @@ def test_citations_limited_to_used_source_ids():
     assert res.citations[0].chunk_text == "Học phí 35 triệu/năm"
 
 
-def test_citations_fallback_to_all_chunks_when_used_ids_empty():
+def test_citations_fallback_to_top_chunk_when_used_ids_empty():
     chunks = [_chunk("a", "http://uet/a", 0.9), _chunk("b", "http://uet/b", 0.8)]
     service, _, _, _ = _build(
         chunks, parsed_data={"answer": "ans", "used_source_ids": []}
     )
     res = service.answer("q", "VNU-UET", "tuition")
-    assert len(res.citations) == 2
+    assert len(res.citations) == 1
+    assert res.citations[0].source_url == "http://uet/a"  # highest score
 
 
 def test_citations_fallback_when_used_ids_invalid():
@@ -196,6 +197,67 @@ def test_gateway_exception_degrades_to_no_data():
     assert len(gateway.calls) == 1
 
 
+# ─── precomputed query vector ────────────────────────────────────────────────
+
+def test_answer_uses_supplied_query_vector_without_embedding():
+    class _CountingEmbedder:
+        def __init__(self):
+            self.calls = 0
+        def embed(self, texts, task_type):
+            self.calls += 1
+            return [[0.0, 0.0, 0.0]]
+
+    class _FakeRepo:
+        def __init__(self):
+            self.searched_with = []
+        def vector_search(self, embedding, school, topic, limit):
+            self.searched_with.append(list(embedding))
+            return []  # no chunks → early no-data return, LLM never called
+
+    embedder = _CountingEmbedder()
+    repo = _FakeRepo()
+    service = KnowledgeQAService(chunk_repository=repo, embedder=embedder, gateway=object())
+    result = service.answer("học phí?", school="VNU-UET", topic="tuition",
+                            query_vector=[0.1, 0.2, 0.3])
+
+    assert embedder.calls == 0                       # supplied vector reused
+    assert repo.searched_with[0] == [0.1, 0.2, 0.3]  # search used that vector
+    assert result.has_data is False
+
+
+# ─── retrieval_query (embed-only augmentation) ───────────────────────────────
+
+def test_answer_embeds_retrieval_query_but_generates_from_question():
+    chunks = [_chunk("Học phí HUST 30 triệu", "http://hust/fee", 0.9)]
+    service, embedder, _, gateway = _build(
+        chunks, parsed_data={"answer": "30 triệu", "used_source_ids": [1]}
+    )
+    service.answer(
+        question="còn học phí thì sao",
+        school="HUST", topic="tuition",
+        retrieval_query="HUST học phí ra sao\ncòn học phí thì sao",
+    )
+    # embedding used the augmented retrieval text...
+    assert embedder.calls[0]["texts"] == ["HUST học phí ra sao\ncòn học phí thì sao"]
+    assert embedder.calls[0]["task_type"] == "RETRIEVAL_QUERY"
+    # ...but the generation prompt's question stayed the original
+    prompt = gateway.calls[0].user_prompt
+    assert "Câu hỏi: còn học phí thì sao" in prompt
+    assert "HUST học phí ra sao" not in prompt
+
+
+def test_query_vector_takes_precedence_over_retrieval_query():
+    chunks = [_chunk("x", "http://x", 0.9)]
+    service, embedder, _, _ = _build(
+        chunks, parsed_data={"answer": "ok", "used_source_ids": [1]}
+    )
+    service.answer(
+        question="q", school="VNU-UET", topic="tuition",
+        query_vector=[0.7, 0.7], retrieval_query="ignored",
+    )
+    assert embedder.calls == []  # supplied vector → no embedding at all
+
+
 # ─── national-scope augmentation ─────────────────────────────────────────────
 
 from ingestion.config.settings import KNOWLEDGE_QA_NATIONAL_TOP_K
@@ -232,12 +294,12 @@ def test_specific_school_query_also_pulls_national_chunks():
                                  "https://chinhphu/r.pdf", 0.80,
                                  school=NATIONAL_SCHOOL, topic="admission_policy")],
     })
-    service = _service_with(repo, parsed_data={"answer": "...", "used_source_ids": []})
+    service = _service_with(repo, parsed_data={"answer": "...", "used_source_ids": [2]})
     res = service.answer("HUST xét tuyển thế nào", school="HUST", topic="admission_policy")
     # two retrievals: the school scope, then the national scope with its own budget
     assert [c["school"] for c in repo.calls] == ["HUST", NATIONAL_SCHOOL]
     assert repo.calls[1]["limit"] == KNOWLEDGE_QA_NATIONAL_TOP_K
-    # the national source is woven into the answer's citations
+    # the national source (cited explicitly by the LLM) is in the answer's citations
     assert "https://chinhphu/r.pdf" in {c.source_url for c in res.citations}
 
 
@@ -254,6 +316,23 @@ def test_national_school_query_does_not_recurse():
     service = _service_with(repo, parsed_data={"answer": "ok"})
     service.answer("q", school=NATIONAL_SCHOOL, topic="admission_policy")
     assert [c["school"] for c in repo.calls] == [NATIONAL_SCHOOL]   # single call only
+
+
+def test_answer_uses_supplied_national_without_research():
+    class _Repo:
+        def __init__(self):
+            self.national_searches = 0
+        def vector_search(self, embedding, school, topic, limit):
+            if school == NATIONAL_SCHOOL:
+                self.national_searches += 1
+            return []
+
+    repo = _Repo()
+    service = KnowledgeQAService(chunk_repository=repo, embedder=object(), gateway=object())
+    service.answer("q", school="VNU-UET", topic="tuition",
+                   query_vector=[0.1], national=[])
+
+    assert repo.national_searches == 0   # supplied national list → no national search
 
 
 def test_low_score_national_chunks_are_dropped():

@@ -2,6 +2,7 @@ from agents.explanation_agent import explanation_agent
 from agents.models import (
     CandidateProgram,
     CutoffAssessment,
+    EligibilityCheck,
     Evidence,
     PolicyDecision,
     RankedRecommendation,
@@ -257,7 +258,7 @@ def test_explanation_uses_vietnamese_accents_and_readable_sections():
     assert "- Tổ hợp xét tuyển phù hợp." in output.final_answer
     assert "**Nguồn tham chiếu**" in output.final_answer
     # Câu hỏi chốt mời ưu tiên tiêu chí (happy-path Turn 6).
-    assert "Em có muốn ưu tiên theo tiêu chí nào hơn" in output.final_answer
+    assert "Bạn có muốn ưu tiên theo tiêu chí nào hơn" in output.final_answer
 
 
 def test_explanation_prepends_correction_sentence_when_correction_note_present():
@@ -412,7 +413,7 @@ def test_no_match_lists_active_criteria_and_suggestions():
     assert "ngân sách" in answer
     assert "không tự nới" in answer
     # Không có câu hỏi chốt khi không có đề xuất
-    assert "Em có muốn ưu tiên theo tiêu chí nào hơn" not in answer
+    assert "Bạn có muốn ưu tiên theo tiêu chí nào hơn" not in answer
 
 
 def test_no_match_all_not_eligible_explains_combination_cause():
@@ -536,3 +537,123 @@ def test_ec17_data_note_lists_both_quota_values_with_sources():
     answer = output.final_answer
     assert "120" in answer and "150" in answer             # EC-17: đủ CẢ HAI giá trị + nguồn
     assert "tham chiếu giá trị 150" in answer
+
+
+from services.explanation_service import build_explanation, CLOSING_VARIANTS
+
+
+def _one_rec(band="safe"):
+    profile = StudentProfile(total_score=27.0, subject_combination="A00",
+                             preferred_majors=["computer_science"])
+    candidate = CandidateProgram(
+        candidate_id="hust:1", school_id="hust", school_name="HUST",
+        admission_year=2026, program_id="computer_science",
+        program_name="Khoa hoc May tinh", admission_method="thpt_score",
+    )
+    rec = RankedRecommendation(candidate_id="hust:1", band=band, score=0.9, summary="fit")
+    return profile, [rec], [candidate]
+
+
+def test_closing_rotates_by_seed():
+    profile, recs, cands = _one_rec()
+    out0 = build_explanation(profile, recs, cands, None, closing_seed=0)
+    out1 = build_explanation(profile, recs, cands, None, closing_seed=1)
+    assert out0.endswith(CLOSING_VARIANTS[0])
+    assert out1.endswith(CLOSING_VARIANTS[1])
+    assert CLOSING_VARIANTS[0] != CLOSING_VARIANTS[1]
+
+
+def test_no_closing_on_correction_rerun():
+    profile, recs, cands = _one_rec()
+    out = build_explanation(
+        profile, recs, cands, None,
+        correction_note={"slot": "total_score", "previous_value": 27.0, "new_value": 25.0},
+        closing_seed=0,
+    )
+    for variant in CLOSING_VARIANTS:
+        assert variant not in out
+
+
+def test_intro_lead_differs_by_band():
+    profile, recs_safe, cands = _one_rec(band="safe")
+    profile2, recs_reach, cands2 = _one_rec(band="reach")
+    safe_out = build_explanation(profile, recs_safe, cands, None)
+    reach_out = build_explanation(profile2, recs_reach, cands2, None)
+    assert "Hồ sơ của bạn đang khá cạnh tranh." in safe_out
+    assert "Có một vài lựa chọn bạn nên cân nhắc kỹ." in reach_out
+
+
+def test_data_note_concise_drops_official_check_boilerplate():
+    from services.explanation_service import _data_note
+    from agents.models import CandidateProgram
+
+    candidate = CandidateProgram(
+        candidate_id="hust:2026:cs:thpt_score", school_id="hust", school_name="HUST",
+        admission_year=2026, program_id="cs", program_name="KHMT",
+        admission_method="thpt_score", data_uncertain_fields=["quota"],
+    )
+    full = _data_note(candidate, {})
+    concise = _data_note(candidate, {}, concise=True)
+    assert "kiểm tra trực tiếp với trường" in full
+    assert "kiểm tra trực tiếp với trường" not in concise
+    assert concise.startswith("**Lưu ý dữ liệu:**")
+
+
+def _resolved_outcome(conflict_key, value):
+    chosen = EvidenceOption(evidence_id=f"mock://{conflict_key}|quota",
+                            source_url=f"mock://{conflict_key}", trust_level=3, value=value)
+    return ResolutionOutcome(
+        conflict_key=conflict_key, field_name="quota", school_id="x", school_name="X",
+        program_name="P", status="resolved", resolved_value=value,
+        chosen_evidence=chosen, rationale="r", decision_axes=["trust_level"],
+    )
+
+
+def test_multiple_conflicts_consolidate_caveat_once():
+    state = AgentState(user_query="Tu van", admission_year=2026)
+    state.student_profile = StudentProfile(total_score=27.0, subject_combination="A00")
+    state.retrieved_programs = [
+        CandidateProgram(candidate_id="hust:2026:cs:thpt_score", school_id="hust",
+                         school_name="HUST", admission_year=2026, program_id="cs",
+                         program_name="KHMT", admission_method="thpt_score"),
+        CandidateProgram(candidate_id="vnu_uet:2026:cntt:thpt_score", school_id="vnu_uet",
+                         school_name="UET", admission_year=2026, program_id="cntt",
+                         program_name="CNTT", admission_method="thpt_score"),
+    ]
+    state.ranked_recommendations = [
+        RankedRecommendation(candidate_id="hust:2026:cs:thpt_score", band="match", score=0.7, summary="f"),
+        RankedRecommendation(candidate_id="vnu_uet:2026:cntt:thpt_score", band="match", score=0.6, summary="f"),
+    ]
+    state.resolution_outcomes = [
+        _resolved_outcome("hust:2026:cs:thpt_score", 100),
+        _resolved_outcome("vnu_uet:2026:cntt:thpt_score", 150),
+    ]
+
+    answer = explanation_agent(state).final_answer
+
+    # consolidated caveat appears exactly once
+    assert answer.count("đối chiếu thông báo tuyển sinh chính thức") == 1
+    # per-program boilerplate is dropped (concise notes)
+    assert "nhưng bạn nên kiểm tra thông báo" not in answer
+    # but per-program specifics survive
+    assert "100" in answer and "150" in answer
+
+
+def test_not_eligible_section_has_bridge_lead_in():
+    state = AgentState(user_query="Tu van", admission_year=2026)
+    state.retrieved_programs = [
+        CandidateProgram(candidate_id="uet:ne", school_id="vnu_uet", school_name="UET",
+                         admission_year=2026, program_id="cs", program_name="KHMT",
+                         admission_method="thpt_score", subject_combinations=["A00"]),
+    ]
+    state.eligibility_checks = [
+        EligibilityCheck(candidate_id="uet:ne", eligible=False,
+                         risks=["Chương trình không nhận tổ hợp D01."]),
+    ]
+    state.ranked_recommendations = []
+    state.policy_decision = PolicyDecision(policy_flags=["no_eligible_recommendations"])
+
+    answer = explanation_agent(state).final_answer
+    bridge = "Một vài chương trình bạn quan tâm chưa đáp ứng điều kiện xét tuyển:"
+    assert bridge in answer
+    assert answer.index(bridge) < answer.index("**Không đủ điều kiện xét tuyển**")

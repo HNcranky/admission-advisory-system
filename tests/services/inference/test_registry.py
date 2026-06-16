@@ -33,3 +33,16 @@ def test_resolve_reads_max_tokens_from_override():
 def test_resolve_max_tokens_defaults_to_none():
     registry = ModelRegistry(default_model="m")
     assert registry.resolve("a").max_tokens is None
+
+
+def test_resolve_passes_thinking_budget_when_set():
+    registry = ModelRegistry(
+        default_model="gemini-2.5-flash-lite",
+        agent_overrides={"qa": {"thinking_budget": 0}},
+    )
+    assert registry.resolve("qa").thinking_budget == 0
+
+
+def test_resolve_thinking_budget_defaults_to_none():
+    registry = ModelRegistry(default_model="gemini-2.5-flash-lite")
+    assert registry.resolve("anything").thinking_budget is None

@@ -439,3 +439,28 @@ def test_intent_prompt_documents_reset_profile_route():
     from services.chat.intent_router import INTENT_SYSTEM_PROMPT
     assert "RESET_PROFILE" in INTENT_SYSTEM_PROMPT
     assert "tư vấn cho người khác" in INTENT_SYSTEM_PROMPT
+
+
+# --- response schema (slice1e) ---
+
+def test_classify_sends_response_schema():
+    from services.chat.intent_router import IntentRouter, IntentResult
+    from services.chat.models import ChatProfileState
+
+    captured = {}
+
+    class _CapturingGateway:
+        def is_available(self):
+            return True
+        def run(self, request):
+            captured["request"] = request
+            from services.inference.models import InferenceResult
+            return InferenceResult(
+                agent_name=request.agent_name, model="m", provider="p",
+                content='{"route": "ADVISORY_FLOW"}',
+                parsed_data={"route": "ADVISORY_FLOW"},
+            )
+
+    router = IntentRouter(gateway=_CapturingGateway())
+    router.classify("25 điểm A00 nên chọn trường nào", ChatProfileState())
+    assert captured["request"].response_schema is IntentResult

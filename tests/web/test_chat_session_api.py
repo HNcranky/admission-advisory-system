@@ -47,6 +47,9 @@ def test_post_message_returns_ready_payload(monkeypatch):
         def create_run(self, session_token, profile_state):
             return 7
 
+        def count_runs(self, session_token):
+            return 1
+
     class FakeService:
         def __init__(self):
             self.repository = FakeRepository()
@@ -66,7 +69,7 @@ def test_post_message_returns_ready_payload(monkeypatch):
             )
 
     class FakeDispatcher:
-        def submit(self, session_token, run_id, latest_user_message, profile_state, correction_note=None):
+        def submit(self, session_token, run_id, latest_user_message, profile_state, correction_note=None, closing_seed=0):
             return None
 
     monkeypatch.setattr("web.routes.chat_api.get_conversation_service", lambda: FakeService())
@@ -195,6 +198,9 @@ def test_post_message_dispatches_hybrid_run(monkeypatch):
     class FakeRepository:
         def create_run(self, session_token, profile_state):
             return 55
+
+        def count_runs(self, session_token):
+            return 1
 
     class FakeService:
         def __init__(self):

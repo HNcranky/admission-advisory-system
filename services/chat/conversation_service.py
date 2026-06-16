@@ -7,8 +7,10 @@ from services.chat.history import build_history_context
 from services.chat.knowledge_fanout import format_knowledge_blocks, run_knowledge_fanout
 from services.chat.repository import ChatSessionRepository
 from services.knowledge.qa_service import KnowledgeQAService
+from services.knowledge.retrieval_query import build_retrieval_query
 from services.profile.slots import (
-    SLOTS, follow_up_for, missing_critical_slots, next_follow_up_question, parse_slot,
+    SLOTS, build_slot_acknowledgement, follow_up_for, missing_critical_slots,
+    next_follow_up_question, parse_slot,
 )
 from services.profile.extractor import apply_profile_delta, extract_profile_update
 from services.profile.validation import validate_profile_delta
@@ -67,8 +69,13 @@ class ConversationService:
 
     def handle_user_message(self, session_token: str, content: str) -> ConversationTurnResult:
         # Build history from turns BEFORE this one — fetch prior to appending so
-        # the message being processed is excluded.
-        history_ctx = build_history_context(self.repository.list_message(session_token))
+        # the message being processed is excluded. The last user turn in that
+        # history is the referent for an elided follow-up (used by retrieval).
+        prior_messages = self.repository.list_message(session_token)
+        history_ctx = build_history_context(prior_messages)
+        prev_user = next(
+            (m.content for m in reversed(prior_messages) if m.role == "user"), ""
+        )
         self.repository.append_message(session_token, "user", content, "user_message")
         session = self.repository.get_session_by_token(session_token)
         profile_state = self.repository.get_profile_state(session_token)
@@ -112,9 +119,9 @@ class ConversationService:
         if intent.route == "ADVISORY_FLOW":
             return self._handle_advisory(session_token, profile_state, flow_state, delta)
         if intent.route == "KNOWLEDGE_QA":
-            return self._handle_knowledge_qa(session_token, content, intent, profile_state, flow_state, session_status, history_ctx)
+            return self._handle_knowledge_qa(session_token, content, intent, profile_state, flow_state, session_status, history_ctx, prev_user)
         if intent.route == "HYBRID":
-            return self._handle_hybrid(session_token, content, intent, profile_state, flow_state, session_status, history_ctx)
+            return self._handle_hybrid(session_token, content, intent, profile_state, flow_state, session_status, history_ctx, prev_user)
         if intent.route == "OUT_OF_SCOPE":
             return self._handle_out_of_scope(session_token, profile_state, flow_state, session_status)
         if intent.route == "CONVERSATIONAL":
@@ -232,7 +239,7 @@ class ConversationService:
                 "pending_question": None,
             }),
         )
-        ack = "Mình sẽ tính lại với thông tin em vừa cập nhật."
+        ack = "Mình sẽ tính lại với thông tin bạn vừa cập nhật."
         self.repository.append_message(session_token, "assistant", ack, "assistant_ready")
         return ConversationTurnResult(
             session_status="ready",
@@ -273,23 +280,25 @@ class ConversationService:
 
     def _handle_advisory(self, session_token, profile_state, flow_state, delta):
         merged = apply_profile_delta(profile_state, delta)
-        return self._advance_advisory(session_token, merged, flow_state)
+        return self._advance_advisory(session_token, merged, flow_state, delta)
 
-    def _advance_advisory(self, session_token, merged, flow_state):
+    def _advance_advisory(self, session_token, merged, flow_state, delta=None):
         follow_up = next_follow_up_question(merged)
         if follow_up:
+            ack = build_slot_acknowledgement(delta, merged)
+            message = f"{ack}\n\n{follow_up}" if ack else follow_up
             self.repository.update_profile_state(session_token, merged, "collecting_profile")
             self.repository.update_flow_state(
                 session_token,
                 flow_state.model_copy(update={
                     "active_flow": "ADVISORY_FLOW",
-                    "pending_question": follow_up,
+                    "pending_question": follow_up,  # stays bare; ack is message-only
                 }),
             )
-            self.repository.append_message(session_token, "assistant", follow_up, "assistant_follow_up")
+            self.repository.append_message(session_token, "assistant", message, "assistant_follow_up")
             return ConversationTurnResult(
                 session_status="collecting_profile",
-                assistant_message=follow_up,
+                assistant_message=message,
                 should_start_run=False,
                 profile_state=merged,
             )
@@ -311,7 +320,7 @@ class ConversationService:
             profile_state=merged,
         )
 
-    def _handle_knowledge_qa(self, session_token, content, intent, profile_state, flow_state, session_status, history_ctx=""):
+    def _handle_knowledge_qa(self, session_token, content, intent, profile_state, flow_state, session_status, history_ctx="", prev_user=""):
         # Resolve school: router value first, else the student's top preferred school.
         school = intent.school or (
             profile_state.preferred_schools[0] if profile_state.preferred_schools else None
@@ -324,6 +333,7 @@ class ConversationService:
                 school=school,
                 topic=intent.topic,
                 conversation_context=history_ctx,
+                retrieval_query=build_retrieval_query(content, prev_user),
             )
         except Exception as exc:
             # any embed/LLM/DB failure → graceful fallback below
@@ -337,7 +347,7 @@ class ConversationService:
             topic_label = self._TOPIC_LABELS.get(intent.topic or "", "thông tin này")
             school_label = school or "trường bạn hỏi"
             body = (
-                f"Hệ thống chưa có dữ liệu về {topic_label} của {school_label}. "
+                f"Mình hiện chưa có dữ liệu về {topic_label} của {school_label}. "
                 f"Bạn có thể liên hệ trực tiếp nhà trường để biết thêm chi tiết."
             )
             citations = []
@@ -352,7 +362,7 @@ class ConversationService:
             citations=citations,
         )
 
-    def _handle_hybrid(self, session_token, content, intent, profile_state, flow_state, session_status, history_ctx=""):
+    def _handle_hybrid(self, session_token, content, intent, profile_state, flow_state, session_status, history_ctx="", prev_user=""):
         missing = missing_critical_slots(profile_state)
 
         if not missing:
@@ -373,7 +383,7 @@ class ConversationService:
 
         # Profile incomplete → answer the knowledge half inline, ask the next advisory follow-up.
         school_fallback = profile_state.preferred_schools[0] if profile_state.preferred_schools else None
-        blocks = run_knowledge_fanout(self.knowledge_qa, intent, content, school_fallback, conversation_context=history_ctx)
+        blocks = run_knowledge_fanout(self.knowledge_qa, intent, content, school_fallback, conversation_context=history_ctx, prev_user=prev_user)
         body = format_knowledge_blocks(blocks)
 
         follow_up = next_follow_up_question(profile_state.model_copy(update={"missing_slots": missing}))

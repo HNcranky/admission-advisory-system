@@ -184,6 +184,19 @@ class ChatSessionRepository:
             )
         return run_id
 
+    def count_runs(self, session_token: str) -> int:
+        with self._cursor() as cur:
+            cur.execute(
+                """
+                SELECT COUNT(*)
+                FROM chat_advisory_runs r
+                JOIN chat_sessions s ON r.session_id = s.id
+                WHERE s.session_token = %s
+                """,
+                (session_token,),
+            )
+            return cur.fetchone()[0]
+
     def mark_run_running(self, run_id: int):
         with self._cursor(commit=True) as cur:
             cur.execute(

@@ -217,9 +217,6 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Local knowledge corpus (official PDFs, not committed)
-data/knowledge/
-
 # LaTeX build artifacts (thesis lives in latex/, compiled externally)
 *.aux
 *.bbl
@@ -244,3 +241,6 @@ latex/main.pdf
 # Local diagram toolchain (PlantUML jar, ~22 MB)
 tools/plantuml.jar
 
+
+# Curation scratch artifact (regenerated; promote reviewed copy to golden_set.json)
+eval/knowledge_qa/golden_set.candidate.json

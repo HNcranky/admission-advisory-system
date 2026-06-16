@@ -45,37 +45,84 @@ class KnowledgeQAService:
         self._min_score = min_score
         self._national_top_k = national_top_k
 
+    def embed_query(self, question: str):
+        """Embed a retrieval query. Exposed so callers (e.g. the fan-out) can
+        embed once and reuse the vector across many answer() calls."""
+        return self._embedder.embed([question], task_type="RETRIEVAL_QUERY")[0]
+
     def answer(
         self,
         question: str,
         school: Optional[str],
         topic: Optional[str],
         conversation_context: str = "",
+        query_vector=None,
+        national=None,
+        retrieval_query: Optional[str] = None,
     ) -> KnowledgeQAResult:
-        embedding = self._embedder.embed([question], task_type="RETRIEVAL_QUERY")[0]
+        # Embedding precedence: caller-supplied vector > retrieval_query (e.g. a
+        # context-augmented follow-up) > the raw question. Generation always uses
+        # `question` (see _generate), so the augmented text never reaches the prompt.
+        if query_vector is not None:
+            embedding = query_vector
+        elif retrieval_query:
+            embedding = self.embed_query(retrieval_query)
+        else:
+            embedding = self.embed_query(question)
         chunks = self._chunk_repository.vector_search(
             embedding, school=school, topic=topic, limit=self._top_k
         )
-        chunks = self._augment_with_national(embedding, school, topic, chunks)
+        chunks = self._augment_with_national(embedding, school, topic, chunks, national=national)
         confidence = chunks[0].score if chunks else 0.0
         if not chunks or confidence < self._min_score:
             return KnowledgeQAResult(has_data=False, confidence=confidence)
         return self._generate(question, chunks, confidence, conversation_context)
 
-    def _augment_with_national(self, embedding, school, topic, chunks):
+    def retrieve(self, question: str, school, topic):
+        """Production-equivalent retrieval (embed → vector_search → national
+        augment), exposed so the eval curation can freeze the same chunks
+        production would surface. Mirrors answer()'s retrieval branch."""
+        embedding = self.embed_query(question)
+        chunks = self._chunk_repository.vector_search(
+            embedding, school=school, topic=topic, limit=self._top_k
+        )
+        return self._augment_with_national(embedding, school, topic, chunks)
+
+    def generate_from_chunks(
+        self, question: str, chunks, conversation_context: str = ""
+    ) -> KnowledgeQAResult:
+        """Eval hook: run only the model-dependent generation step on a fixed set
+        of chunks, bypassing retrieval. Mirrors the post-retrieval branch of
+        answer(), so what it measures is exactly what production runs."""
+        confidence = chunks[0].score if chunks else 0.0
+        if not chunks:
+            return KnowledgeQAResult(has_data=False, confidence=confidence)
+        return self._generate(question, chunks, confidence, conversation_context)
+
+    def national_chunks(self, query_vector, topic):
+        """National-scope (Bộ GD&ĐT) chunks for a topic, score-filtered. The result
+        depends only on the topic, not the school, so the fan-out can compute this
+        once per distinct topic and reuse it across schools."""
+        national = self._chunk_repository.vector_search(
+            query_vector, school=NATIONAL_SCHOOL, topic=topic,
+            limit=self._national_top_k,
+        )
+        return [c for c in national if c.score >= self._min_score]
+
+    def _augment_with_national(self, embedding, school, topic, chunks, national=None):
         """A school-scoped query also pulls national-scope (Bộ GD&ĐT) chunks with
         their own budget — national regulations apply to every school. The two
         scopes keep separate top_k, so national never crowds out the school's own
         chunks. Skipped when the query isn't school-scoped (school=None already
-        scans national chunks) or is already national."""
+        scans national chunks) or is already national.
+
+        A precomputed ``national`` list (e.g. from the fan-out) is reused as-is;
+        otherwise national chunks are fetched on demand."""
         if school in (None, NATIONAL_SCHOOL):
             return chunks
-        national = self._chunk_repository.vector_search(
-            embedding, school=NATIONAL_SCHOOL, topic=topic,
-            limit=self._national_top_k,
-        )
-        national = [c for c in national if c.score >= self._min_score]
-        merged = list(chunks) + national
+        if national is None:
+            national = self.national_chunks(embedding, topic)
+        merged = list(chunks) + list(national)
         merged.sort(key=lambda c: c.score, reverse=True)
         return merged
 
@@ -120,7 +167,7 @@ class KnowledgeQAService:
             if isinstance(i, int) and 1 <= i <= len(chunks)
         ]
         if not selected:
-            selected = list(chunks)  # deterministic fallback: cite every passed chunk
+            selected = chunks[:1]  # fallback: cite only the top-scored chunk
 
         citations = []
         seen = set()

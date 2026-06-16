@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional, Tuple
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class InferenceError(RuntimeError):
@@ -8,12 +8,17 @@ class InferenceError(RuntimeError):
 
 
 class InferenceRequest(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     agent_name: str
     task_type: str
     system_prompt: str
     user_prompt: str
     output_mode: str = "free_text"
     schema_name: Optional[str] = None
+    # A Pydantic model *class* used as a server-side Gemini response_schema to
+    # constrain JSON generation. Default None => no constraint (unchanged).
+    response_schema: Optional[Any] = None
     temperature: float = 0.0
     # (mime_type, raw_bytes) attachments for multimodal (vision) calls.
     # Default empty => every existing text-only call site is unaffected.
@@ -29,6 +34,7 @@ class InferencePolicy(BaseModel):
     output_mode: str = "free_text"
     max_retries: int = 1
     max_tokens: Optional[int] = None
+    thinking_budget: Optional[int] = None
 
 
 class InferenceResult(BaseModel):

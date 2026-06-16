@@ -214,6 +214,7 @@ class IntentRouter:
                     system_prompt=INTENT_SYSTEM_PROMPT,
                     user_prompt=self._build_user_prompt(message, profile_state, history),
                     output_mode="json",
+                    response_schema=IntentResult,
                     temperature=0.0,
                 )
             )

@@ -58,8 +58,8 @@ class FakeKnowledgeQA:
         self._raise = raise_exc
         self.calls = []
 
-    def answer(self, question, school, topic, conversation_context=""):
-        self.calls.append({"question": question, "school": school, "topic": topic})
+    def answer(self, question, school, topic, conversation_context="", query_vector=None, national=None, retrieval_query=None):
+        self.calls.append({"question": question, "school": school, "topic": topic, "retrieval_query": retrieval_query})
         if self._raise:
             raise RuntimeError("simulated knowledge-qa failure")
         if self._result is not None:
@@ -822,8 +822,8 @@ def test_score_answer_then_system_asks_admission_method():
     assert repo.profile_state.total_score == 27.0
     assert "phương thức" in result.assistant_message
     assert repo.flow_state.pending_question == (
-        "Bạn xét tuyển theo phương thức nào: điểm thi tốt nghiệp THPT, học bạ, "
-        "đánh giá năng lực hay xét tuyển kết hợp?"
+        "Bạn dự định xét tuyển bằng phương thức nào nhỉ? Ví dụ: điểm thi tốt nghiệp THPT, "
+        "xét học bạ, đánh giá năng lực, hoặc xét tuyển kết hợp."
     )
 
 
@@ -983,3 +983,26 @@ def test_normal_messages_do_not_trigger_deterministic_reset():
     )
     service.handle_user_message("tok", "tư vấn cho em ngành phù hợp với 27 điểm")
     assert repo.profile_state.total_score == 27.0          # hồ sơ giữ nguyên
+
+
+def test_advisory_echoes_captured_value_before_next_question():
+    service, repo = _make_service(
+        intent_result=IntentResult(route="ADVISORY_FLOW"),
+        extract=lambda text, known_state=None, active_slot=None: {"total_score": 26.0},
+    )
+    result = service.handle_user_message("tok", "Em được 26 điểm")
+    assert "Mình ghi nhận mức điểm 26." in result.assistant_message
+    assert result.assistant_message.strip().endswith("?")  # next question still asked
+    # pending_question stays the bare follow-up, not the ack-decorated message
+    assert "Mình ghi nhận" not in (repo.flow_state.pending_question or "")
+
+
+def test_advisory_recaps_when_two_or_more_slots_filled():
+    service, repo = _make_service(
+        intent_result=IntentResult(route="ADVISORY_FLOW"),
+        profile=ChatProfileState(admission_year=2026, total_score=26.0),
+        extract=lambda text, known_state=None, active_slot=None: {"admission_method": "thpt_score"},
+    )
+    result = service.handle_user_message("tok", "Xét điểm thi THPT")
+    assert "Mình đã nắm:" in result.assistant_message
+    assert "Còn thiếu:" in result.assistant_message

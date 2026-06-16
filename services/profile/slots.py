@@ -2,7 +2,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Callable, List, Optional
 
-from services.profile.admission_methods import parse_admission_method
+from services.profile.admission_methods import parse_admission_method, method_display
 from services.profile_service import extract_subject_combination, normalize_text
 
 
@@ -56,7 +56,8 @@ SLOTS: List[Slot] = [
     Slot("admission_year", True, 0, "Bạn đang xét tuyển cho năm nào?", parse_admission_year),
     Slot("total_score", True, 1, "Tổng điểm hoặc mức điểm ước tính của bạn là bao nhiêu?", parse_score),
     Slot("admission_method", True, 2,
-         "Bạn xét tuyển theo phương thức nào: điểm thi tốt nghiệp THPT, học bạ, đánh giá năng lực hay xét tuyển kết hợp?",
+         "Bạn dự định xét tuyển bằng phương thức nào nhỉ? Ví dụ: điểm thi tốt nghiệp THPT, "
+         "xét học bạ, đánh giá năng lực, hoặc xét tuyển kết hợp.",
          parse_admission_method),
     Slot("preferred_majors", True, 3, "Bạn quan tâm nhất đến ngành nào?", None, present=_major_present),
     Slot("subject_combination", True, 4, "Bạn xét theo tổ hợp nào, ví dụ A00, A01 hay D01?", parse_subject_combination),
@@ -99,3 +100,86 @@ def parse_slot(name: str, raw_message: str):
 def follow_up_for(slot_name: str):
     slot = _BY_NAME.get(slot_name)
     return slot.follow_up if slot else None
+
+
+# Nhãn slot hiển thị cho ack/recap (3c). Nguồn nhãn dùng chung với
+# explanation_service (_SLOT_LABELS) nhưng dạng ngắn cho câu xác nhận.
+SLOT_LABELS = {
+    "admission_year": "năm xét tuyển",
+    "total_score": "mức điểm",
+    "admission_method": "phương thức xét tuyển",
+    "preferred_majors": "ngành quan tâm",
+    "subject_combination": "tổ hợp xét tuyển",
+    "location_preference": "khu vực",
+    "tuition_budget": "mức học phí",
+}
+
+# Các key delta cùng trỏ về slot ngành (AC4): gộp về một nhãn duy nhất.
+_MAJOR_KEYS = {"preferred_majors", "explicit_preferred_majors", "inferred_interest_tags"}
+
+
+def _slot_label(key: str):
+    if key in _MAJOR_KEYS:
+        return SLOT_LABELS["preferred_majors"]
+    return SLOT_LABELS.get(key)
+
+
+def _fmt_slot_value(name: str, value) -> str:
+    if name == "admission_method" and value:
+        return method_display(value)
+    if isinstance(value, (list, tuple)):
+        return ", ".join(str(v) for v in value)
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value)
+
+
+def _state_slot_value(state, name: str) -> str:
+    if name == "preferred_majors":
+        value = (
+            getattr(state, "preferred_majors", None)
+            or getattr(state, "explicit_preferred_majors", None)
+            or getattr(state, "inferred_interest_tags", None)
+        )
+    else:
+        value = getattr(state, name, None)
+    return _fmt_slot_value(name, value)
+
+
+def _captured_pairs(delta):
+    """[(label, formatted_value)] cho các slot critical vừa được set, dedupe theo nhãn."""
+    pairs = []
+    seen = set()
+    for key, value in delta.items():
+        label = _slot_label(key)
+        if label is None or label in seen or _is_empty(value):
+            continue
+        seen.add(label)
+        pairs.append((label, _fmt_slot_value(key, value)))
+    return pairs
+
+
+def build_slot_acknowledgement(delta, state):
+    """Câu xác nhận giá trị vừa nhận (3c). Trả None khi không bắt được slot nào.
+
+    <2 slot critical đã điền → echo riêng giá trị vừa nhận.
+    ≥2 slot critical đã điền → recap: đã nắm gì + còn thiếu gì."""
+    captured = _captured_pairs(delta or {})
+    if not captured:
+        return None
+
+    filled = [s for s in _ORDERED if s.critical and _slot_present(s, state)]
+    if len(filled) >= 2:
+        filled_text = ", ".join(
+            f"{_slot_label(s.name)} {_state_slot_value(state, s.name)}" for s in filled
+        )
+        recap = f"Mình đã nắm: {filled_text}."
+        missing_text = ", ".join(
+            _slot_label(m) for m in missing_critical_slots(state) if _slot_label(m)
+        )
+        if missing_text:
+            recap += f" Còn thiếu: {missing_text}."
+        return recap
+
+    echo = ", ".join(f"{label} {value}" for label, value in captured)
+    return f"Mình ghi nhận {echo}."

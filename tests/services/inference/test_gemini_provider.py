@@ -272,3 +272,51 @@ def test_max_tokens_none_leaves_config_unbounded():
     provider = GeminiProvider(pool=pool)
     provider.generate(_request(), _policy())  # _policy() → max_tokens None
     assert captured["config"].max_output_tokens is None
+
+
+# --- thinking budget -----------------------------------------------------------
+
+def test_thinking_budget_sets_thinking_config():
+    captured = {}
+    pool = _pool({"k1": FakeClient(text='{"ok": true}', captured=captured)})
+    provider = GeminiProvider(pool=pool)
+    policy = InferencePolicy(agent_name="qa", primary_model="gemini-2.5-flash", thinking_budget=0)
+    provider.generate(_request(), policy)
+    assert captured["config"].thinking_config is not None
+    assert captured["config"].thinking_config.thinking_budget == 0
+
+
+def test_no_thinking_budget_leaves_thinking_config_unset():
+    captured = {}
+    pool = _pool({"k1": FakeClient(text='{"ok": true}', captured=captured)})
+    provider = GeminiProvider(pool=pool)
+    provider.generate(_request(), _policy())  # _policy() → thinking_budget None
+    assert captured["config"].thinking_config is None
+
+
+# --- response schema -----------------------------------------------------------
+
+def test_response_schema_passed_to_config_for_json():
+    import pydantic
+
+    class _Shape(pydantic.BaseModel):
+        route: str
+
+    captured = {}
+    pool = _pool({"k1": FakeClient(text='{"route": "X"}', captured=captured)})
+    provider = GeminiProvider(pool=pool)
+    request = InferenceRequest(
+        agent_name="intent_router", task_type="t",
+        system_prompt="sys", user_prompt="usr",
+        output_mode="json", response_schema=_Shape,
+    )
+    provider.generate(request, _policy())
+    assert captured["config"].response_schema is _Shape
+
+
+def test_no_response_schema_leaves_config_unset():
+    captured = {}
+    pool = _pool({"k1": FakeClient(text='{"ok": true}', captured=captured)})
+    provider = GeminiProvider(pool=pool)
+    provider.generate(_request(), _policy())  # _request() sets no schema
+    assert captured["config"].response_schema is None

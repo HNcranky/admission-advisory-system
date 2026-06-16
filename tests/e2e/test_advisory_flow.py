@@ -80,7 +80,7 @@ def test_advisory_flow_returns_policy_checked_answer(monkeypatch):
     result = graph.invoke(state)
 
     assert result["final_answer"]
-    assert "Dựa trên hồ sơ hiện tại của em" in result["final_answer"]
+    assert "Dựa trên hồ sơ hiện tại của bạn" in result["final_answer"]
     assert "### 1." in result["final_answer"]
     assert result["uncertainty_reasons"] == []
 

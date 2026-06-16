@@ -37,6 +37,12 @@ BAND_FIT_LABELS = {
     "unknown": "Chưa đủ dữ liệu",
 }
 
+_CONSOLIDATED_CONFLICT_CAVEAT = (
+    "**Lưu ý dữ liệu:** Một số chương trình dưới đây có dữ liệu chưa thống nhất giữa "
+    "các nguồn; bạn nên đối chiếu thông báo tuyển sinh chính thức mới nhất của trường "
+    "trước khi đăng ký."
+)
+
 # Nhãn slot cho câu thông báo correction (AC7).
 _SLOT_LABELS = {
     "total_score": "điểm dự kiến",
@@ -55,10 +61,22 @@ _FIELD_LABELS = {
     "cutoff_score": "điểm chuẩn",
 }
 
-CLOSING_QUESTION = (
-    "Em có muốn ưu tiên theo tiêu chí nào hơn: **khả năng trúng tuyển**, "
-    "**đúng sở thích**, hay **học phí an toàn nhất**?"
-)
+CLOSING_VARIANTS = [
+    # [0] giữ nguyên chuỗi slice 3a để seed 0 không đổi hành vi.
+    "Bạn có muốn ưu tiên theo tiêu chí nào hơn: **khả năng trúng tuyển**, "
+    "**đúng sở thích**, hay **học phí an toàn nhất**?",
+    "Giữa **khả năng trúng tuyển**, **đúng sở thích** và **học phí an toàn nhất**, "
+    "bạn muốn mình ưu tiên tiêu chí nào?",
+    "Bạn muốn mình sắp xếp ưu tiên theo **khả năng trúng tuyển**, **đúng sở thích** "
+    "hay **học phí an toàn nhất**?",
+]
+
+# Câu dẫn mở đầu theo band của đề xuất tốt nhất (3d). Mặc định cho reach/unknown.
+_BAND_INTRO_LEAD = {
+    "safe": "Hồ sơ của bạn đang khá cạnh tranh.",
+    "match": "Hồ sơ của bạn có một số lựa chọn phù hợp.",
+}
+_DEFAULT_INTRO_LEAD = "Có một vài lựa chọn bạn nên cân nhắc kỹ."
 
 
 def _translate(text: str) -> str:
@@ -113,12 +131,14 @@ def _correction_sentence(note: Dict[str, Any]) -> str:
     if isinstance(prev, (int, float)) and isinstance(new, (int, float)):
         direction = "xuống" if new < prev else ("lên" if new > prev else "thành")
     return (
-        f"Mình đã cập nhật {label} của em từ {_fmt_num(prev)} {direction} {_fmt_num(new)}. "
+        f"Mình đã cập nhật {label} của bạn từ {_fmt_num(prev)} {direction} {_fmt_num(new)}. "
         "Với dữ liệu mới, thứ tự ưu tiên thay đổi:"
     )
 
 
-def _intro_paragraph(profile: StudentProfile, admission_year: Optional[int], n: int) -> str:
+def _intro_paragraph(profile: StudentProfile, admission_year: Optional[int], n: int,
+                     top_band: Optional[str] = None) -> str:
+    lead = _BAND_INTRO_LEAD.get(top_band, _DEFAULT_INTRO_LEAD)
     facts: List[str] = []
     if admission_year:
         facts.append(f"xét tuyển năm {admission_year}")
@@ -136,10 +156,10 @@ def _intro_paragraph(profile: StudentProfile, admission_year: Optional[int], n: 
         facts.append(f"học phí {profile.tuition_budget}")
     if facts:
         return (
-            f"Dựa trên hồ sơ hiện tại của em — {', '.join(facts)} — "
+            f"{lead} Dựa trên hồ sơ hiện tại của bạn — {', '.join(facts)} — "
             f"mình đề xuất {n} lựa chọn sau:"
         )
-    return f"Dựa trên thông tin hiện có, mình đề xuất {n} lựa chọn sau:"
+    return f"{lead} Dựa trên thông tin hiện có, mình đề xuất {n} lựa chọn sau:"
 
 
 def _profile_criteria(profile: StudentProfile, admission_year: Optional[int]) -> List[str]:
@@ -180,11 +200,11 @@ def _no_match_block(
 
     not_eligible = [c for c in eligibility_checks if c.eligible is False]
     if not_eligible and profile.subject_combination:
-        majors = ", ".join(profile.preferred_majors[:3]) or "em quan tâm"
+        majors = ", ".join(profile.preferred_majors[:3]) or "bạn quan tâm"
         lines.append("")
         lines.append(
             f"Các chương trình ngành {majors} trong dữ liệu hiện không nhận tổ hợp "
-            f"{profile.subject_combination}; em có thể cân nhắc tổ hợp khác hoặc ngành gần."
+            f"{profile.subject_combination}; bạn có thể cân nhắc tổ hợp khác hoặc ngành gần."
         )
         return lines
 
@@ -198,14 +218,18 @@ def _no_match_block(
     if suggestions:
         lines.append("")
         lines.append(
-            "Em có thể cân nhắc: " + "; ".join(suggestions)
-            + ". Mình sẽ không tự nới tiêu chí khi chưa có xác nhận của em."
+            "Bạn có thể cân nhắc: " + "; ".join(suggestions)
+            + ". Mình sẽ không tự nới tiêu chí khi chưa có xác nhận của bạn."
         )
     return lines
 
 
-def _data_note(candidate: CandidateProgram, outcome_by_key: Dict[str, ResolutionOutcome]) -> Optional[str]:
-    """Khối '**Lưu ý dữ liệu:**' theo từng chương trình (AC6)."""
+def _data_note(candidate: CandidateProgram, outcome_by_key: Dict[str, ResolutionOutcome],
+               concise: bool = False) -> Optional[str]:
+    """Khối '**Lưu ý dữ liệu:**' theo từng chương trình (AC6).
+
+    concise=True bỏ câu nhắc 'kiểm tra thông báo chính thức' (đã gộp lên đầu khi
+    ≥2 chương trình mâu thuẫn — 3e)."""
     outcome = outcome_by_key.get(_candidate_conflict_key(candidate))
     if outcome is None and not candidate.data_uncertain_fields:
         return None
@@ -217,21 +241,26 @@ def _data_note(candidate: CandidateProgram, outcome_by_key: Dict[str, Resolution
         values = " và ".join(
             f"{_fmt_num(o.value)} ({label_for_source(o.source_url)})" for o in all_options
         )
-        return (
+        note = (
             f"**Lưu ý dữ liệu:** Các nguồn ghi khác nhau về {field}: {values}. "
             f"Hệ thống tham chiếu giá trị {_fmt_num(outcome.resolved_value)} từ "
-            f"{label_for_source(chosen.source_url)}, nhưng em nên kiểm tra thông báo "
-            "tuyển sinh chính thức mới nhất của trường trước khi đăng ký."
+            f"{label_for_source(chosen.source_url)}"
+        )
+        if concise:
+            return note + "."
+        return note + (
+            ", nhưng bạn nên kiểm tra thông báo tuyển sinh chính thức mới nhất của "
+            "trường trước khi đăng ký."
         )
 
     if outcome is not None:
         field = _field_label(outcome.field_name)
     else:
         field = ", ".join(_field_label(f) for f in candidate.data_uncertain_fields)
-    return (
-        f"**Lưu ý dữ liệu:** Thông tin về {field} đang mâu thuẫn giữa các nguồn. "
-        "Em nên kiểm tra trực tiếp với trường trước khi đăng ký."
-    )
+    base = f"**Lưu ý dữ liệu:** Thông tin về {field} đang mâu thuẫn giữa các nguồn."
+    if concise:
+        return base
+    return base + " Bạn nên kiểm tra trực tiếp với trường trước khi đăng ký."
 
 
 def _not_eligible_lines(
@@ -268,6 +297,7 @@ def build_explanation(
     admission_year: Optional[int] = None,
     correction_note: Optional[Dict[str, Any]] = None,
     eligibility_checks: Optional[List[EligibilityCheck]] = None,
+    closing_seed: int = 0,
 ) -> str:
     resolution_outcomes = resolution_outcomes or []
     lines: List[str] = []
@@ -297,7 +327,8 @@ def build_explanation(
     outcome_by_key = {o.conflict_key: o for o in resolution_outcomes}
 
     if renderable:
-        lines.append(_intro_paragraph(profile, admission_year, len(renderable)))
+        top_band = renderable[0][0].band
+        lines.append(_intro_paragraph(profile, admission_year, len(renderable), top_band))
         ref_years = sorted({
             rec.cutoff_assessment.reference_year
             for rec, _candidate in renderable
@@ -312,6 +343,11 @@ def build_explanation(
                 f"Đánh giá dưới đây sử dụng dữ liệu năm {years_text} làm tham chiếu "
                 "và có thể thay đổi khi trường công bố thông tin mới."
             )
+        conflicted = [c for _rec, c in renderable if _data_note(c, outcome_by_key) is not None]
+        consolidate = len(conflicted) >= 2
+        if consolidate:
+            lines.append("")
+            lines.append(_CONSOLIDATED_CONFLICT_CAVEAT)
         for idx, (recommendation, candidate) in enumerate(renderable, start=1):
             lines.append("")
             lines.append(f"### {idx}. {candidate.school_name} — {_program_label(candidate)}")
@@ -327,7 +363,7 @@ def build_explanation(
                 for bullet in bullets:
                     lines.append(f"- {bullet}")
 
-            note = _data_note(candidate, outcome_by_key)
+            note = _data_note(candidate, outcome_by_key, concise=consolidate)
             if note:
                 lines.append("")
                 lines.append(note)
@@ -339,6 +375,8 @@ def build_explanation(
     # chương trình NOT_ELIGIBLE không còn trong danh sách đề xuất).
     ne_lines = _not_eligible_lines(eligibility_checks or [], candidates_by_id)
     if ne_lines:
+        lines.append("")
+        lines.append("Một vài chương trình bạn quan tâm chưa đáp ứng điều kiện xét tuyển:")
         lines.append("")
         lines.append("**Không đủ điều kiện xét tuyển**")
         lines.append("")
@@ -371,8 +409,8 @@ def build_explanation(
             "Thông tin cần bổ sung: điểm, tổ hợp môn, ngành/trường ưu tiên để nâng độ chính xác."
         )
 
-    if renderable:
+    if renderable and not correction_note:
         lines.append("")
-        lines.append(CLOSING_QUESTION)
+        lines.append(CLOSING_VARIANTS[closing_seed % len(CLOSING_VARIANTS)])
 
     return "\n".join(lines)

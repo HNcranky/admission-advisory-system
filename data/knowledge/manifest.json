@@ -1,0 +1,80 @@
+[
+  {
+    "school": "VNU-UET",
+    "url": "https://tuyensinh.uet.vnu.edu.vn/wp-content/images/Huong-dan-dang-ky-xet-tuyen-2026.pdf",
+    "anchor_text": "Hướng dẫn đăng ký xét tuyển 2026",
+    "found_on": "https://uet.vnu.edu.vn/tuyen-sinh",
+    "content_type": "application/pdf",
+    "size_bytes": 1068579,
+    "last_modified": "Mon, 11 May 2026 00:41:26 GMT",
+    "discovered_at": "2026-06-04",
+    "relevance": "low",
+    "status": "pending",
+    "already_ingested": false
+  },
+  {
+    "school": "VNU-UET",
+    "url": "https://tuyensinh.uet.vnu.edu.vn/wp-content/images/Thong-tin-tuyen-sinh-DHCQ-nam-2025-QHI.pdf",
+    "anchor_text": "https://tuyensinh.uet.vnu.edu.vn/uncategorized/thong-tin-tuyen-sinh-dai-hoc-chinh-quy-nam-2025-2/",
+    "found_on": "https://uet.vnu.edu.vn/tuyen-sinh",
+    "content_type": "application/pdf",
+    "size_bytes": 914918,
+    "last_modified": "Thu, 24 Jul 2025 14:35:04 GMT",
+    "discovered_at": "2026-06-04",
+    "relevance": "high",
+    "status": "pending",
+    "already_ingested": false
+  },
+  {
+    "school": "VNU-UET",
+    "url": "https://tuyensinh.uet.vnu.edu.vn/wp-content/images/Thong-tin-tuyen-sinh-DHCQ-nam-2026-cap-nhat.pdf",
+    "anchor_text": "Thông tin tuyển sinh ĐHCQ năm 2026 (cập nhật)",
+    "found_on": "https://tuyensinh.uet.vnu.edu.vn/ban-nen-biet/thong-tin-tuyen-sinh-dhcq-nam-2026-cap-nhat",
+    "content_type": "application/pdf",
+    "size_bytes": 1908053,
+    "last_modified": "Tue, 14 Apr 2026 01:17:09 GMT",
+    "discovered_at": "2026-06-04",
+    "relevance": "high",
+    "status": "pending",
+    "already_ingested": false
+  },
+  {
+    "school": "HUST",
+    "url": "https://hust.edu.vn/uploads/sys/tuyen-sinh/2023_06/thong-tin-tuyen-sinh-dai-hoc-2026.pdf",
+    "anchor_text": "TẠI ĐÂY",
+    "found_on": "https://www.hust.edu.vn/tuyen-sinh/de-an-tuyen-sinh/de-an-tuyen-sinh-567354.html",
+    "content_type": null,
+    "size_bytes": null,
+    "last_modified": null,
+    "discovered_at": "2026-06-04",
+    "relevance": "high",
+    "status": "pending",
+    "already_ingested": false
+  },
+  {
+    "school": "HUST",
+    "url": "https://www.hust.edu.vn/uploads/sys/tuyen-sinh/2025_06/quy-che-tsa-10461qd.pdf",
+    "anchor_text": "TẠI ĐÂY .",
+    "found_on": "https://www.hust.edu.vn/tuyen-sinh/dai-hoc/quy-che-thi-dgtd-569432.html",
+    "content_type": null,
+    "size_bytes": null,
+    "last_modified": null,
+    "discovered_at": "2026-06-04",
+    "relevance": "high",
+    "status": "pending",
+    "already_ingested": false
+  },
+  {
+    "school": "VNU-UET",
+    "url": "https://tuyensinh.uet.vnu.edu.vn/wp-content/images/Thong-tin-tuyen-sinh-DHCQ-nam-2026-QHI.pdf",
+    "anchor_text": "Thông tin tuyển sinh ĐHCQ năm 2026 QHI",
+    "found_on": "https://tuyensinh.uet.vnu.edu.vn/ban-nen-biet/thong-tin-tuyen-sinh-dai-hoc-chinh-quy-nam-2026",
+    "content_type": "application/pdf",
+    "size_bytes": 3126362,
+    "last_modified": "Fri, 13 Feb 2026 04:59:27 GMT",
+    "discovered_at": "2026-06-04",
+    "relevance": "high",
+    "status": "pending",
+    "already_ingested": false
+  }
+]

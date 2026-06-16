@@ -20,13 +20,6 @@ def build_default_gateway() -> LLMGateway:
                 "allow_fallback": True,
                 "fallback_model": "gemini-2.5-flash-lite",
             },
-            "resolution_agent": {
-                "output_mode": "json",
-                "max_retries": 1,
-                "allow_fallback": True,
-                "fallback_model": "gemini-2.5-flash",
-                "max_tokens": 256,
-            },
             "explanation_agent": {"output_mode": "free_text", "max_retries": 1},
             "knowledge_qa_agent": {
                 "primary_model": "gemini-2.5-flash",
@@ -35,6 +28,7 @@ def build_default_gateway() -> LLMGateway:
                 "allow_fallback": True,
                 "fallback_model": "gemini-2.5-flash-lite",
                 "max_tokens": 800,
+                "thinking_budget": 0,
             },
             "synthesis_agent": {
                 "primary_model": "gemini-2.5-flash",
@@ -53,6 +47,7 @@ def build_default_gateway() -> LLMGateway:
             "knowledge_classify": {"output_mode": "json", "max_retries": 1},
             "intent_router": {"output_mode": "json", "max_retries": 1, "max_tokens": 256},
             "profile_extractor": {"output_mode": "json", "max_retries": 1, "max_tokens": 300},
+            "major_resolver": {"output_mode": "json", "max_retries": 1, "max_tokens": 100},
         },
     )
     return LLMGateway(registry=registry, telemetry=InferenceTelemetry())
