@@ -14,7 +14,7 @@ It collects a student profile incrementally and withholds recommendations until 
 It answers factual questions only from ingested documents, with citations, and declines honestly when the corpus is insufficient, rather than fabricating figures as a general-purpose chatbot would.
 It preserves contradictory source values rather than overwriting them, and it discloses the disagreement in its recommendations.
 It stays available through model outages by routing every model call through a gateway that distinguishes hard from soft failures and falls back deterministically.
-These behaviors are backed by a substantial, well-tested implementation --- roughly 28{,}000 lines of Python, 856 automated tests with 854 passing, and a populated data store drawn from real official sources --- as quantified in Chapter~\ref{chapter:Experiment}.
+These behaviors are backed by a substantial, well-tested implementation --- roughly 31{,}000 lines of Python, 1{,}011 automated tests with 1{,}009 passing, and a populated data store drawn from real official sources --- as quantified in Chapter~\ref{chapter:Experiment}.
 Relative to the channels surveyed in Chapter~\ref{chapter:Related_works}, the distinguishing achievement is conflict awareness: where aggregator portals and institutional platforms silently pick one value, this system surfaces the conflict and tells the student to verify it.
 
 The system also has clear limits.
