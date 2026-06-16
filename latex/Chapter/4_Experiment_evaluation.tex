@@ -330,13 +330,17 @@ A completed consultation presents ranked program recommendations in the conversa
 \section{Testing}
 \label{section:4.4}
 
-The system is verified by an automated test suite of 856 tests across 149 test files, built with the pytest framework~\cite{pytest} and spanning unit tests of individual services, integration tests that exercise real \gls{SQL} paths, and end-to-end tests of the advisory and ingestion flows.
+The system is verified by an automated test suite that currently collects 1{,}011 tests across 167 test files, built with the pytest framework~\cite{pytest} and spanning unit tests of individual services, integration tests that exercise real \gls{SQL} paths, and end-to-end tests of the advisory and ingestion flows.
 
 The defining feature of the test strategy is \textit{database isolation}.
 A fixture in \texttt{tests/conftest.py} (\texttt{\_isolate\_test\_db}) redirects the entire suite to an automatically created \texttt{admission\_test} database, so integration and end-to-end tests can create, mutate, and drop data without ever touching the development database.
 This makes the integration tests safe to run repeatedly and satisfies the testability requirement NFR-05.
 
-A full run of the suite on the isolated database completes in approximately 7.4 minutes with 854 tests passing, one skipped, and one failing.
+% TODO-VERIFY 2026-06-16: the pass/fail/skip figures and 7.4 min runtime below are the
+% 2026-06-08 baseline against an earlier collection of 856 tests; the full suite was not
+% re-run in the Plan 00 environment (Docker DB unavailable). Re-run `python -m pytest -q`
+% after `docker compose up -d --wait db` and update before the submission pass.
+The most recent full run on the isolated database --- taken against an earlier collection of 856 tests and predating the latest additions --- completed in approximately 7.4 minutes with 854 tests passing, one skipped, and one failing.
 The skipped test is an end-to-end conflict-resolution scenario that requires an external dataset dump not committed to the repository.
 The single failure is a known, deferred issue in the knowledge-source registry seed: the default seed exposes no NEU sources because NEU documents were ingested through the local-directory path rather than the registered-source path, so a test asserting that every seeded school has at least one registered source fails for NEU.
 This failure concerns test-fixture seeding, not the runtime advisory or question-answering behavior.
@@ -373,10 +377,18 @@ A single service definition runs the database from the \texttt{pgvector/pgvector
 Bringing up the database and waiting for its health check is a single command, after which a setup script (\texttt{db/setup\_db.py}) creates the \texttt{admission} database, applies the migrations in order, verifies the expected tables, and seeds the source registry.
 The web application is then served by Uvicorn.
 Ingestion is run separately through the \gls{CLI} to populate the canonical store and the knowledge corpus.
+The whole bring-up is the short sequence of Listing~\ref{lst:deploy}.
+
+\begin{lstlisting}[language=bash,caption={One-command database bring-up, schema setup, and application server (from \texttt{QUICKSTART.md})},label=lst:deploy]
+docker compose up -d --wait db                 # pgvector/pgvector:pg16, waits for healthy
+python -m db.setup_db                           # create DB, apply migrations, seed sources
+python -m ingestion.main --school vnu_uet       # populate the canonical store (offline)
+uvicorn web.app:build_app --factory --reload    # serve the chat application
+\end{lstlisting}
 
 This separation --- a containerized database, a one-command schema setup, an application server, and an offline ingestion \gls{CLI} --- keeps the runtime dependencies minimal (a Python environment and a Docker engine) while the idempotent migrations and upsert-based ingestion let the operator refresh school data at any time during the admission season, as required by NFR-02.
 
-This chapter presented the system's layered architecture, the design of its core packages, the three-pane interface, the layer interactions behind the two central flows, the database schema, and the deployment, then evaluated the result against an automated suite of 856 tests and a 25-case edge-case catalogue.
+This chapter presented the system's layered architecture, the design of its core packages, the three-pane interface, the layer interactions behind the two central flows, the database schema, and the deployment, then evaluated the result against an automated suite of more than 1{,}000 tests and a 25-case edge-case catalogue.
 The evaluation showed a system that is functionally substantial and well tested, with a clearly identified cluster of unmet preference-handling cases.
 Chapter~\ref{chapter:SolutionAndContribution} steps back from the full system to present its three principal contributions in depth.
 
