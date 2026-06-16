@@ -10,17 +10,17 @@ Command: `git ls-files '*.py' | xargs wc -l` (tracked files only)
 
 | Metric | Value |
 |---|---|
-| Python LOC (total, incl. tests) | 28,055 |
-| Python files (tracked) | 315 |
-| `tests/` LOC | 13,646 |
-| Production LOC (total − tests) | 14,409 |
-| `ingestion/` LOC | 6,767 |
-| `services/` LOC | 5,473 |
-| `db/` LOC | 330 |
-| `agents/` LOC | 271 |
-| `web/` (Python only) LOC | 166 |
+| Python LOC (total, incl. tests) | 31,076 |
+| Python files (tracked) | 376 |
+| `tests/` LOC | 15,664 |
+| Production LOC (total − tests) | 15,412 |
+| `ingestion/` LOC | 6,695 |
+| `services/` LOC | 6,089 |
+| `db/` LOC | 329 |
+| `agents/` LOC | 156 |
+| `web/` (Python only) LOC | 173 |
 | `scripts/` LOC | 1,302 |
-| root (`graph.py`, `state.py`, `main.py`) | 100 |
+| root (`graph.py`, `state.py`, `main.py`) | 101 |
 | Git commits on branch | 124 (as of 2026-06-07) |
 
 ## Database migrations
@@ -61,8 +61,8 @@ entered via the knowledge-corpus path, not the canonical ingestion registry.
 ## Test suite
 
 Command: `python -m pytest --collect-only -q` → **856 tests collected**.
-Test files: 149. Breakdown by directory: services 73, ingestion 45, web 8,
-integration 8, agents 7, e2e 5 (+ fixtures, conftest).
+Test files: 167. Breakdown by directory: services 81, ingestion 52, web 8,
+integration 6, agents 7, e2e 4 (+ fixtures, conftest).
 Isolation: `tests/conftest.py::_isolate_test_db` redirects the whole suite to
 an auto-created `admission_test` database; dev data untouched.
 
@@ -124,7 +124,7 @@ Against the 25 cases in `docs/edge-case.md`:
 ## Advisory pipeline shape (from `graph.py`, `agents/`)
 
 6 pipeline stages: profile → retrieve → conflict → reason → policy → explain.
-7 agent modules in `agents/`: profile, retrieval, conflict, reasoning, policy,
-explanation (+ shared `models.py`).
+6 graph-node modules in `agents/`: profile, retrieval, conflict, reasoning,
+policy, explanation. Shared domain models live in `domain/models.py`.
 `services/` packages: chat, conflict, cutoff, inference, knowledge, profile,
 tracing (+ legacy root-level service modules).

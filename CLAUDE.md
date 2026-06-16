@@ -27,7 +27,7 @@ UI that walks students through profile collection and program recommendations.
   - `services/chat/` — anonymous chat sessions, intent router, profile state,
     advisory/hybrid run dispatchers (background `ThreadPoolExecutor`), repository.
   - `services/knowledge/` — pgvector RAG (`qa_service.py`, `repository.py`).
-  - `services/conflict/` — conflict detection + LLM tiebreaker.
+  - `services/conflict/` — deterministic conflict detection + resolution (no LLM).
   - `services/tracing/` — per-stage trace events for the debug panel.
 - **Ingestion** (`ingestion/`) — fetchers → parsers → extractors → normalization
   → `pipeline/ingestion_pipeline.py` → `storage/db_writer.py` (canonical store).

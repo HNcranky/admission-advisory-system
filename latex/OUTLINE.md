@@ -82,7 +82,7 @@ Rule: each technology must map to a Chapter 2 requirement + name alternatives.
 ## Chapter 5 — Solution and contribution (≥ 5 pages)
 Each: problem → solution → results. Cross-referenced from Chapters 2/4.
 - [~] 5.1 Conflict-aware data consolidation: contradictory quota/cutoff data
-      across sources; `services/conflict/` detection + LLM tiebreaker;
+      across sources; `services/conflict/` deterministic detection + resolution;
       conflict surfacing in advisory answers.
 - [~] 5.2 Resilient LLM inference gateway: API failures vs STRUCTURE_FAILURE,
       retry/fallback in `services/inference/gateway.py`, deterministic keyword
