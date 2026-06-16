@@ -22,6 +22,31 @@ _CONN_KEYS: dict[int, tuple] = {}
 _CONN_KEYS_LOCK = threading.Lock()
 
 
+class PooledConnection:
+    """Proxy that makes conn.close() return the raw connection to its pool."""
+
+    def __init__(self, raw_conn):
+        self._raw_conn = raw_conn
+        self._released = False
+
+    def __getattr__(self, name):
+        return getattr(self._raw_conn, name)
+
+    def close(self) -> None:
+        release(self)
+
+    @property
+    def raw_connection(self):
+        return self._raw_conn
+
+    @property
+    def released(self) -> bool:
+        return self._released
+
+    def mark_released(self) -> None:
+        self._released = True
+
+
 def _dsn_key(dsn: dict) -> tuple:
     return (dsn["host"], dsn["port"], dsn["database"], dsn["user"])
 
@@ -38,7 +63,8 @@ def lease(dsn: dict):
                 user=dsn["user"], password=dsn["password"],
             )
             _POOLS[k] = pool
-    conn = pool.getconn()
+    raw_conn = pool.getconn()
+    conn = PooledConnection(raw_conn)
     with _CONN_KEYS_LOCK:
         _CONN_KEYS[id(conn)] = k
     return conn
@@ -47,17 +73,26 @@ def lease(dsn: dict):
 def release(conn) -> None:
     """Return conn to its pool if it was leased, or close it if not."""
     conn_id = id(conn)
+    if isinstance(conn, PooledConnection) and conn.released:
+        return
+
     with _CONN_KEYS_LOCK:
         key = _CONN_KEYS.pop(conn_id, None)
     if key is None:
-        conn.close()
+        if isinstance(conn, PooledConnection):
+            conn.mark_released()
+            conn.raw_connection.close()
+        else:
+            conn.close()
         return
     with _POOL_LOCK:
         pool = _POOLS.get(key)
     if pool is None:
-        conn.close()
+        conn.mark_released()
+        conn.raw_connection.close()
     else:
-        pool.putconn(conn)
+        conn.mark_released()
+        pool.putconn(conn.raw_connection)
 
 
 def close_all() -> None:
