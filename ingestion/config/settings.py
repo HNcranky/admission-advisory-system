@@ -50,6 +50,10 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 # 429 retryDelay if larger) before the rotator will try it again.
 GEMINI_KEY_COOLDOWN_SECONDS = float(os.getenv("GEMINI_KEY_COOLDOWN_SECONDS", 60))
 
+# Hard timeout (giây) cho mỗi lời gọi Gemini generate/embed. Không có timeout
+# thì connection treo sẽ giữ worker vô hạn và rotation key không bao giờ kích hoạt.
+GEMINI_REQUEST_TIMEOUT_SECONDS = float(os.getenv("GEMINI_REQUEST_TIMEOUT_SECONDS", 60))
+
 
 GEMINI_EXTRACTION_MODEL = os.getenv(
     "GEMINI_EXTRACTION_MODEL", "gemini-2.5-flash"

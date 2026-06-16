@@ -180,7 +180,7 @@ def test_api_key_constructor_builds_single_key_pool(monkeypatch):
     captured = {}
 
     class _SDKClient:
-        def __init__(self, *, api_key):
+        def __init__(self, *, api_key, http_options=None):
             captured["api_key"] = api_key
             self.models = FakeModels(text='{"ok": true}', captured=captured)
 

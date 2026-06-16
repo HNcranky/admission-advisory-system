@@ -11,8 +11,12 @@ import time
 from dataclasses import dataclass
 
 from google import genai
+from google.genai import types
 
-from ingestion.config.settings import GEMINI_KEY_COOLDOWN_SECONDS
+from ingestion.config.settings import (
+    GEMINI_KEY_COOLDOWN_SECONDS,
+    GEMINI_REQUEST_TIMEOUT_SECONDS,
+)
 from services.inference.models import InferenceError
 from services.inference.providers.gemini_errors import (
     is_rotatable_error,
@@ -42,7 +46,13 @@ def load_gemini_keys() -> list[str]:
 
 
 def _default_client_factory(api_key: str):
-    return genai.Client(api_key=api_key)
+    # http_options.timeout tính bằng mili-giây (google-genai 1.75.0).
+    return genai.Client(
+        api_key=api_key,
+        http_options=types.HttpOptions(
+            timeout=int(GEMINI_REQUEST_TIMEOUT_SECONDS * 1000)
+        ),
+    )
 
 
 class GeminiKeyPool:
