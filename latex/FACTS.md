@@ -2,7 +2,7 @@
 
 Single source of truth for every number cited in `latex/Chapter/*.tex`.
 Re-measure before the submission pass if the codebase changes.
-All measurements taken **2026-06-08** on branch `feat/thesis-report` unless noted.
+All measurements taken **2026-06-16** on branch `refactor/codebase` unless noted.
 
 ## Codebase size
 
@@ -21,17 +21,25 @@ Command: `git ls-files '*.py' | xargs wc -l` (tracked files only)
 | `web/` (Python only) LOC | 173 |
 | `scripts/` LOC | 1,302 |
 | root (`graph.py`, `state.py`, `main.py`) | 101 |
-| Git commits on branch | 124 (as of 2026-06-07) |
+| Git commits on branch | 266 (as of 2026-06-16) |
 
 ## Database migrations
 
-Command: `Get-ChildItem db\migrations` — **16 migrations**, `001_source_registry.sql` … `016_cutoff_records.sql`.
-(OUTLINE.md / root CLAUDE.md previously said 001–013 — stale; use 16.)
+Command: `Get-ChildItem db\migrations` — **19 migrations**, `001_source_registry.sql`
+… `018_advisory_run_queue.sql`. Numbering runs `001`–`018` but two files share the
+`014_` prefix (`014_chunk_content_hash.sql`, `014_drop_discovered_resources.sql`), so
+the file count (19) is one higher than the top number (018).
+(OUTLINE.md / root CLAUDE.md previously said 001–013, and a prior FACTS pass said 16 —
+both stale; use 19 files.)
 
 Tables: source_registry, discovered_resources, raw_documents, extracted_facts,
 canonical_admission_records, advisory_runs, chat_sessions/chat_messages/chat_advisory_runs,
 advisory_trace_events, flow_state (012), knowledge_documents/knowledge_chunks (013),
-program_catalog_embeddings (015), cutoff_records (016).
+program_catalog_embeddings (015), cutoff_records (016),
+knowledge_chunk_doc_index (017), advisory_run_queue (018). Migration 018 backs the
+**run-queue worker** (`services/chat/run_queue_worker.py`): advisory/hybrid runs are
+dispatched through a persisted run queue drained by a background worker, not only the
+in-process `ThreadPoolExecutor` the earlier draft described.
 
 ## Canonical store contents (dev DB `admission`, 2026-06-08)
 
