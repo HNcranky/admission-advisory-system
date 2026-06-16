@@ -31,7 +31,7 @@ Figure~\ref{fig:package-overview} shows the package structure and the principal 
 
 The \texttt{web} package is the entry layer: it exposes the chat \gls{HTTP} \gls{API} and serves the interface.
 The \texttt{services} package holds the domain logic, divided into focused sub-packages --- \texttt{chat} (session, routing, dispatch), \texttt{inference} (the \gls{LLM} gateway), \texttt{knowledge} (\gls{RAG}), \texttt{conflict}, \texttt{cutoff}, \texttt{profile}, and \texttt{tracing}.
-The advisory pipeline (\texttt{graph.py}, \texttt{state.py}, and the \texttt{agents} package) is the orchestration layer driven by the chat dispatchers.
+The advisory pipeline --- the orchestration graph, its shared state object, and the \texttt{agents} package --- is the orchestration layer driven by the chat dispatchers.
 The \texttt{ingestion} package is an independent layer feeding the database offline.
 All layers converge on a single PostgreSQL instance.
 Dependencies point inward and downward: the web layer depends on services, services depend on the inference gateway and the database, and no lower layer depends on the web layer.
@@ -41,11 +41,11 @@ Dependencies point inward and downward: the web layer depends on services, servi
 Three packages carry the core logic and are described in detail.
 
 \textbf{Advisory pipeline.}
-The pipeline is defined in \texttt{graph.py} as a LangGraph state graph over the shared state \texttt{state.py::AgentState}.
+The pipeline is defined as a LangGraph state graph over the shared state object \texttt{AgentState}.
 That single Pydantic model threads the entire run: it carries the parsed \texttt{student\_profile} and \texttt{retrieval\_filters} the early stages write, the \texttt{retrieved\_programs}, \texttt{conflict\_records}, and \texttt{resolution\_outcomes} the middle stages attach, the \texttt{eligibility\_checks} and \texttt{ranked\_recommendations} the reasoning stage produces, and a \texttt{trace\_run\_id} that ties every stage's event to one run.
 Six nodes are registered and connected in a fixed linear order --- \texttt{profile}, \texttt{retrieve}, \texttt{conflict}, \texttt{reason}, \texttt{policy}, \texttt{explain} --- as shown in Figure~\ref{fig:advisory-graph} and in the wiring excerpt of Listing~\ref{lst:graph}.
 Each node is a thin function in the \texttt{agents} package that reads fields from the state, calls a service for the real work, writes its results back, and returns the state; for example, the reasoning node calls \texttt{reason\_candidates} and stores the resulting eligibility checks and ranked recommendations.
-Every node is wrapped by a \texttt{traced(...)} decorator (from \texttt{services/tracing}) that records a per-stage event, so the fixed structure of the graph is exactly what makes the pipeline observable: because the edges are static rather than chosen at runtime, the stage sequence is identical on every run and each stage maps to one predictable trace event.
+Every node is wrapped by a \texttt{traced(...)} decorator from the tracing service that records a per-stage event, so the fixed structure of the graph is exactly what makes the pipeline observable: because the edges are static rather than chosen at runtime, the stage sequence is identical on every run and each stage maps to one predictable trace event.
 
 \begin{figure}[H]
     \centering
@@ -54,7 +54,7 @@ Every node is wrapped by a \texttt{traced(...)} decorator (from \texttt{services
     \label{fig:advisory-graph}
 \end{figure}
 
-The wiring, reproduced verbatim from \texttt{graph.py} in Listing~\ref{lst:graph}, makes the determinism explicit: each \texttt{add\_node} call wraps an agent function in the \texttt{traced(stage, sequence, extractor)} decorator before registering it, and the six \texttt{add\_edge} calls fix the order, leaving no conditional branch for an \gls{LLM} to choose at runtime.
+The wiring, reproduced verbatim in Listing~\ref{lst:graph}, makes the determinism explicit: each \texttt{add\_node} call wraps an agent function in the \texttt{traced(stage, sequence, extractor)} decorator before registering it, and the six \texttt{add\_edge} calls fix the order, leaving no conditional branch for an \gls{LLM} to choose at runtime.
 
 \begin{lstlisting}[language=Python,caption={Advisory pipeline wiring in \texttt{graph.py}: each node is registered through the tracing decorator and the edges fix a linear order},label=lst:graph,basicstyle=\footnotesize\ttfamily,breaklines=true,breakatwhitespace=false,columns=fullflexible,showstringspaces=false]
 builder.add_node("profile",  traced("profile",  0, extract_profile)(profile_agent))
@@ -75,14 +75,14 @@ graph = builder.compile()
 \end{lstlisting}
 
 \textbf{Inference gateway.}
-All \gls{LLM} access is funneled through \texttt{services/inference/gateway.py}.
-A call site builds an \texttt{InferenceRequest} and receives an \texttt{InferenceResult}; the gateway resolves a per-agent policy from the model \texttt{registry.py} (primary model, optional fallback model, retry budget) and delegates the actual call to a provider in \texttt{providers/gemini\_provider.py}.
+All \gls{LLM} access is funneled through the inference gateway.
+A call site builds an \texttt{InferenceRequest} and receives an \texttt{InferenceResult}; the gateway resolves a per-agent policy from the model registry (primary model, optional fallback model, retry budget) and delegates the actual call to the Gemini provider.
 The policy fields are resolved by the calling agent's name, so a high-volume step such as intent classification can run with \texttt{allow\_fallback} off and degrade to deterministic keywords, while a harder-to-reconstruct step can be granted a secondary model --- the resilience budget is allocated per call site rather than globally.
 This single choke point is where the retry, fallback, and failure-type logic of Section~\ref{section:5.2} lives, so every reasoning step in the system inherits the same resilience without repeating it.
 
 \textbf{Ingestion pipeline.}
-The ingestion layer is orchestrated by \texttt{ingestion/pipeline/ingestion\_pipeline.py}, which runs each source through five steps: fetch (dispatched by strategy), route (predict the document type), parse (dispatch the matching parser), extract (pull admission facts from parsed text and tables), and normalize (map raw facts to canonical records using per-school dictionaries).
-Normalized records are persisted by \texttt{storage/db\_writer.py}, which upserts each record with an \texttt{ON CONFLICT} key that includes the source \gls{URL} (\texttt{(school\_id, admission\_year, program\_id, admission\_method, source\_url)}), so a re-fetch refreshes the same publication in place while two officially disagreeing sources remain two distinct rows.
+The ingestion layer is orchestrated by the ingestion pipeline, which runs each source through five steps: fetch (dispatched by strategy), route (predict the document type), parse (dispatch the matching parser), extract (pull admission facts from parsed text and tables), and normalize (map raw facts to canonical records using per-school dictionaries).
+Normalized records are persisted by the database writer, which upserts each record with an \texttt{ON CONFLICT} key that includes the source \gls{URL} (\texttt{(school\_id, admission\_year, program\_id, admission\_method, source\_url)}), so a re-fetch refreshes the same publication in place while two officially disagreeing sources remain two distinct rows.
 The pipeline can run for one source, for all sources of a school, or for an ad-hoc \gls{URL}, matching the operator use cases of Section~\ref{subsection:2.2.2}.
 
 \section{Detailed design}
@@ -189,7 +189,7 @@ $d \leftarrow \textsc{Generate}(q,\ C)$ \tcp*[r]{answer strictly from $C$; JSON 
 \end{algorithm}
 
 A design convention shared by every repository supports the testability requirement (NFR-05): each repository takes an injectable connection factory and performs its work over the PostgreSQL driver psycopg~\cite{psycopg} inside a \texttt{\_cursor} context manager that guarantees commit on success, rollback on exception, and connection cleanup in all cases.
-The convention is implemented once in a shared helper (\texttt{services/db}) and reused by every repository, shown in Listing~\ref{lst:cursor}: the nested \texttt{try} blocks commit only when the caller asked for it, roll back and re-raise on any exception, and release the connection in a \texttt{finally} that runs on every path.
+The convention is implemented once in a shared database helper and reused by every repository, shown in Listing~\ref{lst:cursor}: the nested \texttt{try} blocks commit only when the caller asked for it, roll back and re-raise on any exception, and release the connection in a \texttt{finally} that runs on every path.
 This both prevents leaked connections and lets tests substitute a connection factory bound to the isolated test database.
 
 \begin{lstlisting}[language=Python,caption={The shared \texttt{cursor} context manager guaranteeing commit/rollback/cleanup, reused by every repository's \texttt{\_cursor}},label=lst:cursor,basicstyle=\footnotesize\ttfamily,breaklines=true,breakatwhitespace=false,columns=fullflexible,showstringspaces=false]
@@ -213,7 +213,7 @@ def cursor(connection_factory, commit: bool = False):
 
 \subsection{Database design}
 
-The persistent state is one PostgreSQL schema built by nineteen numbered, idempotent migrations (\texttt{db/migrations/001--018}; two files share the \texttt{014} prefix, so the file count is one above the highest number).
+The persistent state is one PostgreSQL schema built by nineteen numbered, idempotent migrations (numbered \texttt{001}--\texttt{018}; two files share the \texttt{014} prefix, so the file count is one above the highest number).
 Figure~\ref{fig:erd} shows the entity-relationship structure, grouped into four areas.
 
 \begin{figure}[H]
@@ -330,7 +330,7 @@ A completed consultation presents ranked program recommendations in the conversa
 The system is verified by an automated test suite that currently collects 1{,}011 tests across 167 test files, built with the pytest framework~\cite{pytest} and spanning unit tests of individual services, integration tests that exercise real \gls{SQL} paths, and end-to-end tests of the advisory and ingestion flows.
 
 The defining feature of the test strategy is \textit{database isolation}.
-A fixture in \texttt{tests/conftest.py} (\texttt{\_isolate\_test\_db}) redirects the entire suite to an automatically created \texttt{admission\_test} database, so integration and end-to-end tests can create, mutate, and drop data without ever touching the development database.
+An autouse fixture in the test configuration redirects the entire suite to an automatically created \texttt{admission\_test} database, so integration and end-to-end tests can create, mutate, and drop data without ever touching the development database.
 This makes the integration tests safe to run repeatedly and satisfies the testability requirement NFR-05.
 
 The most recent full run on the isolated database completed in approximately 22 seconds with 1{,}009 tests passing, one skipped, and one erroring.
@@ -366,7 +366,7 @@ This cluster is carried forward as the principal item of future work in Section~
 
 The system is deployed with Docker Compose~\cite{docker}.
 A single service definition runs the database from the \texttt{pgvector/pgvector:pg16} image, which provides PostgreSQL~16 with the pgvector extension preinstalled, exposed on the standard port with a persistent named volume and a health check.
-Bringing up the database and waiting for its health check is a single command, after which a setup script (\texttt{db/setup\_db.py}) creates the \texttt{admission} database, applies the migrations in order, verifies the expected tables, and seeds the source registry.
+Bringing up the database and waiting for its health check is a single command, after which a setup script creates the \texttt{admission} database, applies the migrations in order, verifies the expected tables, and seeds the source registry.
 The web application is then served by Uvicorn.
 Ingestion is run separately through the \gls{CLI} to populate the canonical store and the knowledge corpus.
 The whole bring-up is the short sequence of Listing~\ref{lst:deploy}.

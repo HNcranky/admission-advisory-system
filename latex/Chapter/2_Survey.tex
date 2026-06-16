@@ -332,17 +332,17 @@ The functional behavior above is constrained by six non-functional requirements.
 Every \gls{LLM}-backed step must have a deterministic fallback, because the assistant depends on an external inference service with quotas and transient failures.
 Intent classification falls back to keyword rules, knowledge answering degrades to an honest ``no data'' reply, and structured-output failures are retried or routed to fallback models rather than surfaced as crashes.
 An advisory consultation must never silently stall because one classification call failed.
-Concretely, every model call routes through \texttt{services/inference/gateway.py}, and when that gateway is unavailable intent classification falls back to the deterministic \texttt{\_fallback\_classify} keyword router in \texttt{services/chat/intent\_router.py}.
+Concretely, every model call routes through a single inference gateway, and when that gateway is unavailable intent classification falls back to a deterministic keyword router.
 
 \textbf{NFR-02 --- Conflict tolerance and data freshness.}
 The store must preserve disagreeing values rather than overwrite them: canonical records are unique per source, so two official publications quoting different quotas coexist as two rows with provenance.
 Recommendations built on conflicting data must disclose the conflict and recommend checking the latest official announcement.
 Ingestion must be re-runnable at any time, with idempotent migrations and upsert semantics, so the operator can refresh a school during the admission season.
-Per-source coexistence is enforced by the \texttt{UNIQUE (school\_id, admission\_year, program\_id, admission\_method, source\_url)} constraint introduced in migration \texttt{010\_canonical\_records\_per\_source.sql}, and every script in \texttt{db/migrations/} is numbered and idempotent so it can be replayed without error.
+Per-source coexistence is enforced by a \texttt{UNIQUE (school\_id, admission\_year, program\_id, admission\_method, source\_url)} constraint introduced in the per-source canonical-records migration, and every migration script is numbered and idempotent so it can be replayed without error.
 
 \textbf{NFR-03 --- Anonymity.}
 Students must be able to use the assistant without registering: sessions are identified only by a random token, and the collected profile contains academic attributes (scores, preferred majors) rather than personal identifiers.
-The token is minted with \texttt{secrets.token\_urlsafe} in \texttt{services/chat/session\_service.py}, so no email, name, or device identifier is ever requested.
+The token is minted as a random URL-safe string by the chat session service, so no email, name, or device identifier is ever requested.
 
 \textbf{NFR-04 --- Responsiveness.}
 A full advisory run involves several \gls{LLM} calls and database queries and may take tens of seconds.
@@ -351,13 +351,13 @@ In practice the endpoint persists a queued row in \texttt{chat\_advisory\_runs} 
 
 \textbf{NFR-05 --- Testability.}
 The test suite must run against an isolated database that is created automatically and never touches development data, so that integration tests can exercise real \gls{SQL} paths safely.
-This isolation is provided by \texttt{tests/conftest.py::\_isolate\_test\_db}, which redirects the shared \texttt{DB\_CONFIG} database name to \texttt{admission\_test} before any test opens a connection.
+This isolation is provided by an autouse fixture in the test configuration, which redirects the shared database name to \texttt{admission\_test} before any test opens a connection.
 Repositories must accept injectable connection factories so tests can substitute fixtures.
 
 \textbf{NFR-06 --- Crawling resilience.}
 Several official Vietnamese sources, including government domains, serve broken \gls{TLS} certificate chains.
 The fetcher must be able to proceed with verification disabled by explicit configuration, and every such fetch must be logged so the relaxation is visible rather than silent.
-This is the \texttt{ADVISORY\_FETCH\_VERIFY\_SSL} flag honored by \texttt{ingestion/fetchers/http\_fetcher.py}, which emits a warning on every request made with certificate verification turned off.
+This is the \texttt{ADVISORY\_FETCH\_VERIFY\_SSL} flag honored by the HTTP fetcher, which emits a warning on every request made with certificate verification turned off.
 
 This chapter derived the system's requirements from a survey of existing admission-information channels, read against prior work on grounded conversational agents and \gls{LLM} reliability.
 That comparison showed that commercial education platforms and the research literature alike establish grounding as a precondition for trustworthy answers, yet none of them addresses the reconciliation of mutually inconsistent official sources; concretely, no current channel reconciles contradictory data, and none combines grounded answers with incremental, profile-aware personalization.

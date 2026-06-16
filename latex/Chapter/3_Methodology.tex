@@ -42,7 +42,7 @@ A hosted model was preferred over a self-hosted open-weight model because the pr
 Where a step's result feeds downstream code --- intent routing, profile extraction, knowledge answering --- the prompt additionally requests \textit{structured output}: the model is instructed to return strict \gls{JSON}, and the response is parsed into a typed object.
 Structured output is fragile by nature: a model can return prose around the \gls{JSON}, malformed syntax, or a value outside the expected set, and such a response passes the network layer cleanly yet cannot be used.
 The system therefore distinguishes a \textit{hard \gls{API} failure} (network, authentication, rate limit) from a \textit{structure failure} (a successful call whose body cannot be parsed into the expected schema).
-This distinction is realized as the \texttt{failure\_type} field on the inference result returned by the gateway in \texttt{services/inference/gateway.py}: a \texttt{STRUCTURE\_FAILURE} is retried on the same model and then escalated to a fallback model, whereas a hard failure stops retrying immediately because re-issuing the same call rarely helps.
+This distinction is realized as the \texttt{failure\_type} field on the inference result returned by the gateway: a \texttt{STRUCTURE\_FAILURE} is retried on the same model and then escalated to a fallback model, whereas a hard failure stops retrying immediately because re-issuing the same call rarely helps.
 The mechanism and its retry/fallback policy are treated in detail as a contribution in Section~\ref{section:5.2}; here it suffices that a malformed response degrades gracefully instead of crashing a consultation (NFR-01).
 
 \section{Retrieval-augmented generation and vector search}
@@ -61,12 +61,12 @@ Each ingested document is therefore split into chunks, and each chunk is mapped 
 The system embeds chunks and queries through Gemini's embedding endpoint, using distinct task types --- \texttt{RETRIEVAL\_DOCUMENT} for chunks and \texttt{RETRIEVAL\_QUERY} for questions --- so the two are optimized for asymmetric retrieval; the embedding dimension is fixed at 768 to match the database schema.
 
 How a document is divided into chunks fixes the granularity of everything downstream, so it is a retrieval decision rather than a mere preprocessing detail.
-The chunker in \texttt{ingestion/knowledge/chunker.py} cuts text at blank-line block boundaries, falls back to sentence boundaries only when a single block exceeds a target size, and overlaps consecutive chunks by a fixed margin so that a passage straddling a cut is not lost to either neighbor.
+The chunker cuts text at blank-line block boundaries, falls back to sentence boundaries only when a single block exceeds a target size, and overlaps consecutive chunks by a fixed margin so that a passage straddling a cut is not lost to either neighbor.
 Chunk size is a trade-off: chunks that are too large dilute a query's match with unrelated text and blur the chunk's embedding toward an average meaning, while chunks that are too small fragment a single answer across several retrievals; aligning cuts to natural block boundaries keeps each chunk a coherent unit of meaning at a size suited to the embedding model.
 
 Proximity is measured by \textit{cosine similarity}.
 For two embedding vectors $\mathbf{u}$ and $\mathbf{v}$ it is the cosine of the angle between them, $\cos(\mathbf{u},\mathbf{v}) = \frac{\mathbf{u}\cdot\mathbf{v}}{\lVert\mathbf{u}\rVert\,\lVert\mathbf{v}\rVert}$, which is $1$ for identical direction and $0$ for orthogonal vectors; the corresponding \textit{cosine distance} is $1-\cos(\mathbf{u},\mathbf{v})$.
-This is exactly the quantity computed in the retrieval \gls{SQL}: in \texttt{services/knowledge/repository.py} chunks are ordered by the pgvector cosine-distance operator \texttt{embedding <=> query} and the score reported to the caller is \texttt{1 - (embedding <=> query)}, recovering cosine similarity.
+This is exactly the quantity computed in the retrieval \gls{SQL}: chunks are ordered by the pgvector cosine-distance operator \texttt{embedding <=> query} and the score reported to the caller is \texttt{1 - (embedding <=> query)}, recovering cosine similarity.
 
 The embeddings and their search must be stored somewhere.
 The system stores them in PostgreSQL~\cite{postgresql} using the pgvector extension~\cite{pgvector}, which adds a native \texttt{vector} column type and vector-similarity indexes.
@@ -91,7 +91,7 @@ That non-determinism is a poor fit for this system's requirements: a consultatio
 
 The system instead uses LangGraph~\cite{langgraph, langgraph_docs}, a library for expressing an agent as an explicit state graph: nodes are functions that read and write a shared typed state, and edges fix the order in which nodes run.
 The advisory pipeline is wired as a fixed linear graph over the six stages, with one shared state object passed from node to node.
-That state object, \texttt{AgentState} in \texttt{state.py}, is a single Pydantic model whose fields each stage fills in turn: the profile stage populates the student profile, the retrieval stage appends candidate programs, the conflict stage adds conflict and resolution records, and the later stages add eligibility checks, ranked recommendations, a policy decision, and the final explanation.
+That state object, \texttt{AgentState}, is a single Pydantic model whose fields each stage fills in turn: the profile stage populates the student profile, the retrieval stage appends candidate programs, the conflict stage adds conflict and resolution records, and the later stages add eligibility checks, ranked recommendations, a policy decision, and the final explanation.
 Because every stage is wrapped by a tracing decorator that records the state it produced under a run identifier, the same fixed structure that orders the computation also yields the per-stage trace, so observability is a by-product of the design rather than a separate instrumentation effort.
 A fixed graph is the deliberate choice for three reasons that map onto Chapter~\ref{chapter:Related_works}'s requirements.
 First, \textit{determinism}: the same profile produces the same stage sequence, so a correction can re-run the pipeline and the change in output is attributable to the changed input (UC-04, NFR-02).
@@ -126,7 +126,7 @@ The chat interface is rendered server-side with the Jinja2 template engine~\cite
 
 Because a full advisory run issues several \gls{LLM} calls and database queries and can take tens of seconds, it cannot run inside the request that triggered it.
 The message endpoint instead writes a run record to the database in a \texttt{queued} state and returns immediately, decoupling acknowledgement from execution.
-A background worker (\texttt{services/chat/run\_queue\_worker.py}) polls that table, claims the next queued run, executes the pipeline on its own thread, and writes the result and per-stage trace back to the database, from which the interface retrieves them by polling.
+A background run-queue worker polls that table, claims the next queued run, executes the pipeline on its own thread, and writes the result and per-stage trace back to the database, from which the interface retrieves them by polling.
 Claims use a \texttt{SELECT \dots\ FOR UPDATE SKIP LOCKED} query, so several worker processes or replicas can drain the same queue without ever claiming the same run twice, and a run that is interrupted by a restart survives in the table to be recovered rather than being lost with an in-memory thread pool.
 This database-backed queue is sufficient here because the workload is a small number of long, \gls{API}-bound tasks rather than thousands of concurrent connections; a dedicated task queue with a separate message broker would add operational components disproportionate to that scale (NFR-04).
 The data-validation layer throughout the application uses Pydantic~\cite{pydantic}, whose typed models define the inference requests and results, the agent state, and the chat schemas, giving every boundary in the system a validated, typed contract.
