@@ -3,20 +3,8 @@ from collections import defaultdict
 from typing import Any, Dict, Hashable, List, Tuple
 
 from domain.models import CandidateProgram
+from services.conflict.keys import cutoff_key_text, quota_key_text_from_tuple, quota_key_tuple
 from services.conflict.models import ConflictRecord, EvidenceOption
-
-
-def _conflict_key(candidate: CandidateProgram) -> Tuple[str, int, str, str]:
-    return (
-        candidate.school_id,
-        candidate.admission_year,
-        candidate.program_id or candidate.program_name,
-        candidate.admission_method or "unknown_method",
-    )
-
-
-def _conflict_key_text(key: Tuple[str, int, str, str]) -> str:
-    return ":".join(str(part) for part in key)
 
 
 def _normalize_quota_value(quota: Any) -> Hashable:
@@ -49,7 +37,7 @@ def _option_from_candidate(candidate: CandidateProgram) -> EvidenceOption:
 def detect_quota_conflicts(candidates: List[CandidateProgram]) -> List[ConflictRecord]:
     groups: Dict[Tuple[str, int, str, str], List[CandidateProgram]] = defaultdict(list)
     for candidate in candidates:
-        groups[_conflict_key(candidate)].append(candidate)
+        groups[quota_key_tuple(candidate)].append(candidate)
 
     records: List[ConflictRecord] = []
     for key, group in groups.items():
@@ -61,7 +49,7 @@ def detect_quota_conflicts(candidates: List[CandidateProgram]) -> List[ConflictR
         first = group[0]
         records.append(
             ConflictRecord(
-                conflict_key=_conflict_key_text(key),
+                conflict_key=quota_key_text_from_tuple(key),
                 field_name="quota",
                 school_id=first.school_id,
                 school_name=first.school_name,
@@ -101,7 +89,7 @@ def detect_cutoff_conflicts(candidates: List[CandidateProgram]) -> List[Conflict
         candidate = sample[key]
         records.append(
             ConflictRecord(
-                conflict_key=f"{school_id}:{cutoff_year}:{program_key}:{method}:cutoff",
+                conflict_key=cutoff_key_text(school_id, cutoff_year, program_key, method),
                 field_name="cutoff_score",
                 school_id=school_id,
                 school_name=candidate.school_name,
