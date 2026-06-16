@@ -12,20 +12,34 @@ Section~\ref{section:3.1} covers large language models and structured output, Se
 \label{section:3.1}
 
 A \gls{LLM} is a neural network trained on large text corpora to predict the next token given a context.
-Modern \gls{LLM}s are built on the Transformer architecture~\cite{vaswani2017attention}, whose self-attention mechanism lets the model condition each output token on every input token.
-A key property exploited throughout this system is \textit{in-context learning}: a sufficiently large model can perform a new task from instructions and a few examples in its prompt, without parameter updates~\cite{brown2020fewshot}.
-Every \gls{LLM}-backed step in this system --- intent classification, conflict tie-breaking, knowledge answering, and \gls{OCR} --- is implemented as a prompt with task instructions and, where helpful, worked examples, rather than as a fine-tuned model.
+Modern \gls{LLM}s are built on the Transformer architecture~\cite{vaswani2017attention}, whose self-attention mechanism computes, for each position in the input, a weighted combination of the representations of all other positions.
+Because every token can attend directly to every other token regardless of distance, the model can condition an output on long-range context --- an entire admission document or a multi-turn conversation --- without the information bottleneck of earlier recurrent architectures.
+This long-range conditioning is what makes it feasible to pass a whole retrieved passage or a full extracted profile into a single prompt and have the model reason over all of it at once.
+
+A second property the system relies on is \textit{in-context learning}: a sufficiently large model can perform a new task from instructions and a few examples placed in its prompt, without any parameter update~\cite{brown2020fewshot}.
+In-context learning is itself a consequence of \textit{instruction tuning}, a post-training stage in which a base model is fine-tuned on instruction--response pairs so that it follows natural-language directions rather than merely continuing text~\cite{ouyang2022instruct}.
+Instruction tuning is the reason a prompt that simply states the task --- ``classify this message into one of the following intents'' --- works at all, and it is why this system can be built entirely by prompting a hosted instruction-tuned model rather than by training a task-specific model.
+Every \gls{LLM}-backed step in this system --- intent classification, conflict tie-breaking, knowledge answering, and \gls{OCR} --- is therefore implemented as a prompt with task instructions and, where helpful, worked examples, rather than as a fine-tuned model.
+
+Within this prompting paradigm three techniques recur, ordered by how much reasoning they ask the model to externalize.
+The first is \textit{role and instruction prompting}: each call sends a system prompt that fixes the model's role (for example, an intent classifier for Vietnamese admission advising) and a user prompt that carries the task input; the intent-routing step uses this form alone.
+The second is \textit{few-shot prompting}: a small number of worked exemplars are included so the model infers the output format and the decision boundary from demonstration, which the system uses where a task's expected output is easier to show than to specify exhaustively.
+The third is \textit{chain-of-thought} prompting, in which the model is asked to produce intermediate reasoning steps before its final answer, improving accuracy on multi-step problems~\cite{wei2022cot}; the conflict tie-breaking and final explanation steps benefit from this style because both must justify a decision rather than only state it.
+
+A bare \gls{LLM}, however prompted, remains prone to \textit{hallucination}: it can state fluent but false facts that were never in its input, a failure mode surveyed across natural-language generation tasks~\cite{ji2023hallucination}.
+For an advisory system whose output must reflect official admission data, hallucination is the central risk, and two design decisions in this chapter exist to contain it.
+The first is grounding the model on retrieved source passages rather than its parametric memory, which is the academic justification for the retrieval-augmented approach of Section~\ref{section:3.2}.
+The second is constraining and validating the model's output so that a malformed or out-of-range answer is caught rather than trusted, which motivates the structured-output safeguards discussed below.
 
 The system uses the Gemini family of models through Google's hosted \gls{API}~\cite{gemini}.
 Gemini is a family of multimodal models that accept interleaved text and image input~\cite{geminiteam2023}; the multimodal capability is what makes the single-gateway approach to \gls{OCR} in Section~\ref{section:3.4} possible, since page images and text prompts pass through the same interface.
 A hosted model was preferred over a self-hosted open-weight model because the project's constraint is engineering a reliable system around an external model, not training one; the trade-off is a dependency on an external service with quotas and transient failures, which directly motivates the graceful-degradation requirement NFR-01.
 
-Two prompting techniques recur.
-The first is \textit{role and instruction prompting}: each call sends a system prompt that fixes the model's role (for example, an intent classifier for Vietnamese admission advising) and a user prompt that carries the task input.
-The second is \textit{structured output}: for tasks whose result feeds downstream code --- intent routing, profile extraction, knowledge answering --- the model is instructed to return strict \gls{JSON}, and the response is parsed into a typed object.
-Structured output is fragile by nature: a model can return prose around the \gls{JSON}, malformed syntax, or a value outside the expected set.
+Where a step's result feeds downstream code --- intent routing, profile extraction, knowledge answering --- the prompt additionally requests \textit{structured output}: the model is instructed to return strict \gls{JSON}, and the response is parsed into a typed object.
+Structured output is fragile by nature: a model can return prose around the \gls{JSON}, malformed syntax, or a value outside the expected set, and such a response passes the network layer cleanly yet cannot be used.
 The system therefore distinguishes a \textit{hard \gls{API} failure} (network, authentication, rate limit) from a \textit{structure failure} (a successful call whose body cannot be parsed into the expected schema).
-This distinction, realized as the \texttt{failure\_type} field on the inference result and discussed in detail in Section~\ref{section:5.2}, lets the system retry or fall back on structure failures while treating hard failures differently, so that a malformed response degrades gracefully instead of crashing a consultation (NFR-01).
+This distinction is realized as the \texttt{failure\_type} field on the inference result returned by the gateway in \texttt{services/inference/gateway.py}: a \texttt{STRUCTURE\_FAILURE} is retried on the same model and then escalated to a fallback model, whereas a hard failure stops retrying immediately because re-issuing the same call rarely helps.
+The mechanism and its retry/fallback policy are treated in detail as a contribution in Section~\ref{section:5.2}; here it suffices that a malformed response degrades gracefully instead of crashing a consultation (NFR-01).
 
 \section{Retrieval-augmented generation and vector search}
 \label{section:3.2}
