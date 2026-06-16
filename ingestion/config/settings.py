@@ -98,7 +98,7 @@ ADVISORY_RUN_QUEUE_MAX = int(os.getenv("ADVISORY_RUN_QUEUE_MAX", 32))
 
 WEB_THREADPOOL_SIZE = int(os.getenv("WEB_THREADPOOL_SIZE", 40))
 
-DB_POOL_ENABLED = os.getenv("DB_POOL_ENABLED", "false").lower() == "true"
+DB_POOL_ENABLED = os.getenv("DB_POOL_ENABLED", "true").lower() == "true"
 DB_POOL_MIN = int(os.getenv("DB_POOL_MIN", 1))
 DB_POOL_MAX = int(os.getenv("DB_POOL_MAX", 10))
 

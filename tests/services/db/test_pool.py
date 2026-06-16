@@ -22,6 +22,4 @@ def test_pool_enabled_by_default(monkeypatch):
     import importlib
     import ingestion.config.settings as s
     importlib.reload(s)
-    # After PR7 this default flips to True; until then it stays False.
-    # This test is updated in PR7 to assert True.
-    assert s.DB_POOL_ENABLED is False
+    assert s.DB_POOL_ENABLED is True

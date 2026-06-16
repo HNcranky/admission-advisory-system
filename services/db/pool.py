@@ -9,24 +9,27 @@ and behaviour is byte-for-byte identical to before."""
 
 import threading
 
-import psycopg2
 from psycopg2.pool import ThreadedConnectionPool
 
 from ingestion.config.settings import DB_POOL_MIN, DB_POOL_MAX
 
 _POOLS: dict[tuple, ThreadedConnectionPool] = {}
-_LOCK = threading.Lock()
-_TAG = "_advisory_pool_key"
+_POOL_LOCK = threading.Lock()
+
+# Maps id(conn) -> pool_key so we can return pooled connections without needing
+# arbitrary attributes on psycopg2 C extension objects (which don't have __dict__).
+_CONN_KEYS: dict[int, tuple] = {}
+_CONN_KEYS_LOCK = threading.Lock()
 
 
-def _key(dsn: dict) -> tuple:
+def _dsn_key(dsn: dict) -> tuple:
     return (dsn["host"], dsn["port"], dsn["database"], dsn["user"])
 
 
 def lease(dsn: dict):
     """Return a connection from the pool for this DSN, creating the pool if needed."""
-    k = _key(dsn)
-    with _LOCK:
+    k = _dsn_key(dsn)
+    with _POOL_LOCK:
         pool = _POOLS.get(k)
         if pool is None:
             pool = ThreadedConnectionPool(
@@ -36,17 +39,20 @@ def lease(dsn: dict):
             )
             _POOLS[k] = pool
     conn = pool.getconn()
-    setattr(conn, _TAG, k)
+    with _CONN_KEYS_LOCK:
+        _CONN_KEYS[id(conn)] = k
     return conn
 
 
 def release(conn) -> None:
-    """Return conn to its pool, or close it if it was not pooled."""
-    key = getattr(conn, _TAG, None)
+    """Return conn to its pool if it was leased, or close it if not."""
+    conn_id = id(conn)
+    with _CONN_KEYS_LOCK:
+        key = _CONN_KEYS.pop(conn_id, None)
     if key is None:
         conn.close()
         return
-    with _LOCK:
+    with _POOL_LOCK:
         pool = _POOLS.get(key)
     if pool is None:
         conn.close()
@@ -56,7 +62,9 @@ def release(conn) -> None:
 
 def close_all() -> None:
     """Close every pool (useful in tests and graceful shutdown)."""
-    with _LOCK:
+    with _POOL_LOCK:
         for pool in _POOLS.values():
             pool.closeall()
         _POOLS.clear()
+    with _CONN_KEYS_LOCK:
+        _CONN_KEYS.clear()
