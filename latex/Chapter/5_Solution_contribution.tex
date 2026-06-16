@@ -16,21 +16,53 @@ Official admission data is not only fragmented but internally inconsistent: two 
 As established in Chapter~\ref{chapter:Related_works}, every existing channel resolves such disagreement silently --- it picks one value or shows none --- which hides exactly the uncertainty a student needs to know about before committing an application.
 Consolidating these sources therefore cannot mean overwriting one value with another; the disagreement must survive into the recommendation.
 The general problem of combining records that describe the same entity but disagree on attribute values is studied as \textit{data fusion}~\cite{bleiholder2009fusion}, which frames the available strategies as resolving, ignoring, or deferring a conflict; the design below applies the deferring strategy where a conflict cannot be settled objectively.
+The related field of \textit{truth discovery}~\cite{li2016truth} estimates which of several conflicting values is correct by jointly inferring per-source reliability, and its central finding --- that no single source can be trusted unconditionally and that reliability must be inferred from evidence --- motivates the conservative stance taken here: the system resolves a disagreement only when an objective, auditable signal makes one value defensible, and otherwise defers rather than commits to a possibly wrong winner.
 
 \textbf{Solution.}
-Conflict awareness is built in three layers.
+Conflict awareness is built in three layers, and the detection-and-resolution logic is summarized in Algorithm~\ref{alg:conflict}.
 At the storage layer, as described in Section~\ref{section:4.2}, the canonical tables are unique per source, so contradictory publications coexist as distinct rows rather than overwriting one another.
-At the detection layer, the conflict service groups candidate records by program, year, and method and flags a conflict whenever the grouped rows carry two or more distinct values; quota and cutoff conflicts are detected separately because they have different keys and different resolution rules.
+At the detection layer, the conflict service (\texttt{services/conflict/detection.py}) groups candidate records by program, year, and method --- the canonical conflict key built in \texttt{services/conflict/keys.py} --- and flags a conflict whenever the grouped rows carry two or more distinct values; quota and cutoff conflicts are detected separately because they have different keys and different resolution rules.
 At the resolution layer, the two kinds of conflict are treated deliberately differently.
-A quota conflict is first put through a deterministic comparison over trust level and source confidence; only if that comparison is not decisive is a single, tightly constrained \gls{LLM} tie-breaker consulted, and even then the model's choice is accepted only when it returns high confidence and selects a known source.
-A cutoff conflict is never resolved by picking a winner with a model.
-Instead, the system checks whether the disagreement is \textit{decision-changing} for this particular student --- that is, whether the competing cutoff values would place the student's score into different fit categories.
-If it is, the conflict is left unresolved, the affected field is marked uncertain, and the explanation presents every competing value; if it is not, the system references the most trusted value while still stating all of them.
+A quota conflict is settled by a deterministic comparison (\texttt{services/conflict/comparison.py}) that ranks the competing options on a fixed lexicographic ordering of trust level, then corroboration, then recency, then source confidence.
+If that comparison is decisive --- the top option strictly outranks its nearest differing challenger on at least one axis --- the highest-ranked value is accepted; if every axis ties, the conflict is left unresolved rather than guessed, the field is marked uncertain, and every competing value is surfaced.
+No language model is consulted at any point in conflict resolution; the agent (\texttt{agents/conflict\_agent.py}) wires only these deterministic comparators, which keeps the resolution fully auditable.
+A cutoff conflict is never resolved by ranking alone either.
+Instead, the system checks whether the disagreement is \textit{decision-changing} for this particular student --- that is, whether the competing cutoff values, classified through \texttt{services/cutoff/assessment.py}, would place the student's score into different fit categories.
+If it is, the conflict is left unresolved, the affected field is marked uncertain, and the explanation presents every competing value; if it is not --- or if the student's score or method is not on a comparable scale --- the system references the most trusted value while still stating all of them.
+
+\begin{algorithm}[H]
+\caption{Conflict detection and resolution (per recommended program)}
+\label{alg:conflict}
+\KwIn{candidate records $R$ for a program; student score $s$ and method $m$}
+\KwOut{a resolved value, or an uncertainty annotation listing all competing values}
+Group $R$ by the conflict key $(\textit{program}, \textit{year}, \textit{method})$, separately for quota and cutoff fields\;
+\ForEach{group $g$ with $\geq 2$ distinct quota values}{
+  rank the options of $g$ by $(\textit{trust}, \textit{corroboration}, \textit{recency}, \textit{confidence})$, descending\;
+  \eIf{top option strictly outranks its nearest differing challenger on some axis}{
+    resolve quota to the top-ranked value\;
+  }{
+    mark quota \textbf{uncertain}; surface every competing value\;
+  }
+}
+\ForEach{group $g$ with $\geq 2$ distinct cutoff scores}{
+  order the options of $g$ by trust level (then score)\;
+  \eIf{$s$ known \textbf{and} $m$ on a comparable scale}{
+    $F \leftarrow \{\,\textsc{ClassifyFit}(s, v) : v \in \textit{values}(g)\,\}$\;
+    \eIf{$|F| > 1$ \tcp*[r]{decision-changing}}{
+      mark cutoff \textbf{uncertain}; list every competing value\;
+    }{
+      reference the most-trusted value; still list all values\;
+    }
+  }{
+    reference the most-trusted value; still list all values\;
+  }
+}
+\end{algorithm}
 
 \textbf{Result.}
 The pipeline surfaces conflicts instead of hiding them.
 When a program's sources disagree in a way that matters, the recommendation marks the field as uncertain, lists the differing values, and advises the student to verify against the latest official announcement, which is the behavior required by edge case EC-16 and the conflict-disclosure use case of Chapter~\ref{chapter:Related_works}.
-The conservative division of labor --- deterministic comparison first, a constrained model only for non-decisive quota cases, and never for decision-changing cutoffs --- keeps the model away from the decisions where an over-confident guess could mislead a student, while still consolidating the cases that can be settled objectively.
+The conservative division of labor --- a fully deterministic comparison that resolves a quota conflict only when one value objectively outranks the others, and a decision-changing test that refuses to settle a cutoff conflict whenever the choice would alter the student's fit category --- keeps every consolidation auditable and defers, rather than guesses, exactly the cases where an over-confident commitment could mislead a student.
 The conflict-handling edge cases (EC-16 and EC-17) are among the 17 satisfied cases reported in Section~\ref{section:4.4}.
 
 \section{Resilient LLM inference gateway}
