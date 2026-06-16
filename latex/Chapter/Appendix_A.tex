@@ -93,4 +93,23 @@ Each scenario is given as a precondition, a user action, and the required system
 \textit{User action:} the student requests recommendations.
 \textit{Required behavior:} the system states which criteria could not be satisfied and suggests which constraint to relax, rather than returning an empty or misleadingly confident result.
 
+\section*{A.5 Ingestion scenarios}
+
+These scenarios describe the offline pipeline that populates the canonical store, rather than a turn of the advisory conversation. Each source is fetched, routed, parsed, extracted, normalized, and persisted with provenance.
+
+\textbf{UC-05.1 --- Ingest all sources of one school.}
+\textit{Precondition:} a school is registered with several active sources.
+\textit{User action:} an operator runs the pipeline for that school.
+\textit{Required behavior:} every active source is processed through the full fetch-to-normalize chain, and the resulting records are persisted with their provenance (source identifier, source URL, school, and trust level) using an idempotent upsert keyed per source, so a re-run updates rather than duplicates; a source that fails is logged and skipped while the remaining sources continue, rather than aborting the whole school.
+
+\textbf{UC-05.2 --- Scanned-PDF source needing OCR.}
+\textit{Precondition:} a source is a PDF whose pages have no usable text layer.
+\textit{User action:} the source is ingested.
+\textit{Required behavior:} pages with a sufficiently long text layer are taken as-is, while image-only pages are rendered to an image and transcribed through the inference gateway; an output that is the product of a repetition loop --- detected by an excessive length or a single dominant character --- is rejected and retried once at a higher temperature, and if it is still degenerate that one page is isolated as failed while the other pages proceed; if the document yields no text at all, the run raises rather than silently marking the document ingested, so the failure is not hidden by a later content-hash skip.
+
+\textbf{UC-05.3 --- Source with no extractable facts.}
+\textit{Precondition:} a source is reachable and parses, but contains no admission facts the extractor recognizes.
+\textit{User action:} the source is ingested.
+\textit{Required behavior:} the run completes with a warning and writes nothing to the canonical store, rather than persisting empty or fabricated records.
+
 \end{document}
