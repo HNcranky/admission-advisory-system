@@ -40,7 +40,7 @@ class CutoffEntry(BaseModel):
 class CutoffAssessment(BaseModel):
     """Kết quả đối chiếu điểm hồ sơ với điểm chuẩn lịch sử (EC-14/15/16/18).
 
-    Đặt ở agents.models (không phải services/cutoff) để tránh vòng import:
+    Đặt ở domain.models (không phải services/cutoff) để tránh vòng import:
     services/cutoff/assessment.py import CutoffEntry từ đây."""
     score_fit: Literal["above", "borderline", "below", "uncertain"]
     reference_year: int
