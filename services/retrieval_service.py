@@ -216,28 +216,3 @@ def fetch_candidates(filters: Dict[str, Any], limit: int = 100) -> List[Candidat
                 (candidate.school_id, candidate.program_id), []
             )
     return candidates
-
-
-def detect_conflicts(candidates: List[CandidateProgram]) -> List[str]:
-    grouped: Dict[Tuple[str, str, str], CandidateProgram] = {}
-    conflicts: List[str] = []
-    for candidate in candidates:
-        key = (
-            candidate.school_id,
-            candidate.program_id or candidate.program_name,
-            candidate.admission_method or "unknown_method",
-        )
-        previous = grouped.get(key)
-        if previous is None:
-            grouped[key] = candidate
-            continue
-
-        if previous.quota != candidate.quota:
-            conflicts.append(
-                f"Quota conflict for {candidate.program_name} at {candidate.school_name}"
-            )
-        if sorted(previous.subject_combinations) != sorted(candidate.subject_combinations):
-            conflicts.append(
-                f"Subject-combination conflict for {candidate.program_name} at {candidate.school_name}"
-            )
-    return list(dict.fromkeys(conflicts))

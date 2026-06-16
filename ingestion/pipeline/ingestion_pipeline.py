@@ -256,12 +256,3 @@ class IngestionPipeline:
             parser_profile=parser_profile,
         )
         return self.run_for_source(temp_source)
-
-
-                                                                  
-
-def run_ingestion(url: str):
-    """Legacy entry point for backwards compatibility."""
-    pipeline = IngestionPipeline()
-    records = pipeline.run_single_url(url)
-    return records

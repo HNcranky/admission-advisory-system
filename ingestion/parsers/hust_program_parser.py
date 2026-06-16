@@ -712,21 +712,3 @@ def _extract_subject_combinations(text: str) -> List[str]:
             unique.append(code)
 
     return unique
-
-
-                                                                  
-
-def parse_hust_programs(
-    content: bytes,
-    source_url: str,
-    source_id: str = "hust_program_listing",
-    school_id: str = "hust",
-) -> List[ExtractedAdmissionFact]:
-    """Legacy entry point for backward compatibility."""
-    parser = HustProgramParser()
-    return parser.parse(
-        content=content,
-        source_url=source_url,
-        school_id=school_id,
-        school_name="Đại học Bách khoa Hà Nội",
-    )

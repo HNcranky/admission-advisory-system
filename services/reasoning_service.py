@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 
 from agents.models import CandidateProgram, EligibilityCheck, RankedRecommendation, StudentProfile
 from services.cutoff.assessment import SAFE_MARGIN, assess_cutoff
@@ -246,7 +246,3 @@ def reason_candidates(
     order = {"safe": 0, "match": 1, "reach": 2, "unknown": 3}
     recommendations.sort(key=lambda rec: (order.get(rec.band, 99), -rec.score))
     return checks, recommendations
-
-
-def index_candidates_by_id(candidates: List[CandidateProgram]) -> Dict[str, CandidateProgram]:
-    return {candidate.candidate_id: candidate for candidate in candidates}

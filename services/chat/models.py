@@ -61,11 +61,3 @@ class ConversationTurnResult(BaseModel):
     hybrid_intent: Optional[Dict[str, Any]] = None  # serialized IntentResult, replayed by HybridDispatcher
     correction_note: Optional[Dict[str, Any]] = None  # {slot, previous_value, new_value} khi re-rank (AC7)
 
-class AdvisoryRunRecord(BaseModel):
-    id: int
-    session_token: str
-    status: str
-    result_json: Optional[Dict[str, Any]] = None
-    final_answer: Optional[str] = None
-
-    
