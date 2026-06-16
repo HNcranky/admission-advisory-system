@@ -26,6 +26,9 @@ At the resolution layer, the two kinds of conflict are treated deliberately diff
 A quota conflict is settled by a deterministic comparison (\texttt{services/conflict/comparison.py}) that ranks the competing options on a fixed lexicographic ordering of trust level, then corroboration, then recency, then source confidence.
 If that comparison is decisive --- the top option strictly outranks its nearest differing challenger on at least one axis --- the highest-ranked value is accepted; if every axis ties, the conflict is left unresolved rather than guessed, the field is marked uncertain, and every competing value is surfaced.
 No language model is consulted at any point in conflict resolution; the agent (\texttt{agents/conflict\_agent.py}) wires only these deterministic comparators, which keeps the resolution fully auditable.
+The ranking is intentionally lexicographic rather than a weighted score, so that the axis on which a decision turns is always recoverable: the comparison reports the first axis where the winner and its nearest differing challenger diverge --- trust level, then corroboration, then recency, then declared confidence --- and that axis is stored on the outcome.
+The second axis, corroboration, counts how many independent sources report the same value, which is the operational form of the truth-discovery intuition that agreement across sources is itself evidence~\cite{li2016truth}; a value asserted by two official publications outranks an equally trusted value asserted by one.
+Only when none of these axes separates the candidates --- equal trust, equal corroboration, equal recency, equal confidence --- does the comparison declare itself non-decisive, and only then is the value withheld.
 A cutoff conflict is never resolved by ranking alone either.
 Instead, the system checks whether the disagreement is \textit{decision-changing} for this particular student --- that is, whether the competing cutoff values, classified through \texttt{services/cutoff/assessment.py}, would place the student's score into different fit categories.
 If it is, the conflict is left unresolved, the affected field is marked uncertain, and the explanation presents every competing value; if it is not --- or if the student's score or method is not on a comparable scale --- the system references the most trusted value while still stating all of them.
@@ -81,6 +84,9 @@ A hard failure is raised as an \texttt{InferenceError}; a soft failure is report
 The gateway resolves a per-agent policy from a model registry (\texttt{services/inference/registry.py}) that supplies the primary model, an optional fallback model, a retry budget, and whether fallback is allowed for that agent.
 It then treats the two failures differently: on a hard error it stops retrying the same model immediately and moves to the configured fallback model, because retrying an unreachable endpoint wastes time; on a structure failure it retries within the per-agent retry budget and then falls back to the secondary model.
 If no fallback is configured, the gateway re-raises the hard error so that the call site can degrade, and every call site is written to do exactly that --- wrapping the call and substituting deterministic output on failure.
+Whether a fallback exists, and how many structure retries precede it, is not global but per agent: the registry resolves an \texttt{InferencePolicy} for the calling agent, supplying its primary model, an optional fallback model, a retry budget, and an explicit \texttt{allow\_fallback} flag that defaults to off.
+This lets a cheap, high-volume step such as intent classification run with no fallback and degrade to deterministic keywords, while a step whose output is harder to reconstruct can be granted a secondary model --- the resilience budget is spent where it is worth spending.
+Every attempt is reported to a telemetry sink with its model, attempt number, resolved \texttt{failure\_type}, and a \texttt{used\_fallback} flag, so a degraded call is never silent: an operator can see that a stage fell back or that a structure failure recurred, which is the observability half of graceful degradation.
 The clearest instance of this discipline is intent classification.
 When the gateway is unavailable or returns an unusable response, the router falls back to a deterministic keyword classifier that mirrors the prompt's own priority rules: it checks knowledge-topic keywords before advisory phrases, so a factual question is never misrouted into a full advisory run while the model is unavailable, and unrecognized messages become a clarification request rather than a silent re-run.
 This deterministic fallback was introduced in commit \texttt{c2ef582}.
@@ -156,6 +162,11 @@ A degenerate page is retried once at a raised decoding temperature (0.3, up from
   \Return false\;
 }
 \end{algorithm}
+
+Two properties of this control flow are deliberate.
+First, the escalation from the cheap text layer to the expensive vision call is page-local and demand-driven: the renderer is imported lazily and invoked only for pages below the 50-character threshold, so a born-digital document with a clean text layer never loads the rasterizer at all, and the number of paid \gls{OCR} calls stays proportional to the count of genuinely scanned pages rather than to document length.
+Second, the document-level guard distinguishes a partially failed document from an empty one for a concrete reason: ingested documents are deduplicated by content hash, so silently recording a zero-text document as ingested would cause its hash to be remembered and the document to be skipped forever, permanently hiding the failure.
+Raising instead leaves the document outside the corpus, where a later run --- after the loop is diagnosed or the source is replaced --- can retry it.
 
 \textbf{Result.}
 The pipeline ingests both structured and unstructured official sources end to end.
