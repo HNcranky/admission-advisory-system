@@ -379,7 +379,7 @@ The web application is then served by Uvicorn.
 Ingestion is run separately through the \gls{CLI} to populate the canonical store and the knowledge corpus.
 The whole bring-up is the short sequence of Listing~\ref{lst:deploy}.
 
-\begin{lstlisting}[language=bash,caption={One-command database bring-up, schema setup, and application server (from \texttt{QUICKSTART.md})},label=lst:deploy]
+\begin{lstlisting}[language={},caption={One-command database bring-up, schema setup, and application server (from \texttt{QUICKSTART.md})},label=lst:deploy]
 docker compose up -d --wait db                 # pgvector/pgvector:pg16, waits for healthy
 python -m db.setup_db                           # create DB, apply migrations, seed sources
 python -m ingestion.main --school vnu_uet       # populate the canonical store (offline)
