@@ -18,6 +18,7 @@ from ingestion.config.settings import (
     GEMINI_REQUEST_TIMEOUT_SECONDS,
 )
 from services.inference.models import InferenceError
+from services.inference.providers.cooldown_store import InProcessCooldownStore
 from services.inference.providers.gemini_errors import (
     is_rotatable_error,
     parse_retry_delay,
@@ -63,6 +64,7 @@ class GeminiKeyPool:
         client_factory=_default_client_factory,
         cooldown_seconds: float = GEMINI_KEY_COOLDOWN_SECONDS,
         now=time.monotonic,
+        cooldown_store=None,
     ):
         ordered: list[str] = []
         seen: set[str] = set()
@@ -76,7 +78,7 @@ class GeminiKeyPool:
         self._cooldown_seconds = float(cooldown_seconds)
         self._now = now
         self._clients: dict[str, object] = {}
-        self._cooldown_until: dict[str, float] = {}
+        self._cooldown = cooldown_store or InProcessCooldownStore()
         self._cursor = 0
         self._lock = threading.Lock()
 
@@ -102,15 +104,14 @@ class GeminiKeyPool:
             for offset in range(n):
                 idx = (self._cursor + offset) % n
                 key = self._keys[idx]
-                if self._cooldown_until.get(key, 0.0) <= now:
+                if not self._cooldown.is_cooling(key, now):
                     self._cursor = (idx + 1) % n
                     return KeyHandle(key_id=key, client=self._client_for(key))
             return None
 
     def penalize(self, key_id: str, delay: float | None = None) -> None:
-        with self._lock:
-            cooldown = self._cooldown_seconds if delay is None else float(delay)
-            self._cooldown_until[key_id] = self._now() + cooldown
+        cooldown = self._cooldown_seconds if delay is None else float(delay)
+        self._cooldown.penalize(key_id, self._now() + cooldown)
 
     def release(self, key_id: str) -> None:
         """Reset cursor to key_id's position (undo a non-rotatable-error acquire)."""
