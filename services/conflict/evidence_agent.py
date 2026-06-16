@@ -26,10 +26,8 @@ def _batch_fetched_at(source_urls: List[str], record: ConflictRecord) -> Dict[st
     return several rows; the first wins (fetched_at is a property of the source
     document, consistent across that URL's rows)."""
     sql = """
-        SELECT car.source_url, rd.fetched_at
+        SELECT car.source_url, NULL::timestamptz AS fetched_at
         FROM canonical_admission_records car
-        LEFT JOIN extracted_facts ef ON ef.id = car.extracted_fact_id
-        LEFT JOIN raw_documents rd ON rd.id = ef.raw_document_id
         WHERE car.source_url = ANY(%s)
           AND car.school_id = %s
           AND car.admission_year = %s

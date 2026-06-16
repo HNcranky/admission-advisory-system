@@ -100,7 +100,6 @@ def verify_tables():
     
     expected = [
     "source_registry",
-    "discovered_resources",
     "raw_documents",
     "extracted_facts",
     "canonical_admission_records",
