@@ -1,17 +1,15 @@
 import logging
-from concurrent.futures import ThreadPoolExecutor
 
 from services.chat.advisory_runner import run_advisory_for_session
-from services.chat.repository import ChatSessionRepository
+from services.chat.base_dispatcher import BaseRunDispatcher
 
 logger = logging.getLogger(__name__)
 
 
-class RunDispatcher:
+class RunDispatcher(BaseRunDispatcher):
     def __init__(self, repository = None, runner = None, executor = None):
-        self.repository = repository or ChatSessionRepository()
+        super().__init__(repository=repository, executor=executor)
         self.runner = runner or run_advisory_for_session
-        self.executor = executor or ThreadPoolExecutor(max_workers=2)
 
     def submit(self, session_token: str, run_id: int, latest_user_message: str, profile_state,
                correction_note: dict | None = None, closing_seed: int = 0):
@@ -43,18 +41,3 @@ class RunDispatcher:
             logger.exception("advisory run %s failed for session %s", run_id, session_token)
             self._mark_failed(session_token)
             raise
-
-    def _mark_failed(self, session_token: str):
-        try:
-            self.repository.append_message(
-                session_token,
-                "assistant",
-                "Xin lỗi, quá trình phân tích bị gián đoạn. Bạn thử lại giúp mình nhé.",
-                "assistant_error",
-            )
-        except Exception:
-            logger.exception("failed to append error message for session %s", session_token)
-        try:
-            self.repository.update_session_status(session_token, "failed")
-        except Exception:
-            logger.exception("failed to mark session %s as failed", session_token)
