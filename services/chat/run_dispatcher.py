@@ -14,7 +14,7 @@ class RunDispatcher(BaseRunDispatcher):
 
     def submit(self, session_token: str, run_id: int, latest_user_message: str, profile_state,
                correction_note: dict | None = None, closing_seed: int = 0):
-        self.executor.submit(
+        accepted = self.executor.submit(
             self._execute,
             session_token,
             run_id,
@@ -23,6 +23,11 @@ class RunDispatcher(BaseRunDispatcher):
             correction_note,
             closing_seed,
         )
+        if not accepted:
+            logger.warning("run queue full; rejecting run %s for %s", run_id, session_token)
+            self.repository.complete_run(run_id, {"rejected": True}, "")
+            self._reject(session_token)
+        return accepted
 
     def _execute(self, session_token: str, run_id: int, latest_user_message: str, profile_state,
                  correction_note: dict | None = None, closing_seed: int = 0):

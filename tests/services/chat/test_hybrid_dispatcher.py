@@ -41,6 +41,7 @@ class FakeOrchestrator:
 class InlineExecutor:
     def submit(self, fn, *args, **kwargs):
         fn(*args, **kwargs)
+        return True
 
 
 def _intent():

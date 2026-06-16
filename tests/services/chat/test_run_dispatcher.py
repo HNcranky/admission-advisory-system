@@ -24,6 +24,7 @@ class FakeRepository:
 class InlineExecutor:
     def submit(self, fn, *args, **kwargs):
         fn(*args, **kwargs)
+        return True
 
 
 def test_dispatcher_completes_run_and_posts_result_message():

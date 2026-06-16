@@ -13,7 +13,12 @@ class HybridDispatcher(BaseRunDispatcher):
         self.orchestrator = orchestrator or CompareOrchestrator()
 
     def submit(self, session_token: str, run_id: int, content: str, profile_state, intent):
-        self.executor.submit(self._execute, session_token, run_id, content, profile_state, intent)
+        accepted = self.executor.submit(self._execute, session_token, run_id, content, profile_state, intent)
+        if not accepted:
+            logger.warning("run queue full; rejecting hybrid run %s for %s", run_id, session_token)
+            self.repository.complete_run(run_id, {"rejected": True}, "")
+            self._reject(session_token)
+        return accepted
 
     def _execute(self, session_token: str, run_id: int, content: str, profile_state, intent):
         try:
