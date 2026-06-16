@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from services.inference.embedder import GeminiEmbedder, l2_normalize
+from services.inference.embedder import GeminiEmbedder, l2_normalize, reset_embed_cache
 from services.inference.providers import key_pool as key_pool_module
 from services.inference.providers.key_pool import GeminiKeyPool, reset_key_pool
 
@@ -11,8 +11,10 @@ from services.inference.providers.key_pool import GeminiKeyPool, reset_key_pool
 @pytest.fixture(autouse=True)
 def _reset_singleton():
     reset_key_pool()
+    reset_embed_cache()
     yield
     reset_key_pool()
+    reset_embed_cache()
 
 
 # --- l2_normalize -------------------------------------------------------------
@@ -182,3 +184,43 @@ def test_ingestion_embedder_shim_still_works():
     from ingestion.knowledge.embedder import GeminiEmbedder as Shim
     from services.inference.embedder import GeminiEmbedder as Real
     assert Shim is Real
+
+
+# --- embedding cache ----------------------------------------------------------
+
+class _CountingPool:
+    def __init__(self):
+        self.calls = 0
+
+    def call(self, fn, *, context=""):
+        self.calls += 1
+
+        class _Emb:
+            def __init__(self, v):
+                self.values = v
+
+        class _Resp:
+            def __init__(self, n):
+                self.embeddings = [_Emb([0.1, 0.2, 0.3]) for _ in range(n)]
+
+        return _Resp(1)
+
+
+def test_embed_caches_repeated_text():
+    reset_embed_cache()
+    pool = _CountingPool()
+    emb = GeminiEmbedder(pool=pool, dim=3, batch_size=1)
+    v1 = emb.embed(["xin chao"], task_type="RETRIEVAL_QUERY")
+    v2 = emb.embed(["xin chao"], task_type="RETRIEVAL_QUERY")
+    assert v1 == v2
+    assert pool.calls == 1  # second call hits cache
+
+
+def test_embed_cache_disabled(monkeypatch):
+    import services.inference.embedder as e
+    monkeypatch.setattr(e, "EMBED_CACHE_SIZE", 0)
+    pool = _CountingPool()
+    emb = GeminiEmbedder(pool=pool, dim=3, batch_size=1)
+    emb.embed(["a"])
+    emb.embed(["a"])
+    assert pool.calls == 2
