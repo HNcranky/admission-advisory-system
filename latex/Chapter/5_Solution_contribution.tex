@@ -76,13 +76,38 @@ A naive implementation that treats every \gls{LLM} call as reliable would let ei
 The two failure kinds also call for opposite responses: retrying a rate-limited endpoint is pointless, whereas retrying a malformed structured response can succeed.
 
 \textbf{Solution.}
-All model access is funneled through a single gateway (Section~\ref{section:4.1}) that makes the two failure modes first-class.
+All model access is funneled through a single gateway (\texttt{services/inference/gateway.py}, Section~\ref{section:4.1}) that makes the two failure modes first-class; its control flow is given in Algorithm~\ref{alg:gateway}.
 A hard failure is raised as an \texttt{InferenceError}; a soft failure is reported on the result as a \texttt{failure\_type} of \texttt{STRUCTURE\_FAILURE} rather than as an exception.
-The gateway treats them differently: on a hard error it stops retrying the same model immediately and moves to the configured fallback model, because retrying an unreachable endpoint wastes time; on a structure failure it retries within the per-agent retry budget and then falls back to the secondary model.
+The gateway resolves a per-agent policy from a model registry (\texttt{services/inference/registry.py}) that supplies the primary model, an optional fallback model, a retry budget, and whether fallback is allowed for that agent.
+It then treats the two failures differently: on a hard error it stops retrying the same model immediately and moves to the configured fallback model, because retrying an unreachable endpoint wastes time; on a structure failure it retries within the per-agent retry budget and then falls back to the secondary model.
 If no fallback is configured, the gateway re-raises the hard error so that the call site can degrade, and every call site is written to do exactly that --- wrapping the call and substituting deterministic output on failure.
 The clearest instance of this discipline is intent classification.
 When the gateway is unavailable or returns an unusable response, the router falls back to a deterministic keyword classifier that mirrors the prompt's own priority rules: it checks knowledge-topic keywords before advisory phrases, so a factual question is never misrouted into a full advisory run while the model is unavailable, and unrecognized messages become a clarification request rather than a silent re-run.
 This deterministic fallback was introduced in commit \texttt{c2ef582}.
+
+\begin{algorithm}[H]
+\caption{Inference gateway: hard- vs structure-failure handling}
+\label{alg:gateway}
+\KwIn{request $q$ with an agent name}
+\KwOut{a usable \texttt{InferenceResult}, or a raised \texttt{InferenceError} for the call site to handle}
+$p \leftarrow$ registry policy for $q$'s agent \tcp*[r]{primary, fallback, retries, allow\_fallback}
+$e \leftarrow \varnothing$ \tcp*[r]{remembered hard error}
+\For{$\text{attempt} \leftarrow 0$ \KwTo $p.\textit{maxRetries}$}{
+  $r \leftarrow \textsc{Generate}(q, p.\textit{primaryModel})$\;
+  \If{\textsc{Generate} raised \texttt{InferenceError} $\varepsilon$ \tcp*[r]{hard: network/auth/rate-limit}}{
+    $e \leftarrow \varepsilon$; record \textsc{ApiError}; \textbf{break} \tcp*[r]{stop retrying this model}
+  }
+  record $r.\textit{failureType}$\;
+  \lIf{$r.\textit{failureType} \neq \textsc{StructureFailure}$}{\Return $r$}
+}
+\eIf{$p.\textit{allowFallback}$ \textbf{and} $p.\textit{fallbackModel}$ exists}{
+  $r \leftarrow \textsc{Generate}(q, p.\textit{fallbackModel})$ \tcp*[r]{re-raises on hard error}
+  \Return $r$\;
+}{
+  \lIf{$e \neq \varnothing$}{\textbf{raise} $e$ \tcp*[r]{let the call site degrade}}
+  \Return $r$ \tcp*[r]{last structure-failure result}
+}
+\end{algorithm}
 
 \textbf{Result.}
 The assistant remains usable through model outages.
