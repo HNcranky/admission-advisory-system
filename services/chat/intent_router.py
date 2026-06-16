@@ -3,6 +3,11 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+from services import build_default_gateway
+from services.chat.models import ChatProfileState
+from services.inference.models import InferenceRequest
+from services.profile_service import normalize_text
+
 # Canonical knowledge topics. Synonyms the LLM commonly emits are normalized to
 # these; anything unrecognized degrades to None rather than failing the whole
 # classification (a secondary field must never invalidate the route).
@@ -27,11 +32,6 @@ def _normalize_topic(value):
     if key in KNOWLEDGE_TOPICS:
         return key
     return _TOPIC_SYNONYMS.get(key)  # None if unrecognized
-
-from services import build_default_gateway
-from services.chat.models import ChatProfileState
-from services.inference.models import InferenceRequest
-from services.profile_service import normalize_text
 
 logger = logging.getLogger(__name__)
 
