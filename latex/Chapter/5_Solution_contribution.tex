@@ -125,14 +125,41 @@ Scanned documents are the hardest case, because recovering their text requires \
 \textbf{Solution.}
 Ingestion is a configurable, staged pipeline (Section~\ref{section:4.1}): per-source configuration selects the fetch strategy, the document router predicts each document's type, and a matching parser and extractor turn it into raw facts that are then normalized against per-school dictionaries into canonical records.
 Because the per-source configuration and dictionaries are data rather than code, adding a school is largely a matter of configuration.
-Scanned \gls{PDF}s are handled by a hybrid per-page extractor (Section~\ref{section:3.4}): a page with a usable text layer is read directly, and only image-only pages are rendered and sent to the multimodal gateway for transcription, keeping cost proportional to the number of scanned pages.
+Scanned \gls{PDF}s are handled by a hybrid per-page extractor (\texttt{ingestion/knowledge/pdf\_ocr.py}, Section~\ref{section:3.4}), whose logic is given in Algorithm~\ref{alg:ocr}: a page whose stripped text layer is at least 50 characters long is read directly, and only shorter (effectively image-only) pages are rendered to PNG at roughly 200 \gls{DPI} and sent to the multimodal gateway for transcription, keeping cost proportional to the number of scanned pages.
 The distinctive part is the safeguard against model \gls{OCR} repetition loops, introduced in commit \texttt{b41dd9f}.
 When transcribing a page with merged table cells, the model can lock into emitting one character endlessly --- one NEU page produced on the order of a million dash characters.
-The extractor classifies an output as \textit{degenerate} when it exceeds an absolute per-page character ceiling, or when a single character dominates more than a set fraction of the non-whitespace output above a minimum length.
-A degenerate page is retried once at a raised decoding temperature to break the greedy loop; if it is still degenerate the page is marked failed and the remaining pages of the document are ingested normally, so one bad page cannot discard a whole document, while a document that yields no text at all is deliberately left un-ingested rather than recorded as empty.
+The extractor classifies an output as \textit{degenerate} when it exceeds an absolute ceiling of 20{,}000 characters per page, or when --- among at least 2{,}000 non-whitespace characters --- a single character accounts for more than 80\% of them.
+A degenerate page is retried once at a raised decoding temperature (0.3, up from 0.0) to break the greedy loop; if it is still degenerate the page is marked failed and the remaining pages of the document are ingested normally, so one bad page cannot discard a whole document, while a document that yields no text at all is deliberately left un-ingested rather than recorded as empty.
+
+\begin{algorithm}[H]
+\caption{Hybrid per-page extraction with degenerate-OCR detection}
+\label{alg:ocr}
+\KwIn{a scanned or mixed \gls{PDF}}
+\KwOut{per-page text, each tagged \texttt{text\_layer}, \texttt{ocr}, or \texttt{failed}}
+\ForEach{page in document}{
+  $b \leftarrow$ stripped pdfplumber text layer of the page\;
+  \lIf{$|b| \geq 50$}{record $(b, \texttt{text\_layer})$; \textbf{continue}}
+  $\textit{img} \leftarrow$ render the page to PNG at $\approx 200$ \gls{DPI}\;
+  \For{$\tau \in (0.0,\ 0.3)$ \tcp*[r]{retry once at raised temperature}}{
+    $t \leftarrow \textsc{GatewayOCR}(\textit{img},\ \tau)$\;
+    \lIf{\textbf{not} \textsc{Degenerate}$(t)$}{record $(t, \texttt{ocr})$; \textbf{continue to next page}}
+  }
+  record $(\texttt{""}, \texttt{failed})$ \tcp*[r]{both attempts degenerate}
+}
+\lIf{every page is empty}{\textbf{raise} --- leave the document un-ingested}
+\BlankLine
+\SetKwProg{Fn}{Function}{:}{}
+\Fn{\textsc{Degenerate}$(t)$}{
+  \lIf{$|t| > 20000$}{\Return true}
+  $c \leftarrow t$ with all whitespace removed\;
+  \lIf{$|c| \geq 2000$ \textbf{and} $\max_x \text{count}(x, c) / |c| > 0.8$}{\Return true}
+  \Return false\;
+}
+\end{algorithm}
 
 \textbf{Result.}
 The pipeline ingests both structured and unstructured official sources end to end.
+% TODO-VERIFY 2026-06-16: store counts below are the 2026-06-08 baseline (FACTS.md); dev Postgres was unavailable for re-measurement. Re-run `docker compose up -d --wait db` then the psql counts in FACTS.md before the submission pass.
 The canonical store holds 136 admission records and 699 cutoff records for HUST and 20 admission records and 16 cutoff records for VNU-UET, and the knowledge corpus holds 18 documents and 406 chunks drawn from HUST, NEU, VNU-UET, and national \gls{MOET} regulations, as reported in Section~\ref{section:4.3}.
 The degenerate-output safeguard is what makes the scanned subset of that corpus ingestible: without it, a single repetition-loop page would either bloat the store with megabytes of junk or abort the document; with it, the bad page is isolated and the rest of the document is preserved.
 
