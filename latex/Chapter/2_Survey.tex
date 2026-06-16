@@ -35,6 +35,11 @@ However, they are institution-centric: each deployment serves one university's o
 
 Table~\ref{table:channel-comparison} summarizes the comparison.
 
+These channels can be situated against two strands of prior work.
+Research on \gls{LLM} reliability documents that models without access to current, authoritative context hallucinate factual details, producing fluent but unfaithful text~\cite{ji2023hallucination}; this is the failure mode that makes a general-purpose chatbot unsafe for quoting a specific quota or cutoff.
+It is also why the commercial education platforms cited above --- Element451~\cite{element451} and Mainstay~\cite{mainstay}, built on dialogue frameworks such as Rasa's \gls{CALM} architecture~\cite{rasa_calm} and Google Dialogflow CX~\cite{dialogflow} --- pair conversation with a grounding knowledge base rather than relying on a model's parametric memory.
+What none of this prior work targets is a setting in which the grounding sources are themselves mutually inconsistent: those systems assume one institution curates one trusted corpus, whereas a Vietnamese applicant must reconcile several independent official publications that openly disagree.
+
 \begin{table}[H]
     \centering
     \caption{Comparison of existing admission-information channels}
@@ -58,8 +63,11 @@ Table~\ref{table:channel-comparison} summarizes the comparison.
 
 Three gaps recur across every channel.
 First, no channel reconciles contradictory data: even authoritative sources disagree with each other, and every existing tool silently picks one value or presents none.
+In the Vietnamese context this is not an edge case --- quotas, cutoff scores, and admission methods are revised repeatedly within a single season --- so a tool that commits to one value is frequently wrong without signalling it.
 Second, no channel combines personalization with grounding: human counselors personalize but do not scale, while portals scale but treat every student identically.
+Aggregators and generic chatbots reach any applicant, but neither weighs an individual's score, subject combination, and budget against a specific program's published requirements.
 Third, no conversational tool collects a student profile incrementally and gates its recommendations on having sufficient data, the way a careful human counselor does.
+A student who states only a vague interest such as ``thích lập trình'' cannot be served a reliable recommendation until enough of a profile exists to constrain retrieval to admissible programs.
 The system described in this thesis is designed to close these three gaps for the Vietnamese admission context.
 
 \section{Functional overview}
