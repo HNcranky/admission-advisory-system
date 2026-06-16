@@ -1,32 +1,17 @@
-from contextlib import contextmanager
-
 from fastapi.encoders import jsonable_encoder
 from psycopg2.extras import Json
 
 from services.chat.db import get_db_connection
+from services.db import cursor
 
 
 class TraceRepository:
     def __init__(self, connection_factory=get_db_connection):
         self.connection_factory = connection_factory
 
-    @contextmanager
     def _cursor(self, commit: bool = False):
-        """Yield a cursor, guaranteeing commit/rollback and connection cleanup."""
-        conn = self.connection_factory()
-        try:
-            cur = conn.cursor()
-            try:
-                yield cur
-                if commit:
-                    conn.commit()
-            except Exception:
-                conn.rollback()
-                raise
-            finally:
-                cur.close()
-        finally:
-            conn.close()
+        # Delegate sang helper dùng chung (services/db). Hành vi không đổi.
+        return cursor(self.connection_factory, commit=commit)
 
     def start_event(self, run_id: int, stage: str, sequence: int) -> int:
         with self._cursor(commit=True) as cur:

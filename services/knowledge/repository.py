@@ -1,6 +1,6 @@
 import hashlib
-from contextlib import contextmanager
 
+from services.db import cursor as _cursor, vector_literal as _vector_literal
 from services.knowledge.db import get_knowledge_db_connection
 from services.knowledge.models import KnowledgeChunk, ScoredChunk, KnowledgeDocument
 
@@ -19,31 +19,6 @@ def _parse_vector(raw) -> list[float]:
     if not s:
         return []
     return [float(x) for x in s.split(",")]
-
-
-def _vector_literal(embedding):
-    if embedding is None:
-        return None
-    return "[" + ",".join(str(float(x)) for x in embedding) + "]"
-
-
-@contextmanager
-def _cursor(connection_factory, commit: bool = False):
-    """Yield a cursor, guaranteeing commit/rollback and connection cleanup."""
-    conn = connection_factory()
-    try:
-        cur = conn.cursor()
-        try:
-            yield cur
-            if commit:
-                conn.commit()
-        except Exception:
-            conn.rollback()
-            raise
-        finally:
-            cur.close()
-    finally:
-        conn.close()
 
 
 # SELECT column order shared by the read methods (id is selected separately).
