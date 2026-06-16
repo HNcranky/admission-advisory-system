@@ -113,11 +113,13 @@ This panel is the user-facing surface of the tracing subsystem and realizes the 
 The interaction between layers is clearest in the two central flows.
 
 \textbf{Advisory dispatch.}
-Figure~\ref{fig:seq-advisory} traces a student message that triggers an advisory run.
-The message endpoint in the \texttt{chat\_api} route calls the conversation service, which classifies intent and decides whether to start a run.
-When a run is warranted, the route creates a run record through the repository and submits the work to the \texttt{RunDispatcher}, then returns immediately so the request does not block (NFR-04).
-The dispatcher executes the run on a background thread pool: it marks the run running, invokes the LangGraph pipeline through \texttt{advisory\_runner}, persists the final answer and the per-stage trace, and marks the session completed.
+Figure~\ref{fig:seq-advisory} traces a student message that triggers an advisory run, and Algorithm~\ref{alg:dispatch} gives the same flow as control flow across the request thread and the background worker.
+The message endpoint in the \texttt{chat\_api} route calls the conversation service, which classifies intent, updates the profile, and decides whether to start a run.
+When a run is warranted, \texttt{start\_run} inserts a row into \texttt{chat\_advisory\_runs} in the \textit{queued} state, recording the dispatch arguments and a profile snapshot, and the endpoint returns immediately so the request does not block (NFR-04).
+The work is drained off that queue by a separate \texttt{RunQueueWorker}: it polls for the oldest queued run and claims it atomically with an \texttt{UPDATE \ldots FOR UPDATE SKIP LOCKED} statement, so several worker replicas can run without ever claiming the same row.
+Holding a claim, the worker hands the run to the \texttt{RunDispatcher}, which marks the run \textit{running}, invokes the LangGraph pipeline through \texttt{advisory\_runner}, persists the final answer and the per-stage trace, and marks the session \textit{completed} (or appends a recovery message and marks it \textit{failed} on an exception).
 The browser polls the session and trace endpoints until the run completes and then renders the answer together with the stage ladder.
+Routing the run through a persisted queue rather than an in-process executor is what lets a run survive a restart of the web process and lets the application scale to more than one worker.
 
 \begin{figure}[H]
     \centering
@@ -126,11 +128,38 @@ The browser polls the session and trace endpoints until the run completes and th
     \label{fig:seq-advisory}
 \end{figure}
 
+\begin{algorithm}[H]
+\caption{Advisory run dispatch (non-blocking, durable queue)}
+\label{alg:dispatch}
+\SetKwProg{Fn}{Function}{:}{}
+\KwIn{a student message $m$ on session $t$}
+\Fn{\textsc{PostMessage}($t$, $m$) \tcp*[r]{request thread}}{
+  $r \leftarrow$ \textsc{HandleUserMessage}($t$, $m$) \tcp*[r]{classify intent, update profile}\;
+  \If{$r.\textit{shouldStartRun}$}{
+    \textsc{EnqueueRun}($t$, $r.\textit{profileSnapshot}$, $r.\textit{dispatchArgs}$) \tcp*[r]{INSERT row, status \textit{queued}}\;
+  }
+  \Return $r$ \tcp*[r]{respond at once (NFR-04)}\;
+}
+\Fn{\textsc{WorkerLoop}()\tcp*[r]{background worker, separate process}}{
+  \While{not stopped}{
+    $c \leftarrow$ \textsc{ClaimNextQueued}() \tcp*[r]{UPDATE \ldots FOR UPDATE SKIP LOCKED}\;
+    \eIf{$c = \textsc{None}$}{wait \textit{pollSeconds}\;}{
+      \textsc{MarkRunning}($c.\textit{runId}$)\;
+      \eIf{\textsc{InvokeGraph}($c$) succeeds $\to a$ \tcp*[r]{LangGraph pipeline + per-stage trace}}{
+        \textsc{CompleteRun}($c.\textit{runId}$, $a$); \textsc{MarkSession}($c.\textit{token}$, \textit{completed})\;
+      }{
+        append recovery message; \textsc{MarkSession}($c.\textit{token}$, \textit{failed})\;
+      }
+    }
+  }
+}
+\end{algorithm}
+
 \textbf{Knowledge question answering.}
-Figure~\ref{fig:seq-knowledge} traces a factual question.
-The knowledge service embeds the question, runs a vector search over the knowledge chunks scoped to the requested school and topic, and additionally retrieves national (ministry) chunks with their own budget, because national regulations apply to every school.
+Figure~\ref{fig:seq-knowledge} traces a factual question, and Algorithm~\ref{alg:retrieval} gives the retrieval control flow that backs it.
+The knowledge service embeds the question, runs a vector search over the knowledge chunks scoped to the requested school and topic, and additionally retrieves national (ministry) chunks with their own separate budget, because national regulations apply to every school; the two scopes keep independent top-$k$ limits so national chunks never crowd out the school's own, and the merged set is re-sorted by score.
 If the best match falls below a confidence threshold, the service returns a ``no data'' result rather than calling the model, satisfying the honest-degradation behavior of UC-02.
-Otherwise it asks the model to answer strictly from the retrieved passages and resolves the cited sources.
+Otherwise it asks the model to answer strictly from the retrieved passages, returns no-data again if the model produces no grounded answer, and resolves the cited sources from the passages the model says it used.
 
 \begin{figure}[H]
     \centering
@@ -139,8 +168,48 @@ Otherwise it asks the model to answer strictly from the retrieved passages and r
     \label{fig:seq-knowledge}
 \end{figure}
 
+\begin{algorithm}[H]
+\caption{Scoped knowledge retrieval with confidence gating}
+\label{alg:retrieval}
+\KwIn{question $q$; optional school $s$ and topic $\theta$; thresholds \textit{minScore}, budgets \textit{topK}, \textit{nationalTopK}}
+\KwOut{a grounded, cited answer, or a ``no data'' result}
+$e \leftarrow \textsc{Embed}(q)$ \tcp*[r]{RETRIEVAL\_QUERY task type}\;
+$C \leftarrow \textsc{VectorSearch}(e,\ \text{school}{=}s,\ \text{topic}{=}\theta,\ \text{limit}{=}\textit{topK})$\;
+\If{$s \notin \{\textsc{None}, \textsc{National}\}$ \tcp*[r]{a school query also pulls ministry chunks}}{
+  $N \leftarrow \{\,c \in \textsc{VectorSearch}(e,\ \text{school}{=}\textsc{National},\ \text{topic}{=}\theta,\ \text{limit}{=}\textit{nationalTopK}) : c.\textit{score} \geq \textit{minScore}\,\}$\;
+  $C \leftarrow \textsc{SortByScore}(C \cup N)$\;
+}
+$\textit{conf} \leftarrow C \neq \emptyset\ ?\ C_1.\textit{score} : 0$\;
+\If{$C = \emptyset$ \textbf{or} $\textit{conf} < \textit{minScore}$}{
+  \Return \textsc{NoData}(\textit{conf}) \tcp*[r]{honest degradation, no model call (UC-02)}\;
+}
+$d \leftarrow \textsc{Generate}(q,\ C)$ \tcp*[r]{answer strictly from $C$; JSON \{answer, usedSourceIds\}}\;
+\If{$d.\textit{answer}$ is empty}{\Return \textsc{NoData}(\textit{conf})\;}
+\Return \textsc{Answer}($d.\textit{answer}$,\ \textsc{ResolveCitations}($C$,\ $d.\textit{usedSourceIds}$),\ \textit{conf})\;
+\end{algorithm}
+
 A design convention shared by every repository supports the testability requirement (NFR-05): each repository takes an injectable connection factory and performs its work over the PostgreSQL driver psycopg~\cite{psycopg} inside a \texttt{\_cursor} context manager that guarantees commit on success, rollback on exception, and connection cleanup in all cases.
+The convention is implemented once in a shared helper (\texttt{services/db}) and reused by every repository, shown in Listing~\ref{lst:cursor}: the nested \texttt{try} blocks commit only when the caller asked for it, roll back and re-raise on any exception, and release the connection in a \texttt{finally} that runs on every path.
 This both prevents leaked connections and lets tests substitute a connection factory bound to the isolated test database.
+
+\begin{lstlisting}[language=Python,caption={The shared \texttt{cursor} context manager guaranteeing commit/rollback/cleanup, reused by every repository's \texttt{\_cursor}},label=lst:cursor]
+@contextmanager
+def cursor(connection_factory, commit: bool = False):
+    conn = connection_factory()
+    try:
+        cur = conn.cursor()
+        try:
+            yield cur
+            if commit:
+                conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            cur.close()
+    finally:
+        release(conn)
+\end{lstlisting}
 
 \subsection{Database design}
 
