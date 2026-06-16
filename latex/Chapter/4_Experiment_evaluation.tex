@@ -213,7 +213,7 @@ def cursor(connection_factory, commit: bool = False):
 
 \subsection{Database design}
 
-The persistent state is one PostgreSQL schema built by sixteen numbered, idempotent migrations (\texttt{db/migrations/001--016}).
+The persistent state is one PostgreSQL schema built by nineteen numbered, idempotent migrations (\texttt{db/migrations/001--018}; two files share the \texttt{014} prefix, so the file count is one above the highest number).
 Figure~\ref{fig:erd} shows the entity-relationship structure, grouped into four areas.
 
 \begin{figure}[H]
@@ -227,6 +227,7 @@ The \textit{ingestion working store} (\texttt{source\_registry}, \texttt{discove
 The \textit{canonical store} (\texttt{canonical\_admission\_records}, \texttt{cutoff\_records}) holds the normalized, query-ready admission data.
 A design decision central to conflict awareness lives here: both canonical tables are unique \textit{per source} --- the uniqueness key includes the source \gls{URL} --- so two official publications that disagree about the same program coexist as two rows rather than overwriting each other.
 The \textit{chat and tracing} area (\texttt{chat\_sessions}, \texttt{chat\_messages}, \texttt{chat\_advisory\_runs}, \texttt{advisory\_trace\_events}) stores anonymous sessions keyed by a random token, their transcripts, the advisory runs, and the per-stage trace events that drive the analysis panel.
+The latest migration (\texttt{018\_advisory\_run\_queue}) turns \texttt{chat\_advisory\_runs} into a durable claim-based queue by adding claim-metadata columns (\texttt{worker\_id}, \texttt{claimed\_at}, \texttt{dispatch\_args\_json}) and a partial index over queued rows, which is the table behind the run-queue worker of Section~\ref{section:4.2}.
 The \textit{knowledge corpus} area (\texttt{knowledge\_documents}, \texttt{knowledge\_chunks}, \texttt{program\_catalog\_embeddings}) holds the \gls{RAG} documents and their 768-dimensional embeddings, indexed with \gls{HNSW} for vector search.
 
 \section{Application building}
@@ -279,11 +280,14 @@ Table~\ref{table:libraries} lists the principal libraries and their versions, ta
 
 \subsection{Achievement}
 
-The implemented system comprises 28{,}055 lines of Python across 315 tracked source files, of which 13{,}646 lines are tests.
-By layer, ingestion is the largest at 6{,}767 lines, followed by the services layer at 5{,}473 lines.
-The database schema is defined by sixteen idempotent migrations.
+The implemented system comprises 31{,}076 lines of Python across 376 tracked source files, of which 15{,}664 lines are tests.
+By layer, ingestion is the largest at 6{,}695 lines, followed by the services layer at 6{,}089 lines.
+The database schema is defined by nineteen idempotent migration files.
 
 The data layer is populated from real official sources.
+% TODO-VERIFY 2026-06-16: the store counts in this paragraph and Table~\ref{table:achievement}
+% are the 2026-06-08 baseline; the dev Postgres was not running in the Plan 00 measurement
+% environment. Re-run the psql counts (FACTS.md) after `docker compose up -d --wait db` before submission.
 The canonical store holds 136 admission records for HUST and 20 for VNU-UET, together with 715 historical cutoff-score records (699 for HUST, 16 for VNU-UET) and 81 program-catalog embeddings used to resolve free-text major names.
 The knowledge corpus for grounded question answering holds 18 documents and 406 embedded chunks, drawn from HUST, NEU, VNU-UET, and national \gls{MOET} regulation documents.
 These figures are summarized in Table~\ref{table:achievement}.
@@ -296,23 +300,23 @@ These figures are summarized in Table~\ref{table:achievement}.
         \hline
         \textbf{Metric} & \textbf{Value} \\
         \hline
-        Python source lines (total) & 28{,}055 \\
+        Python source lines (total) & 31{,}076 \\
         \hline
-        Python source files (tracked) & 315 \\
+        Python source files (tracked) & 376 \\
         \hline
-        Test lines & 13{,}646 \\
+        Test lines & 15{,}664 \\
         \hline
-        Database migrations & 16 \\
+        Database migrations (files) & 19 \\
         \hline
-        Canonical admission records (HUST / VNU-UET) & 136 / 20 \\
+        Canonical admission records (HUST / VNU-UET) & 136 / 20 \\ % TODO-VERIFY: dev DB not re-measured (2026-06-08 baseline)
         \hline
-        Historical cutoff records (total) & 715 \\
+        Historical cutoff records (total) & 715 \\ % TODO-VERIFY: dev DB not re-measured (2026-06-08 baseline)
         \hline
-        Program-catalog embeddings & 81 \\
+        Program-catalog embeddings & 81 \\ % TODO-VERIFY: dev DB not re-measured (2026-06-08 baseline)
         \hline
-        Knowledge documents / chunks & 18 / 406 \\
+        Knowledge documents / chunks & 18 / 406 \\ % TODO-VERIFY: dev DB not re-measured (2026-06-08 baseline)
         \hline
-        Automated tests & 856 \\
+        Automated tests & 1{,}011 \\
         \hline
     \end{tabular}
 \end{table}
@@ -366,7 +370,7 @@ This cluster is carried forward as the principal item of future work in Section~
 
 The system is deployed with Docker Compose~\cite{docker}.
 A single service definition runs the database from the \texttt{pgvector/pgvector:pg16} image, which provides PostgreSQL~16 with the pgvector extension preinstalled, exposed on the standard port with a persistent named volume and a health check.
-Bringing up the database and waiting for its health check is a single command, after which a setup script (\texttt{db/setup\_db.py}) creates the \texttt{admission} database, applies the sixteen migrations in order, verifies the expected tables, and seeds the source registry.
+Bringing up the database and waiting for its health check is a single command, after which a setup script (\texttt{db/setup\_db.py}) creates the \texttt{admission} database, applies the migrations in order, verifies the expected tables, and seeds the source registry.
 The web application is then served by Uvicorn.
 Ingestion is run separately through the \gls{CLI} to populate the canonical store and the knowledge corpus.
 
