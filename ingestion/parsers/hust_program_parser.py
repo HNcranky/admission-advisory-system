@@ -1,4 +1,4 @@
-                                
+
 """
 HUST-specific parser for the program listing page:
 https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc
@@ -31,7 +31,7 @@ _RE_LABEL_QUOTA = re.compile(r"\bChỉ\s+tiêu\s+tuyển\s+sinh\b", re.IGNORECAS
 _RE_LABEL_COMBOS = re.compile(r"\bTổ\s+hợp\s+xét\s+tuyển\b", re.IGNORECASE)
 _RE_LABEL_DETAIL = re.compile(r"\bChi\s+tiết\b", re.IGNORECASE)
 
-                                                                                   
+
 _RE_SUBJECT_COMBO = re.compile(r"\b(DD\d|[ABCDKV]\d{2})\b")
 
 
@@ -160,7 +160,7 @@ def _extract_tuition_value(
         if tuition:
             return tuition
 
-                                                                     
+
     for line in lines:
         normalized = _normalize_for_match(line)
         if not any(
@@ -185,7 +185,7 @@ def _extract_tuition_value(
                 return value
         return cleaned
 
-                                                                 
+
     full_text = "\n".join(lines)
     segment_match = re.search(
         r"(?is)(học\s*phí|hoc\s*phi|chi\s*phí|chi\s*phi)[^\n]{0,160}",
@@ -234,11 +234,11 @@ class HustProgramParser(BaseSpecializedParser):
 
         soup = BeautifulSoup(html_str, "html.parser")
 
-                                                                     
+
         parsed_url = urlparse(source_url)
         self._base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
 
-                                        
+
         program_cards = self._find_program_cards(soup)
 
         if not program_cards:
@@ -392,9 +392,9 @@ class HustProgramParser(BaseSpecializedParser):
                 )
                 return cards
 
-                             
-                                                                          
-                                                                                       
+
+
+
         candidates: list[Tag] = []
         for node in soup.find_all(string=_RE_LABEL_PROGRAM_CODE):
             if not getattr(node, "parent", None):
@@ -431,7 +431,7 @@ class HustProgramParser(BaseSpecializedParser):
         """Parse a single program card into an ExtractedAdmissionFact."""
         text = card.get_text(separator="\n", strip=True)
 
-                                                                      
+
         header_pattern = r"(\d+)\s*-\s*\(\s*([A-Za-z0-9\-]+)\s*\)\s*(.+?)(?:\n|$)"
         header_match = re.search(header_pattern, text)
 
@@ -445,7 +445,7 @@ class HustProgramParser(BaseSpecializedParser):
             code_line = _find_first_line(card, _RE_LABEL_PROGRAM_CODE)
             if code_line:
                 code_value = _value_after_colon(code_line)
-                                                                                            
+
                 code_match = re.search(
                     r"\b([A-Z0-9]{2,}(?:-[A-Z0-9]{1,})+)\b",
                     code_value,
@@ -462,20 +462,20 @@ class HustProgramParser(BaseSpecializedParser):
                 if name_text:
                     program_name = name_text
 
-                                                                   
-                                                                                              
+
+
         if not program_code:
             return None
 
-                                                                      
-                                                                                            
+
+
         subject_combinations: List[str] = []
         for line in _iter_text_lines(card):
             if _RE_LABEL_COMBOS.search(line):
                 subject_combinations.extend(_RE_SUBJECT_COMBO.findall(line))
 
         if subject_combinations:
-                                        
+
             seen_combos: set[str] = set()
             subject_combinations = [
                 c for c in subject_combinations
@@ -484,7 +484,7 @@ class HustProgramParser(BaseSpecializedParser):
         else:
             subject_combinations = _extract_subject_combinations(text)
 
-                                                                               
+
         method_lines: List[str] = []
         for line in _iter_text_lines(card):
             normalized_line = _normalize_for_match(line)
@@ -493,7 +493,7 @@ class HustProgramParser(BaseSpecializedParser):
         if method_lines:
             method_lines = _dedupe_preserve_order(method_lines)
 
-                                                                      
+
         quota_line = _find_first_line(card, _RE_LABEL_QUOTA)
         if quota_line:
             quota_value = _value_after_colon(quota_line)
@@ -502,14 +502,14 @@ class HustProgramParser(BaseSpecializedParser):
         else:
             quota_raw = "0"
 
-                                                                      
+
         language = None
         lang_line = _find_first_line(card, _RE_LABEL_LANGUAGE)
         if lang_line:
             language_value = _value_after_colon(lang_line)
             language = language_value.strip() if language_value else None
 
-                                                                      
+
         faculty = None
         lines = [l.strip() for l in text.split("\n") if l.strip()]
         for line in reversed(lines):
@@ -519,7 +519,7 @@ class HustProgramParser(BaseSpecializedParser):
                 faculty = line
                 break
 
-                                                                      
+
         detail_link = None
         for anchor in card.find_all("a", href=True):
             anchor_label = _normalize_for_match(anchor.get_text(" ", strip=True))
@@ -538,10 +538,10 @@ class HustProgramParser(BaseSpecializedParser):
             method_lines = _dedupe_preserve_order(method_lines + detail_method_lines)
         admission_method_raw = "; ".join(method_lines) if method_lines else None
         deadline_raw = detail_payload.get("deadline_raw")
-                                                               
+
         tuition_raw = detail_payload.get("tuition_raw", "Không thông tin")
 
-                                                                      
+
         conditions = {}
         if language:
             conditions["language"] = language
@@ -561,8 +561,8 @@ class HustProgramParser(BaseSpecializedParser):
         detail_raw_document = detail_payload.get("detail_raw_document")
         if detail_raw_document:
             conditions["detail_raw_document"] = detail_raw_document
-                                                                      
-                                                 
+
+
         record_source_url = resolved_detail_url or detail_url or source_url
 
         source_ref = SourceReference(
@@ -693,7 +693,7 @@ class HustProgramParser(BaseSpecializedParser):
         return facts
 
 
-                                                                   
+
 
 def _extract_subject_combinations(text: str) -> List[str]:
     """

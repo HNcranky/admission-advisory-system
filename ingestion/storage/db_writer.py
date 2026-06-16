@@ -1,4 +1,4 @@
-                                
+
 """
 Storage layer: writes pipeline output to PostgreSQL.
 
@@ -26,7 +26,7 @@ from ingestion.models.pipeline_models import (
 logger = logging.getLogger(__name__)
 
 
-                                                                  
+
 
 def save_raw_document(
     fetch_result: FetchResult,
@@ -78,7 +78,7 @@ def psycopg2_Binary(data: bytes):
     return psycopg2.Binary(data)
 
 
-                                                                  
+
 
 def save_extracted_facts(
     facts: List[ExtractedAdmissionFact],
@@ -129,7 +129,7 @@ def save_extracted_facts(
     return ids
 
 
-                                                                  
+
 
 def save_canonical_records(
     records: List[NormalizedAdmissionRecord],
@@ -148,7 +148,7 @@ def save_canonical_records(
             for i, record in enumerate(records):
                 fact_id = fact_ids[i] if fact_ids and i < len(fact_ids) else None
 
-                                                  
+
                 combos_json = json.dumps(
                     [c.model_dump() for c in record.subject_combinations],
                     ensure_ascii=False
@@ -221,7 +221,7 @@ def save_canonical_records(
     return count
 
 
-                                                                  
+
 
 def load_and_save_from_json(json_path: str) -> int:
     """
