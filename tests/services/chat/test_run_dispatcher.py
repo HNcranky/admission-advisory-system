@@ -21,21 +21,14 @@ class FakeRepository:
         self.status = (status, session_token)
 
 
-class InlineExecutor:
-    def submit(self, fn, *args, **kwargs):
-        fn(*args, **kwargs)
-        return True
-
-
 def test_dispatcher_completes_run_and_posts_result_message():
     repo = FakeRepository()
     dispatcher = RunDispatcher(
         repository=repo,
         runner=lambda profile_state, latest_user_message, trace_run_id=None, correction_note=None, closing_seed=None: {"final_answer": "De xuat phu hop"},
-        executor=InlineExecutor(),
     )
 
-    dispatcher.submit(
+    dispatcher.execute(
         session_token="session-123",
         run_id=7,
         latest_user_message="Em duoc 27 diem",
@@ -60,10 +53,9 @@ def test_dispatcher_posts_mock_conflict_verification_result_message(monkeypatch)
         runner=lambda profile_state, latest_user_message, trace_run_id=None, correction_note=None, closing_seed=None: {
             "final_answer": "Gợi ý CNTT\n\nXác minh dữ liệu\n- Hạn ngạch có mâu thuẫn."
         },
-        executor=InlineExecutor(),
     )
 
-    dispatcher.submit(
+    dispatcher.execute(
         session_token="session-456",
         run_id=8,
         latest_user_message="Tu van nganh Cong nghe thong tin UET nam 2026",
@@ -93,13 +85,9 @@ def test_dispatcher_passes_run_id_as_trace_run_id_to_runner():
         captured["correction_note"] = correction_note
         return {"final_answer": "ok"}
 
-    dispatcher = RunDispatcher(
-        repository=repo,
-        runner=runner,
-        executor=InlineExecutor(),
-    )
+    dispatcher = RunDispatcher(repository=repo, runner=runner)
 
-    dispatcher.submit(
+    dispatcher.execute(
         session_token="session-xyz",
         run_id=99,
         latest_user_message="hello",
@@ -115,17 +103,17 @@ def test_dispatcher_failure_message_uses_diacritics_and_register():
     def boom(profile_state, latest_user_message, trace_run_id=None, correction_note=None, closing_seed=None):
         raise RuntimeError("inference down")
 
-    dispatcher = RunDispatcher(repository=repo, runner=boom, executor=InlineExecutor())
+    dispatcher = RunDispatcher(repository=repo, runner=boom)
 
     try:
-        dispatcher.submit(
+        dispatcher.execute(
             session_token="session-err",
             run_id=11,
             latest_user_message="Tu van",
             profile_state=ChatProfileState(admission_year=2026),
         )
     except RuntimeError:
-        pass  # _execute re-raises after recording the failure
+        pass  # execute re-raises after recording the failure
 
     error_msgs = [m for m in repo.messages if m[2] == "assistant_error"]
     assert error_msgs, "expected an assistant_error message"
@@ -142,8 +130,8 @@ def test_dispatcher_forwards_closing_seed_to_runner():
         captured["closing_seed"] = closing_seed
         return {"final_answer": "ok"}
 
-    dispatcher = RunDispatcher(repository=repo, runner=runner, executor=InlineExecutor())
-    dispatcher.submit(
+    dispatcher = RunDispatcher(repository=repo, runner=runner)
+    dispatcher.execute(
         session_token="s", run_id=1, latest_user_message="hi",
         profile_state=ChatProfileState(admission_year=2026), closing_seed=3,
     )

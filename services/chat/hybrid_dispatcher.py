@@ -1,5 +1,4 @@
 import logging
-from functools import lru_cache
 
 from services.chat.base_dispatcher import BaseRunDispatcher
 from services.chat.compare_orchestrator import CompareOrchestrator
@@ -8,19 +7,11 @@ logger = logging.getLogger(__name__)
 
 
 class HybridDispatcher(BaseRunDispatcher):
-    def __init__(self, repository=None, orchestrator=None, executor=None):
-        super().__init__(repository=repository, executor=executor)
+    def __init__(self, repository=None, orchestrator=None):
+        super().__init__(repository=repository)
         self.orchestrator = orchestrator or CompareOrchestrator()
 
-    def submit(self, session_token: str, run_id: int, content: str, profile_state, intent):
-        accepted = self.executor.submit(self._execute, session_token, run_id, content, profile_state, intent)
-        if not accepted:
-            logger.warning("run queue full; rejecting hybrid run %s for %s", run_id, session_token)
-            self.repository.complete_run(run_id, {"rejected": True}, "")
-            self._reject(session_token)
-        return accepted
-
-    def _execute(self, session_token: str, run_id: int, content: str, profile_state, intent):
+    def execute(self, session_token: str, run_id: int, content: str, profile_state, intent):
         try:
             self.repository.mark_run_running(run_id)
             answer = self.orchestrator.run(intent, profile_state, content, trace_run_id=run_id)
@@ -28,14 +19,6 @@ class HybridDispatcher(BaseRunDispatcher):
             self.repository.append_message(session_token, "assistant", answer, "assistant_result")
             self.repository.update_session_status(session_token, "completed")
         except Exception:
-            # Fire-and-forget executor thread: log or the failure is lost, and
-            # mark failed best-effort so the session can't hang in 'running'.
             logger.exception("hybrid run %s failed for session %s", run_id, session_token)
             self._mark_failed(session_token)
             raise
-
-
-# Singleton: holds a ThreadPoolExecutor (see get_run_dispatcher — audit §4.6).
-@lru_cache(maxsize=1)
-def get_hybrid_dispatcher():
-    return HybridDispatcher()

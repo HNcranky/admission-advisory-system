@@ -38,12 +38,6 @@ class FakeOrchestrator:
         return self._answer
 
 
-class InlineExecutor:
-    def submit(self, fn, *args, **kwargs):
-        fn(*args, **kwargs)
-        return True
-
-
 def _intent():
     return IntentResult(route="HYBRID", schools=["VNU-UET", "HUST"], topics=["tuition"], needs_advisory=True)
 
@@ -51,9 +45,9 @@ def _intent():
 def test_dispatcher_runs_orchestrator_and_persists_answer():
     repo = FakeRepository()
     orch = FakeOrchestrator(answer="Tổng hợp xong")
-    dispatcher = HybridDispatcher(repository=repo, orchestrator=orch, executor=InlineExecutor())
+    dispatcher = HybridDispatcher(repository=repo, orchestrator=orch)
 
-    dispatcher.submit(
+    dispatcher.execute(
         session_token="s1", run_id=42, content="so sánh UET và HUST",
         profile_state=ChatProfileState(total_score=27.0), intent=_intent(),
     )
@@ -69,10 +63,10 @@ def test_dispatcher_runs_orchestrator_and_persists_answer():
 def test_dispatcher_marks_failed_and_reraises_on_orchestrator_error():
     repo = FakeRepository()
     orch = FakeOrchestrator(raise_exc=True)
-    dispatcher = HybridDispatcher(repository=repo, orchestrator=orch, executor=InlineExecutor())
+    dispatcher = HybridDispatcher(repository=repo, orchestrator=orch)
 
     with pytest.raises(RuntimeError):
-        dispatcher.submit(
+        dispatcher.execute(
             session_token="s2", run_id=9, content="q",
             profile_state=ChatProfileState(), intent=_intent(),
         )

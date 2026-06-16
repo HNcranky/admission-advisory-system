@@ -22,7 +22,7 @@ class SpyDispatcher:
     def __init__(self):
         self.calls = []
 
-    def _execute(self, *args):
+    def execute(self, *args):
         self.calls.append(args)
 
 

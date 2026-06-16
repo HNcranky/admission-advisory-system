@@ -47,17 +47,13 @@ def test_post_message_returns_ready_payload(monkeypatch):
     client = TestClient(build_app())
 
     class FakeRepository:
-        def create_run(self, session_token, profile_state):
+        def enqueue_run(self, session_token, profile_state, dispatch_args):
             return 7
 
         def count_runs(self, session_token):
             return 1
 
-    class FakeDispatcher:
-        def submit(self, session_token, run_id, latest_user_message, profile_state, correction_note=None, closing_seed=0):
-            return None
-
-    service = ConversationService(repository=FakeRepository(), run_dispatcher=FakeDispatcher())
+    service = ConversationService(repository=FakeRepository())
     service.handle_user_message = lambda session_token, content: ConversationTurnResult(
         session_status="ready",
         assistant_message="Cảm ơn bạn. Mình đã có đủ thông tin và sẽ bắt đầu phân tích.",
@@ -193,30 +189,17 @@ def test_post_message_dispatches_hybrid_run(monkeypatch):
 
     client = TestClient(build_app())
 
+    captured = {}
+
     class FakeRepository:
-        def create_run(self, session_token, profile_state):
+        def enqueue_run(self, session_token, profile_state, dispatch_args):
+            captured["dispatch_args"] = dispatch_args
             return 55
 
         def count_runs(self, session_token):
             return 1
 
-    captured = {}
-
-    class FakeHybridDispatcher:
-        def submit(self, session_token, run_id, content, profile_state, intent):
-            captured["run_id"] = run_id
-            captured["intent_schools"] = intent.schools
-            captured["content"] = content
-
-    class FailRunDispatcher:
-        def submit(self, **kwargs):
-            raise AssertionError("advisory dispatcher must not be used for a hybrid run")
-
-    service = ConversationService(
-        repository=FakeRepository(),
-        run_dispatcher=FailRunDispatcher(),
-        hybrid_dispatcher=FakeHybridDispatcher(),
-    )
+    service = ConversationService(repository=FakeRepository())
     service.handle_user_message = lambda session_token, content: ConversationTurnResult(
         session_status="running",
         assistant_message="đang tổng hợp",
@@ -236,9 +219,9 @@ def test_post_message_dispatches_hybrid_run(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["run_kind"] == "hybrid"
-    assert captured["run_id"] == 55
-    assert captured["intent_schools"] == ["VNU-UET", "HUST"]
-    assert captured["content"] == "so sánh UET và HUST"
+    assert captured["dispatch_args"]["run_kind"] == "hybrid"
+    assert captured["dispatch_args"]["intent"]["schools"] == ["VNU-UET", "HUST"]
+    assert captured["dispatch_args"]["content"] == "so sánh UET và HUST"
 
 
 def test_get_session_endpoint_returns_404_when_missing(monkeypatch):

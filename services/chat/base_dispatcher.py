@@ -1,50 +1,19 @@
 import logging
-import threading
 
 from services.chat.repository import ChatSessionRepository
-from ingestion.config.settings import ADVISORY_RUN_WORKERS, ADVISORY_RUN_QUEUE_MAX
 
 logger = logging.getLogger(__name__)
 
 
-class BoundedExecutor:
-    """ThreadPoolExecutor wrapper with a counted semaphore for backpressure.
-
-    submit() returns False immediately when the queue is full instead of
-    enqueueing silently — callers can post a rejection message to the user."""
-
-    def __init__(self, max_workers, max_queue):
-        from concurrent.futures import ThreadPoolExecutor
-        self._pool = ThreadPoolExecutor(max_workers=max_workers)
-        self._sem = threading.Semaphore(max_queue)
-
-    def submit(self, fn, *args, **kwargs):
-        if not self._sem.acquire(blocking=False):
-            return False
-
-        def _wrapped():
-            try:
-                fn(*args, **kwargs)
-            finally:
-                self._sem.release()
-
-        self._pool.submit(_wrapped)
-        return True
-
-
 class BaseRunDispatcher:
-    """Shared fire-and-forget run dispatching (audit §2.5).
+    """Shared execution helpers for advisory and hybrid runs.
 
-    Subclasses keep their own ``submit``/``_execute`` (the actual work differs:
-    advisory runner vs compare orchestrator). What's shared is the threadpool,
-    the repository handle, and the single failure-recovery path — so the error
-    message has one source of truth instead of two copies that drifted apart
-    (the hybrid copy had lost its Vietnamese diacritics).
-    """
+    After PR9 the executor-based dispatch path is removed; dispatchers only
+    provide execute() called by RunQueueWorker. What remains here is the
+    repository handle and the shared failure-recovery messages."""
 
-    def __init__(self, repository=None, executor=None):
+    def __init__(self, repository=None):
         self.repository = repository or ChatSessionRepository()
-        self.executor = executor or BoundedExecutor(ADVISORY_RUN_WORKERS, ADVISORY_RUN_QUEUE_MAX)
 
     def _mark_failed(self, session_token: str):
         try:
@@ -60,15 +29,3 @@ class BaseRunDispatcher:
             self.repository.update_session_status(session_token, "failed")
         except Exception:
             logger.exception("failed to mark session %s as failed", session_token)
-
-    def _reject(self, session_token: str):
-        try:
-            self.repository.append_message(
-                session_token,
-                "assistant",
-                "Hệ thống đang xử lý nhiều yêu cầu, bạn vui lòng thử lại sau giây lát nhé.",
-                "assistant_error",
-            )
-            self.repository.update_session_status(session_token, "failed")
-        except Exception:
-            logger.exception("failed to post reject message for session %s", session_token)

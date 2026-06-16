@@ -45,13 +45,13 @@ class RunQueueWorker:
                 intent = IntentResult.model_validate(
                     args.get("intent") or {"route": "HYBRID"}
                 )
-                self._get_hybrid_dispatcher()._execute(
+                self._get_hybrid_dispatcher().execute(
                     claimed["session_token"], claimed["run_id"],
                     args.get("content", ""), args.get("profile_state"),
                     intent,
                 )
             else:
-                self._get_run_dispatcher()._execute(
+                self._get_run_dispatcher().execute(
                     claimed["session_token"], claimed["run_id"],
                     args.get("latest_user_message", ""), args.get("profile_state"),
                     args.get("correction_note"), args.get("closing_seed", 0),
