@@ -2,7 +2,7 @@ from contextlib import contextmanager
 from decimal import Decimal
 
 import services.retrieval_service as retrieval_service
-from agents.models import StudentProfile
+from domain.models import StudentProfile
 
 
 class _FakeCursor:
@@ -226,7 +226,7 @@ class _FakeCutoffRepo:
 
 
 def test_fetch_cutoff_history_delegates_clean_pairs_to_repo():
-    from agents.models import CutoffEntry
+    from domain.models import CutoffEntry
 
     entry = CutoffEntry(cutoff_year=2025, admission_method="thpt_score",
                         cutoff_score=28.25, score_scale=30.0, source_url="https://dc",
@@ -273,7 +273,7 @@ def test_fetch_candidates_attaches_cutoff_history(monkeypatch):
 
     monkeypatch.setattr(retrieval_service, "get_cursor", fake_get_cursor)
 
-    from agents.models import CutoffEntry
+    from domain.models import CutoffEntry
     entry = CutoffEntry(cutoff_year=2025, admission_method="thpt_score",
                         cutoff_score=27.5, source_url="https://dc", trust_level=5)
     captured = {}

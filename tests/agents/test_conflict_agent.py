@@ -1,5 +1,5 @@
 from agents.conflict_agent import conflict_agent
-from agents.models import CandidateProgram, CutoffEntry, Evidence, StudentProfile
+from domain.models import CandidateProgram, CutoffEntry, Evidence, StudentProfile
 from state import AgentState
 
 

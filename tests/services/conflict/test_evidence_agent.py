@@ -1,4 +1,4 @@
-from agents.models import CandidateProgram, Evidence
+from domain.models import CandidateProgram, Evidence
 from services.conflict.detection import detect_quota_conflicts
 from services.conflict.evidence_agent import package_evidence
 

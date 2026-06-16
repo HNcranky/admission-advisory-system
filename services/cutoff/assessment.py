@@ -12,7 +12,7 @@ bị lọc ở gate, không bao giờ được so trực tiếp.
 """
 from typing import List, Optional
 
-from agents.models import CutoffAssessment, CutoffEntry
+from domain.models import CutoffAssessment, CutoffEntry
 from services.profile.admission_methods import THANG_30_METHODS
 
 BORDERLINE_MARGIN = 0.25

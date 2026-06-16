@@ -1,6 +1,6 @@
 from typing import List, Tuple
 
-from agents.models import CandidateProgram, EligibilityCheck, RankedRecommendation, StudentProfile
+from domain.models import CandidateProgram, EligibilityCheck, RankedRecommendation, StudentProfile
 from services.cutoff.assessment import SAFE_MARGIN, assess_cutoff
 from services.formatting import fmt_num as _fmt_num, program_label as _program_label
 from services.profile.admission_methods import (

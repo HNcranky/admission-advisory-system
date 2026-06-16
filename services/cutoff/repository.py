@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional, Set, Tuple
 
-from agents.models import CutoffEntry
+from domain.models import CutoffEntry
 from ingestion.storage.db_connection import get_connection
 from services.db import cursor
 

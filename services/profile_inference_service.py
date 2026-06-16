@@ -2,7 +2,7 @@ import logging
 
 from pydantic import ValidationError
 
-from agents.models import StudentProfile
+from domain.models import StudentProfile
 from services.inference.models import InferenceError, InferenceRequest
 from services.profile.major_resolver import resolve_majors
 from services.profile.slots import missing_critical_slots

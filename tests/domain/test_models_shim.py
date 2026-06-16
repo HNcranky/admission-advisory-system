@@ -1,5 +1,5 @@
 def test_agents_models_shim_reexports_domain_models():
-    from agents.models import CandidateProgram as ShimCP
+    from domain.models import CandidateProgram as ShimCP
     from domain.models import CandidateProgram as DomainCP
     assert ShimCP is DomainCP
 

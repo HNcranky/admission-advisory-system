@@ -1,4 +1,4 @@
-from agents.models import StudentProfile
+from domain.models import StudentProfile
 from agents.retrieval_agent import retrieval_agent
 from services.mock_retrieval import (
     build_mock_conflict_candidates,

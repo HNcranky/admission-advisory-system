@@ -4,7 +4,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Set
 
-from agents.models import StudentProfile
+from domain.models import StudentProfile
 from services.text_utils import vietnamese_fold
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent

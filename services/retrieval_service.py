@@ -2,7 +2,7 @@ import json
 import logging
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from agents.models import CandidateProgram, CutoffEntry, Evidence, StudentProfile
+from domain.models import CandidateProgram, CutoffEntry, Evidence, StudentProfile
 from ingestion.storage.db_connection import get_cursor
 from services.cutoff.repository import CutoffRepository
 from services.mock_retrieval import (

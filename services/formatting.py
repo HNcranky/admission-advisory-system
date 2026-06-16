@@ -1,6 +1,6 @@
 from typing import Any
 
-from agents.models import CandidateProgram
+from domain.models import CandidateProgram
 
 
 def fmt_num(value: Any) -> str:

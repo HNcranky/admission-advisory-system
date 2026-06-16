@@ -1,5 +1,5 @@
 from agents.explanation_agent import explanation_agent
-from agents.models import (
+from domain.models import (
     CandidateProgram,
     CutoffAssessment,
     EligibilityCheck,
@@ -290,7 +290,7 @@ def test_explanation_prepends_correction_sentence_when_correction_note_present()
     assert "thứ tự ưu tiên thay đổi" in output.final_answer
 
 
-from agents.models import EligibilityCheck
+from domain.models import EligibilityCheck
 
 
 def test_explanation_renders_not_eligible_section_with_reason():
@@ -585,7 +585,7 @@ def test_intro_lead_differs_by_band():
 
 def test_data_note_concise_drops_official_check_boilerplate():
     from services.explanation_service import _data_note
-    from agents.models import CandidateProgram
+    from domain.models import CandidateProgram
 
     candidate = CandidateProgram(
         candidate_id="hust:2026:cs:thpt_score", school_id="hust", school_name="HUST",

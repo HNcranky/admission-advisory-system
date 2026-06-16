@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
 
-from agents.models import (
+from domain.models import (
     CandidateProgram,
     EligibilityCheck,
     PolicyDecision,

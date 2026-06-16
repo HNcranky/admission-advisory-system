@@ -1,7 +1,7 @@
 import pytest
 from langgraph.graph import StateGraph
 
-from agents.models import (
+from domain.models import (
     CandidateProgram,
     EligibilityCheck,
     PolicyDecision,

@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional
 
-from agents.models import CandidateProgram
+from domain.models import CandidateProgram
 from services.conflict.models import ConflictRecord, EvidenceOption
 from services.conflict.repository import ConflictEvidenceRepository
 

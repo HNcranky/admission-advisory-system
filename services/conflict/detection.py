@@ -2,7 +2,7 @@ import json
 from collections import defaultdict
 from typing import Any, Dict, Hashable, List, Tuple
 
-from agents.models import CandidateProgram
+from domain.models import CandidateProgram
 from services.conflict.models import ConflictRecord, EvidenceOption
 
 

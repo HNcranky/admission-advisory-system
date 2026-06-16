@@ -1,4 +1,4 @@
-from agents.models import CandidateProgram, StudentProfile
+from domain.models import CandidateProgram, StudentProfile
 from agents.retrieval_agent import retrieval_agent
 from state import AgentState
 

@@ -2,7 +2,7 @@ import agents.conflict_agent as conflict_agent_module
 import agents.profile_agent as profile_agent_module
 import agents.policy_agent as policy_agent_module
 import agents.retrieval_agent as retrieval_agent
-from agents.models import CandidateProgram, CutoffEntry, Evidence, StudentProfile
+from domain.models import CandidateProgram, CutoffEntry, Evidence, StudentProfile
 from graph import graph
 from services.conflict.models import ConflictRecord, EvidenceOption
 from services.inference.models import InferenceResult

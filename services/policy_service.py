@@ -1,6 +1,6 @@
 from typing import Dict, List, Tuple
 
-from agents.models import (
+from domain.models import (
     CandidateProgram,
     PolicyDecision,
     RankedRecommendation,
