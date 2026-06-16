@@ -53,7 +53,7 @@ def resolve_majors(text: str, *, known_state=None, cheap_only: bool = False, top
     from services.profile.major_catalog_repository import ProgramCatalogRepository
     repository = repository or ProgramCatalogRepository()
     if embedder is None:
-        from ingestion.knowledge.embedder import GeminiEmbedder
+        from services.inference.embedder import GeminiEmbedder
         embedder = GeminiEmbedder()
 
     try:

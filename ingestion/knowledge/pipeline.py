@@ -13,7 +13,7 @@ from ingestion.knowledge.local_metadata import (
 from ingestion.knowledge.pdf_ocr import build_gateway_ocr, extract_pages_hybrid
 from ingestion.knowledge.pdf_pages import extract_pages, pages_to_marked_text
 from ingestion.knowledge.chunker import split_into_chunks
-from ingestion.knowledge.embedder import GeminiEmbedder
+from services.inference.embedder import GeminiEmbedder
 from ingestion.knowledge.registry.knowledge_registry import KnowledgeRegistry
 from services.knowledge.models import KnowledgeChunk, KnowledgeDocument
 from services.knowledge.repository import (

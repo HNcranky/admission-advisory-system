@@ -4,7 +4,7 @@ from typing import Optional
 from ingestion.config.settings import (
     KNOWLEDGE_QA_MIN_SCORE, KNOWLEDGE_QA_NATIONAL_TOP_K, KNOWLEDGE_QA_TOP_K,
 )
-from ingestion.knowledge.embedder import GeminiEmbedder
+from services.inference.embedder import GeminiEmbedder
 from services import build_default_gateway
 from services.inference.models import InferenceRequest
 from services.knowledge.models import Citation, KnowledgeQAResult

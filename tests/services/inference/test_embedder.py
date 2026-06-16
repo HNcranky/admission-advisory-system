@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from ingestion.knowledge.embedder import GeminiEmbedder, l2_normalize
+from services.inference.embedder import GeminiEmbedder, l2_normalize
 from services.inference.providers import key_pool as key_pool_module
 from services.inference.providers.key_pool import GeminiKeyPool, reset_key_pool
 
@@ -176,3 +176,9 @@ def test_default_constructor_uses_env_singleton(monkeypatch):
     emb = GeminiEmbedder()
     # no keys configured → empty pool, no embedding attempted
     assert emb.embed([]) == []
+
+
+def test_ingestion_embedder_shim_still_works():
+    from ingestion.knowledge.embedder import GeminiEmbedder as Shim
+    from services.inference.embedder import GeminiEmbedder as Real
+    assert Shim is Real
