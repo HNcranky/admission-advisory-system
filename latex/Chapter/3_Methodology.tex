@@ -95,8 +95,9 @@ The cost of a fixed graph is reduced flexibility --- it cannot improvise a new s
 The ingestion pipeline must turn heterogeneous official sources --- \gls{HTML} admission pages and \gls{PDF} proposal documents, some of them scanned images --- into text that can be parsed and embedded.
 For born-digital \gls{PDF}s the system extracts the embedded text layer using pdfplumber~\cite{pdfplumber}, which also recovers table structure; for rendering pages to images it uses PyMuPDF~\cite{pymupdf}.
 
-Scanned documents have no text layer and require \textit{optical character recognition} (\gls{OCR}).
-Rather than adding a separate \gls{OCR} engine, the system reuses the multimodal inference gateway: a page without a usable text layer is rendered to a PNG image at roughly 200 dots per inch and sent to the Gemini model with a transcription prompt.
+Scanned documents have no text layer and require \textit{optical character recognition} (\gls{OCR}), the task of recovering machine-readable text from an image of a page.
+A multimodal \gls{LLM} that accepts interleaved image and text input can perform \gls{OCR} as one instance of image-to-text transcription, without a purpose-built recognition engine, because the same model that reasons over text also reads the rendered page~\cite{geminiteam2023}.
+The system exploits this: rather than adding a separate \gls{OCR} engine, it reuses the multimodal inference gateway, rendering a page without a usable text layer to a PNG image at roughly 200 dots per inch and sending it to the Gemini model with a transcription prompt.
 Extraction is \textit{hybrid and per page}: a page whose text layer is long enough is used directly, and only image-only pages incur an \gls{OCR} call, which keeps cost proportional to the number of scanned pages.
 
 A failure mode specific to model-based \gls{OCR} motivates an explicit safeguard.
@@ -109,15 +110,18 @@ The rationale and the controlling thresholds are revisited as a contribution in 
 \label{section:3.5}
 
 The user-facing layer is a web application that must acknowledge a student message immediately and run the advisory pipeline without blocking the request (NFR-04).
-The application is built on FastAPI~\cite{fastapi}, an asynchronous Python web framework, served by the Uvicorn \gls{ASGI} server~\cite{uvicorn}.
+The application is built on FastAPI~\cite{fastapi}, a Python web framework built on the \gls{ASGI} standard, and is served by the Uvicorn \gls{ASGI} server~\cite{uvicorn}.
+The asynchronous model is what allows a single worker process to keep many slow, \gls{API}-bound consultations in flight concurrently: while one request awaits a network call it yields control rather than holding a thread, so concurrency is bounded by outstanding work rather than by a fixed thread count.
 The chat interface is rendered server-side with the Jinja2 template engine~\cite{jinja2} and progressively updated by client-side JavaScript that polls for run completion and renders the stage trace.
 
 Because a full advisory run issues several \gls{LLM} calls and database queries and can take tens of seconds, it cannot run inside the request that triggered it.
-The message endpoint instead creates a run record, submits the work to a background thread pool, and returns immediately; the pipeline executes on a worker thread and writes its result and trace to the database, which the interface retrieves by polling.
-A background thread pool is sufficient here because the workload is a small number of long, \gls{API}-bound tasks rather than thousands of concurrent connections; a dedicated task queue with a separate broker would add operational components disproportionate to that scale.
+The message endpoint instead writes a run record to the database in a \texttt{queued} state and returns immediately, decoupling acknowledgement from execution.
+A background worker (\texttt{services/chat/run\_queue\_worker.py}) polls that table, claims the next queued run, executes the pipeline on its own thread, and writes the result and per-stage trace back to the database, from which the interface retrieves them by polling.
+Claims use a \texttt{SELECT \dots\ FOR UPDATE SKIP LOCKED} query, so several worker processes or replicas can drain the same queue without ever claiming the same run twice, and a run that is interrupted by a restart survives in the table to be recovered rather than being lost with an in-memory thread pool.
+This database-backed queue is sufficient here because the workload is a small number of long, \gls{API}-bound tasks rather than thousands of concurrent connections; a dedicated task queue with a separate message broker would add operational components disproportionate to that scale (NFR-04).
 The data-validation layer throughout the application uses Pydantic~\cite{pydantic}, whose typed models define the inference requests and results, the agent state, and the chat schemas, giving every boundary in the system a validated, typed contract.
 
-This chapter reviewed the technologies underpinning the system and tied each to a requirement and an alternative: hosted multimodal \gls{LLM}s with structured output for the reasoning and \gls{OCR} steps, \gls{RAG} over pgvector for grounded knowledge answering, a fixed LangGraph pipeline for deterministic and traceable advising, a hybrid text-and-\gls{OCR} extractor for heterogeneous documents, and an asynchronous FastAPI stack for a responsive interface.
+This chapter reviewed the theoretical background and the technologies underpinning the system, tying each to a requirement and to the main alternative considered: instruction-tuned hosted multimodal \gls{LLM}s with validated structured output to contain hallucination in the reasoning and \gls{OCR} steps, rather than a self-hosted or unconstrained model; \gls{RAG} over pgvector's \gls{HNSW} \gls{ANN} index for grounded knowledge answering, rather than a separate vector database; a fixed LangGraph pipeline for deterministic and traceable advising, rather than a run-time-decided ReAct loop; a hybrid text-and-\gls{OCR} extractor for heterogeneous documents; and an asynchronous FastAPI stack with a database-backed run queue for a responsive interface, rather than a broker-backed task queue.
 Chapter~\ref{chapter:Experiment} applies these technologies, presenting the system's design, implementation, and evaluation.
 
 \end{document}
