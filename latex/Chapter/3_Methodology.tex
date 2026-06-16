@@ -46,16 +46,25 @@ The mechanism and its retry/fallback policy are treated in detail as a contribut
 
 A bare \gls{LLM} cannot answer questions about current admission documents: the information either postdates its training data or never appeared in it, and asking the model directly invites fabrication.
 Retrieval-augmented generation (\gls{RAG}) addresses this by retrieving relevant passages from an external corpus and conditioning the model's answer on them~\cite{lewis2020rag}.
+A survey of the area frames \gls{RAG} as a design space spanning what is retrieved, how the retriever is trained, and how retrieved context is fused into generation, rather than a single fixed recipe~\cite{gao2023ragsurvey}.
+Within that space this system adopts the simplest effective configuration --- retrieve-then-read over a frozen retriever and a frozen generator --- because the corpus is small and the engineering goal is grounding, not end-to-end retrieval training.
 This pattern directly serves the grounded-answer requirement behind UC-02: the knowledge question-answering step retrieves passages from ingested official documents and instructs the model to answer only from those passages, citing them, and to return an empty answer when they are insufficient.
 
-Retrieval is implemented by \textit{semantic vector search}.
-Each document is split into chunks, and each chunk is mapped to a dense embedding vector by an embedding model, such that semantically similar texts lie close together under cosine distance.
-A question is embedded the same way, and the chunks whose embeddings are nearest the question embedding are retrieved.
-The system embeds chunks and queries through Gemini's embedding endpoint, using distinct task types for documents and for queries so the embeddings are optimized for retrieval; the embedding dimension is fixed at 768 to match the database schema.
+Retrieval is implemented by \textit{semantic vector search}, which rests on \textit{embeddings}: learned dense vector representations of text in which semantic similarity corresponds to geometric proximity.
+Sentence-level embedding models produce such vectors so that texts with similar meaning map to nearby points, even when they share no words~\cite{reimers2019sbert}.
+Using these representations to retrieve answer passages for a question is the dense-passage-retrieval approach that underpins modern retrieval question answering, in which both questions and passages are embedded into a shared space and matched by vector similarity~\cite{karpukhin2020dpr}.
+Each ingested document is therefore split into chunks, and each chunk is mapped to a dense embedding vector; a question is embedded the same way, and the chunks whose embeddings are nearest the question embedding are returned.
+The system embeds chunks and queries through Gemini's embedding endpoint, using distinct task types --- \texttt{RETRIEVAL\_DOCUMENT} for chunks and \texttt{RETRIEVAL\_QUERY} for questions --- so the two are optimized for asymmetric retrieval; the embedding dimension is fixed at 768 to match the database schema.
+
+Proximity is measured by \textit{cosine similarity}.
+For two embedding vectors $\mathbf{u}$ and $\mathbf{v}$ it is the cosine of the angle between them, $\cos(\mathbf{u},\mathbf{v}) = \frac{\mathbf{u}\cdot\mathbf{v}}{\lVert\mathbf{u}\rVert\,\lVert\mathbf{v}\rVert}$, which is $1$ for identical direction and $0$ for orthogonal vectors; the corresponding \textit{cosine distance} is $1-\cos(\mathbf{u},\mathbf{v})$.
+This is exactly the quantity computed in the retrieval \gls{SQL}: in \texttt{services/knowledge/repository.py} chunks are ordered by the pgvector cosine-distance operator \texttt{embedding <=> query} and the score reported to the caller is \texttt{1 - (embedding <=> query)}, recovering cosine similarity.
 
 The embeddings and their search must be stored somewhere.
-The system stores them in PostgreSQL~\cite{postgresql} using the pgvector extension~\cite{pgvector}, which adds a native \texttt{vector} column type and approximate-nearest-neighbor indexes.
-Chunk similarity is expressed directly in \gls{SQL}: the retrieval query orders chunks by the cosine-distance operator \texttt{embedding <=> query} and converts it to a similarity score, backed by an \gls{HNSW} index for sublinear search.
+The system stores them in PostgreSQL~\cite{postgresql} using the pgvector extension~\cite{pgvector}, which adds a native \texttt{vector} column type and vector-similarity indexes.
+Comparing a query against every chunk is exact but linear in the corpus size; \gls{ANN} search trades a small, bounded loss of recall for sublinear query time, which matters once a corpus is large.
+pgvector provides this through a \gls{HNSW} index, a navigable-small-world graph in which search greedily descends from coarse to fine neighborhoods to reach a query's nearest vectors in logarithmic expected time~\cite{malkov2020hnsw}.
+At this system's scale --- hundreds of documents and chunks rather than billions --- an exact scan would in fact be adequate, but the \gls{HNSW} index is retained because it is cheap to maintain at this size and keeps query latency flat as the corpus grows.
 The main alternative is a dedicated vector database such as a standalone similarity-search service.
 A dedicated store can offer richer indexing options at very large scale, but it would introduce a second datastore to deploy, back up, and keep consistent with the relational data.
 Integrating vectors into the existing PostgreSQL instance keeps the knowledge corpus, the canonical admission records, and the chat state in one transactional database, which matches the system's scale (hundreds of documents and chunks, not billions) and the conflict-tolerance requirement NFR-02, where vector chunks and structured records are queried together.
