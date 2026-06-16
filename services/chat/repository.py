@@ -218,3 +218,23 @@ class ChatSessionRepository:
                 """,
                 (status, session_token),
             )
+
+    def reap_stale_runs(self):
+        """Mark runs stuck in 'queued'/'running' (orphaned after restart) as 'failed'.
+
+        Returns [(run_id, session_token)] for each reaped run so the caller can
+        post an error message to the session. Idempotent — safe to call multiple times."""
+        with self._cursor(commit=True) as cur:
+            cur.execute(
+                """
+                UPDATE chat_advisory_runs r
+                SET status = 'failed',
+                    error_text = COALESCE(error_text, 'reaped on startup'),
+                    completed_at = NOW()
+                FROM chat_sessions s
+                WHERE r.session_id = s.id
+                  AND r.status IN ('queued', 'running')
+                RETURNING r.id, s.session_token
+                """
+            )
+            return [(row[0], row[1]) for row in cur.fetchall()]
