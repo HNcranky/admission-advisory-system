@@ -52,3 +52,23 @@ def test_parse_card_extracts_language_and_faculty_in_conditions():
     assert cond["language"] == "Tiếng Anh"
     assert cond["faculty"] == "Trường Hóa và Khoa học sự sống"
     assert cond["detail_url"] == "https://ts.hust.edu.vn/programs/bf-e12"
+
+
+# --- per-field helpers (PR9 decomposition) -----------------------------------
+
+def test_extract_program_header_from_h3():
+    from bs4 import BeautifulSoup
+    card = BeautifulSoup(
+        "<div><h3>01 - ( BF-E12 ) Kỹ thuật thực phẩm</h3></div>", "html.parser"
+    ).div
+    parser = HustProgramParser()
+    name, code = parser._extract_program_header(card, card.get_text("\n", strip=True))
+    assert code == "BF-E12"
+    assert "Kỹ thuật thực phẩm" in name
+
+
+def test_extract_quota_defaults_to_zero_without_label():
+    from bs4 import BeautifulSoup
+    card = BeautifulSoup("<div><p>Không có chỉ tiêu</p></div>", "html.parser").div
+    parser = HustProgramParser()
+    assert parser._extract_quota(card) == "0"

@@ -436,18 +436,8 @@ class HustProgramParser(BaseSpecializedParser):
 
         return unique
 
-    def _parse_card(
-        self,
-        card: Tag,
-        source_url: str,
-        source_id: str,
-        school_id: str,
-        school_name: str,
-    ) -> Optional[ExtractedAdmissionFact]:
-        """Parse a single program card into an ExtractedAdmissionFact."""
-        text = card.get_text(separator="\n", strip=True)
-
-
+    def _extract_program_header(self, card: Tag, text: str):
+        """Return (program_name, program_code) from a card's header/labels."""
         header_pattern = r"(\d+)\s*-\s*\(\s*([A-Za-z0-9\-]+)\s*\)\s*(.+?)(?:\n|$)"
         header_match = re.search(header_pattern, text)
 
@@ -478,20 +468,15 @@ class HustProgramParser(BaseSpecializedParser):
                 if name_text:
                     program_name = name_text
 
+        return program_name, program_code
 
-
-        if not program_code:
-            return None
-
-
-
+    def _extract_subject_combos(self, card: Tag, text: str) -> List[str]:
         subject_combinations: List[str] = []
         for line in _iter_text_lines(card):
             if _RE_LABEL_COMBOS.search(line):
                 subject_combinations.extend(_RE_SUBJECT_COMBO.findall(line))
 
         if subject_combinations:
-
             seen_combos: set[str] = set()
             subject_combinations = [
                 c for c in subject_combinations
@@ -499,8 +484,9 @@ class HustProgramParser(BaseSpecializedParser):
             ]
         else:
             subject_combinations = _extract_subject_combinations(text)
+        return subject_combinations
 
-
+    def _extract_admission_methods(self, card: Tag) -> List[str]:
         method_lines: List[str] = []
         for line in _iter_text_lines(card):
             normalized_line = _normalize_for_match(line)
@@ -508,34 +494,38 @@ class HustProgramParser(BaseSpecializedParser):
                 method_lines.append(line.rstrip(":").strip())
         if method_lines:
             method_lines = _dedupe_preserve_order(method_lines)
+        return method_lines
 
-
+    def _extract_quota(self, card: Tag) -> str:
         quota_line = _find_first_line(card, _RE_LABEL_QUOTA)
         if quota_line:
             quota_value = _value_after_colon(quota_line)
             quota_int = _extract_first_int(quota_value)
-            quota_raw = str(quota_int) if quota_int is not None else "0"
-        else:
-            quota_raw = "0"
+            return str(quota_int) if quota_int is not None else "0"
+        return "0"
 
-
-        language = None
+    def _extract_language(self, card: Tag) -> Optional[str]:
         lang_line = _find_first_line(card, _RE_LABEL_LANGUAGE)
         if lang_line:
             language_value = _value_after_colon(lang_line)
-            language = language_value.strip() if language_value else None
+            return language_value.strip() if language_value else None
+        return None
 
-
-        faculty = None
+    def _extract_faculty(self, text: str) -> Optional[str]:
         lines = [l.strip() for l in text.split("\n") if l.strip()]
         for line in reversed(lines):
             if _normalize_for_match(line) == "chi tiet":
                 continue
             if any(kw in line for kw in ["Trường ", "Khoa ", "Viện "]):
-                faculty = line
-                break
+                return line
+        return None
 
+    def _fetch_and_merge_detail(
+        self, card: Tag, source_url: str, program_code: str, method_lines: List[str]
+    ) -> Dict[str, Any]:
+        """Resolve the detail link, fetch its payload, and merge method lines.
 
+        Network I/O is confined here (via _fetch_detail_payload)."""
         detail_link = None
         for anchor in card.find_all("a", href=True):
             anchor_label = _normalize_for_match(anchor.get_text(" ", strip=True))
@@ -552,13 +542,18 @@ class HustProgramParser(BaseSpecializedParser):
         detail_method_lines = detail_payload.get("method_lines", [])
         if detail_method_lines:
             method_lines = _dedupe_preserve_order(method_lines + detail_method_lines)
-        admission_method_raw = "; ".join(method_lines) if method_lines else None
-        deadline_raw = detail_payload.get("deadline_raw")
+        return {
+            "detail_url": detail_url,
+            "detail_payload": detail_payload,
+            "admission_method_raw": "; ".join(method_lines) if method_lines else None,
+            "deadline_raw": detail_payload.get("deadline_raw"),
+            "tuition_raw": detail_payload.get("tuition_raw", "Không thông tin"),
+        }
 
-        tuition_raw = detail_payload.get("tuition_raw", "Không thông tin")
-
-
-        conditions = {}
+    def _build_conditions(
+        self, language, faculty, detail_url, detail_payload: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        conditions: Dict[str, Any] = {}
         if language:
             conditions["language"] = language
         if faculty:
@@ -577,8 +572,43 @@ class HustProgramParser(BaseSpecializedParser):
         detail_raw_document = detail_payload.get("detail_raw_document")
         if detail_raw_document:
             conditions["detail_raw_document"] = detail_raw_document
+        return conditions
 
+    def _parse_card(
+        self,
+        card: Tag,
+        source_url: str,
+        source_id: str,
+        school_id: str,
+        school_name: str,
+    ) -> Optional[ExtractedAdmissionFact]:
+        """Parse a single program card into an ExtractedAdmissionFact."""
+        text = card.get_text(separator="\n", strip=True)
 
+        program_name, program_code = self._extract_program_header(card, text)
+        if not program_code:
+            return None
+
+        subject_combinations = self._extract_subject_combos(card, text)
+        method_lines = self._extract_admission_methods(card)
+        quota_raw = self._extract_quota(card)
+        language = self._extract_language(card)
+        faculty = self._extract_faculty(text)
+
+        detail = self._fetch_and_merge_detail(
+            card, source_url, program_code, method_lines
+        )
+        detail_url = detail["detail_url"]
+        detail_payload = detail["detail_payload"]
+        admission_method_raw = detail["admission_method_raw"]
+        deadline_raw = detail["deadline_raw"]
+        tuition_raw = detail["tuition_raw"]
+
+        conditions = self._build_conditions(
+            language, faculty, detail_url, detail_payload
+        )
+
+        resolved_detail_url = detail_payload.get("resolved_detail_url")
         record_source_url = resolved_detail_url or detail_url or source_url
 
         source_ref = SourceReference(
