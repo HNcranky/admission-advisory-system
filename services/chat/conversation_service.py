@@ -46,11 +46,42 @@ def _is_reset_request(content: str) -> bool:
 
 
 class ConversationService:
-    def __init__(self, repository=None, extract_profile=None, intent_router=None, knowledge_qa=None):
+    def __init__(self, repository=None, extract_profile=None, intent_router=None,
+                 knowledge_qa=None, run_dispatcher=None, hybrid_dispatcher=None):
         self.repository = repository or ChatSessionRepository()
         self.extract_profile = extract_profile or self._extract_profile
         self.intent_router = intent_router or IntentRouter()
         self.knowledge_qa = knowledge_qa or KnowledgeQAService()
+        self._run_dispatcher = run_dispatcher
+        self._hybrid_dispatcher = hybrid_dispatcher
+
+    def start_run(self, session_token: str, content: str, result: ConversationTurnResult) -> None:
+        """Create the run row and dispatch it. Owns the orchestration that used
+        to live in the chat_api route (audit §4.6): the transport now just
+        validates + delegates here."""
+        if not result.should_start_run:
+            return
+        run_id = self.repository.create_run(session_token, result.profile_state)
+        if result.run_kind == "hybrid":
+            from services.chat.hybrid_dispatcher import get_hybrid_dispatcher
+            from services.chat.intent_router import IntentResult
+            intent = IntentResult.model_validate(
+                result.hybrid_intent or {"route": "HYBRID"}
+            )
+            dispatcher = self._hybrid_dispatcher or get_hybrid_dispatcher()
+            dispatcher.submit(
+                session_token=session_token, run_id=run_id, content=content,
+                profile_state=result.profile_state, intent=intent,
+            )
+        else:
+            from services.chat.run_dispatcher import get_run_dispatcher
+            closing_seed = max(0, self.repository.count_runs(session_token) - 1)
+            dispatcher = self._run_dispatcher or get_run_dispatcher()
+            dispatcher.submit(
+                session_token=session_token, run_id=run_id,
+                latest_user_message=content, profile_state=result.profile_state,
+                correction_note=result.correction_note, closing_seed=closing_seed,
+            )
 
     def _extract_profile(self, text: str, known_state=None, active_slot=None):
         gateway = build_default_gateway()

@@ -26,6 +26,9 @@ def test_post_message_returns_follow_up_payload(monkeypatch):
                 ),
             )
 
+        def start_run(self, session_token, content, result):
+            assert not result.should_start_run  # no run dispatched for a follow-up
+
     monkeypatch.setattr("web.routes.chat_api.get_conversation_service", lambda: FakeService())
 
     response = client.post(
@@ -50,30 +53,25 @@ def test_post_message_returns_ready_payload(monkeypatch):
         def count_runs(self, session_token):
             return 1
 
-    class FakeService:
-        def __init__(self):
-            self.repository = FakeRepository()
-
-        def handle_user_message(self, session_token, content):
-            return ConversationTurnResult(
-                session_status="ready",
-                assistant_message="Cảm ơn bạn. Mình đã có đủ thông tin và sẽ bắt đầu phân tích.",
-                should_start_run=True,
-                profile_state=ChatProfileState(
-                    admission_year=2026,
-                    total_score=27.0,
-                    preferred_majors=["computer_science"],
-                    location_preference="Ha Noi",
-                    missing_slots=[],
-                ),
-            )
-
     class FakeDispatcher:
         def submit(self, session_token, run_id, latest_user_message, profile_state, correction_note=None, closing_seed=0):
             return None
 
-    monkeypatch.setattr("web.routes.chat_api.get_conversation_service", lambda: FakeService())
-    monkeypatch.setattr("web.routes.chat_api.get_run_dispatcher", lambda: FakeDispatcher())
+    service = ConversationService(repository=FakeRepository(), run_dispatcher=FakeDispatcher())
+    service.handle_user_message = lambda session_token, content: ConversationTurnResult(
+        session_status="ready",
+        assistant_message="Cảm ơn bạn. Mình đã có đủ thông tin và sẽ bắt đầu phân tích.",
+        should_start_run=True,
+        profile_state=ChatProfileState(
+            admission_year=2026,
+            total_score=27.0,
+            preferred_majors=["computer_science"],
+            location_preference="Ha Noi",
+            missing_slots=[],
+        ),
+    )
+
+    monkeypatch.setattr("web.routes.chat_api.get_conversation_service", lambda: service)
 
     response = client.post(
         "/api/sessions/session-123/messages",
@@ -202,24 +200,6 @@ def test_post_message_dispatches_hybrid_run(monkeypatch):
         def count_runs(self, session_token):
             return 1
 
-    class FakeService:
-        def __init__(self):
-            self.repository = FakeRepository()
-
-        def handle_user_message(self, session_token, content):
-            return ConversationTurnResult(
-                session_status="running",
-                assistant_message="đang tổng hợp",
-                should_start_run=True,
-                run_kind="hybrid",
-                hybrid_intent={"route": "HYBRID", "schools": ["VNU-UET", "HUST"],
-                               "topics": ["tuition"], "needs_advisory": True},
-                profile_state=ChatProfileState(
-                    admission_year=2026, total_score=27.0,
-                    preferred_majors=["computer_science"], location_preference="Ha Noi",
-                ),
-            )
-
     captured = {}
 
     class FakeHybridDispatcher:
@@ -232,9 +212,25 @@ def test_post_message_dispatches_hybrid_run(monkeypatch):
         def submit(self, **kwargs):
             raise AssertionError("advisory dispatcher must not be used for a hybrid run")
 
-    monkeypatch.setattr("web.routes.chat_api.get_conversation_service", lambda: FakeService())
-    monkeypatch.setattr("web.routes.chat_api.get_hybrid_dispatcher", lambda: FakeHybridDispatcher())
-    monkeypatch.setattr("web.routes.chat_api.get_run_dispatcher", lambda: FailRunDispatcher())
+    service = ConversationService(
+        repository=FakeRepository(),
+        run_dispatcher=FailRunDispatcher(),
+        hybrid_dispatcher=FakeHybridDispatcher(),
+    )
+    service.handle_user_message = lambda session_token, content: ConversationTurnResult(
+        session_status="running",
+        assistant_message="đang tổng hợp",
+        should_start_run=True,
+        run_kind="hybrid",
+        hybrid_intent={"route": "HYBRID", "schools": ["VNU-UET", "HUST"],
+                       "topics": ["tuition"], "needs_advisory": True},
+        profile_state=ChatProfileState(
+            admission_year=2026, total_score=27.0,
+            preferred_majors=["computer_science"], location_preference="Ha Noi",
+        ),
+    )
+
+    monkeypatch.setattr("web.routes.chat_api.get_conversation_service", lambda: service)
 
     response = client.post("/api/sessions/s/messages", json={"content": "so sánh UET và HUST"})
 

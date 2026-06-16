@@ -45,6 +45,17 @@ def test_student_can_complete_follow_up_and_receive_final_result(monkeypatch):
         def __init__(self):
             self.repository = FakeRepository()
             self.turn_count = 0
+            self.run_dispatcher = None
+
+        def start_run(self, session_token, content, result):
+            if not result.should_start_run:
+                return
+            self.run_dispatcher.submit(
+                session_token=session_token,
+                run_id=1,
+                latest_user_message=content,
+                profile_state=result.profile_state,
+            )
 
         def handle_user_message(self, session_token, content):
             self.turn_count += 1
@@ -126,10 +137,10 @@ def test_student_can_complete_follow_up_and_receive_final_result(monkeypatch):
 
     fake_session_service = FakeSessionService()
     fake_conversation_service = FakeConversationService()
+    fake_conversation_service.run_dispatcher = FakeDispatcher()
 
     monkeypatch.setattr("web.routes.chat_api.get_session_service", lambda: fake_session_service)
     monkeypatch.setattr("web.routes.chat_api.get_conversation_service", lambda: fake_conversation_service)
-    monkeypatch.setattr("web.routes.chat_api.get_run_dispatcher", lambda: FakeDispatcher())
 
     created = client.post("/api/sessions")
     assert created.status_code == 201

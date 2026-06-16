@@ -1,4 +1,5 @@
 import logging
+from functools import lru_cache
 
 from services.chat.advisory_runner import run_advisory_for_session
 from services.chat.base_dispatcher import BaseRunDispatcher
@@ -41,3 +42,11 @@ class RunDispatcher(BaseRunDispatcher):
             logger.exception("advisory run %s failed for session %s", run_id, session_token)
             self._mark_failed(session_token)
             raise
+
+
+# Singleton: holds a ThreadPoolExecutor. Building a new one per request leaks
+# worker threads on every message that starts a run (moved here from chat_api so
+# ConversationService.start_run owns dispatch — audit §4.6).
+@lru_cache(maxsize=1)
+def get_run_dispatcher():
+    return RunDispatcher()

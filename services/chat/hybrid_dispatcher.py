@@ -1,4 +1,5 @@
 import logging
+from functools import lru_cache
 
 from services.chat.base_dispatcher import BaseRunDispatcher
 from services.chat.compare_orchestrator import CompareOrchestrator
@@ -27,3 +28,9 @@ class HybridDispatcher(BaseRunDispatcher):
             logger.exception("hybrid run %s failed for session %s", run_id, session_token)
             self._mark_failed(session_token)
             raise
+
+
+# Singleton: holds a ThreadPoolExecutor (see get_run_dispatcher — audit §4.6).
+@lru_cache(maxsize=1)
+def get_hybrid_dispatcher():
+    return HybridDispatcher()
