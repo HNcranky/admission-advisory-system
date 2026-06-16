@@ -11,7 +11,6 @@ a consistent structure we can exploit.
 import re
 import json
 import logging
-import unicodedata
 from typing import List, Optional, Iterable, Dict, Any, Union
 from urllib.parse import urlparse, urljoin
 from bs4 import BeautifulSoup, Tag
@@ -22,6 +21,7 @@ from ingestion.models.pipeline_models import (
     SourceReference,
 )
 from ingestion.config.settings import ADMISSION_YEAR
+from services.text_utils import vietnamese_fold
 
 logger = logging.getLogger(__name__)
 
@@ -73,13 +73,8 @@ def _extract_first_int(text: str) -> Optional[int]:
 
 
 def _normalize_for_match(text: str) -> str:
-    """
-    Normalize Vietnamese text for robust keyword matching.
-    Example: "Xét tuyển" -> "xet tuyen".
-    """
-    decomposed = unicodedata.normalize("NFKD", text)
-    without_marks = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
-    return without_marks.lower().strip()
+    """Normalize tiếng Việt cho keyword matching ("Xét tuyển" -> "xet tuyen")."""
+    return vietnamese_fold(text)
 
 
 def _dedupe_preserve_order(items: List[str]) -> List[str]:
