@@ -45,6 +45,13 @@ def build_default_gateway() -> LLMGateway:
                 "fallback_model": "gemini-2.5-flash",
             },
             "knowledge_classify": {"output_mode": "json", "max_retries": 1},
+            "fact_extractor": {
+                "primary_model": "gemini-2.5-flash",
+                "output_mode": "json",
+                "max_retries": 1,
+                "allow_fallback": True,
+                "fallback_model": "gemini-2.5-flash-lite",
+            },
             "intent_router": {"output_mode": "json", "max_retries": 1, "max_tokens": 256},
             "profile_extractor": {"output_mode": "json", "max_retries": 1, "max_tokens": 300},
             "major_resolver": {"output_mode": "json", "max_retries": 1, "max_tokens": 100},
