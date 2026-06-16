@@ -228,6 +228,8 @@ The optional slots --- location preference and tuition budget --- are collected 
     \end{tabular}
 \end{table}
 
+The honesty obligation in A1 is enforced mechanically rather than left to the model: an answer is withheld whenever retrieval confidence falls below the \texttt{KNOWLEDGE\_QA\_MIN\_SCORE} threshold, and national-regulation passages are retrieved under their own \texttt{KNOWLEDGE\_QA\_NATIONAL\_TOP\_K} budget so ministry rules surface even for a school-scoped question.
+
 \subsection{UC-03: Hybrid comparison}
 
 \begin{table}[H]
@@ -256,6 +258,8 @@ The optional slots --- location preference and tuition budget --- are collected 
     \end{tabular}
 \end{table}
 
+Skipping the advisory path when only factual topics are requested (A1) keeps a purely informational comparison off the slower multi-stage advisory pipeline, which is invoked only when the question touches admission chances.
+
 \subsection{UC-04: Profile reset and correction}
 
 \begin{table}[H]
@@ -282,6 +286,8 @@ The optional slots --- location preference and tuition budget --- are collected 
         \hline
     \end{tabular}
 \end{table}
+
+Re-running the full pipeline after a correction, rather than patching the previous answer, is what upholds the post-condition that stale recommendations are never presented as still valid.
 
 \subsection{UC-05: Data ingestion run}
 
@@ -312,6 +318,8 @@ The optional slots --- location preference and tuition budget --- are collected 
         \hline
     \end{tabular}
 \end{table}
+
+Writing one row per source in step~5, instead of overwriting a shared key, is the precondition for conflict detection: only because two publications persist as distinct rows can the downstream pipeline compare their quotas rather than silently keep the last one written.
 
 \section{Non-functional requirement}
 \label{section:2.4}
@@ -349,8 +357,8 @@ Several official Vietnamese sources, including government domains, serve broken 
 The fetcher must be able to proceed with verification disabled by explicit configuration, and every such fetch must be logged so the relaxation is visible rather than silent.
 This is the \texttt{ADVISORY\_FETCH\_VERIFY\_SSL} flag honored by \texttt{ingestion/fetchers/http\_fetcher.py}, which emits a warning on every request made with certificate verification turned off.
 
-This chapter derived the system's requirements from a survey of existing admission-information channels.
-The survey showed that no current channel reconciles contradictory official data, and none combines grounded answers with incremental, profile-aware personalization.
+This chapter derived the system's requirements from a survey of existing admission-information channels, read against prior work on grounded conversational agents and \gls{LLM} reliability.
+That comparison showed that commercial education platforms and the research literature alike establish grounding as a precondition for trustworthy answers, yet none of them addresses the reconciliation of mutually inconsistent official sources; concretely, no current channel reconciles contradictory data, and none combines grounded answers with incremental, profile-aware personalization.
 The resulting requirements were specified as a use-case model centered on an anonymous multi-turn advisory consultation, grounded knowledge answering, and operator-driven ingestion, constrained by graceful degradation, conflict tolerance, anonymity, responsiveness, testability, and crawling resilience.
 Chapter~\ref{chapter:Methodology} reviews the theoretical background and the technologies selected to satisfy these requirements.
 
