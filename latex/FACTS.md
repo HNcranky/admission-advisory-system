@@ -45,6 +45,13 @@ in-process `ThreadPoolExecutor` the earlier draft described.
 
 Command: `docker exec advisory-db psql -U postgres -d admission -c "SELECT school_id, COUNT(*) ..."`
 
+<!-- TODO-VERIFY 2026-06-16: every count in the table below is the 2026-06-08 baseline.
+     The dev Postgres (Docker) was not running in this measurement environment, so these
+     were NOT re-measured. Re-run the psql commands above once `docker compose up -d --wait db`
+     succeeds, and update before the submission pass. Chapter plans citing these numbers
+     should carry a matching % TODO-VERIFY. -->
+
+
 | Table | Count |
 |---|---|
 | canonical_admission_records — hust | 136 |
@@ -68,14 +75,18 @@ entered via the knowledge-corpus path, not the canonical ingestion registry.
 
 ## Test suite
 
-Command: `python -m pytest --collect-only -q` → **856 tests collected**.
+Command: `python -m pytest --collect-only -q` → **1011 tests collected** (2026-06-16).
 Test files: 167. Breakdown by directory: services 81, ingestion 52, web 8,
 integration 6, agents 7, e2e 4 (+ fixtures, conftest).
 Isolation: `tests/conftest.py::_isolate_test_db` redirects the whole suite to
 an auto-created `admission_test` database; dev data untouched.
 
-Full-suite result (`python -m pytest -q`, 2026-06-08, 445.76 s):
-**854 passed, 1 failed, 1 skipped** (of 856 collected).
+<!-- TODO-VERIFY 2026-06-16: full-suite pass/fail not re-run — Docker DB unavailable
+     in this environment. Collection count (1011) is current; the passed/failed/skipped
+     figures below are the 2026-06-08 baseline against 856 collected and MUST be re-run
+     (`docker compose up -d --wait db; python -m pytest -q`) before the submission pass. -->
+Full-suite result (`python -m pytest -q`, 2026-06-08 baseline, 445.76 s):
+**854 passed, 1 failed, 1 skipped** (of 856 collected — stale, see TODO above).
 - The 1 failure is the known deferred issue
   `tests/ingestion/knowledge/test_registry.py::test_default_seed_loads_three_schools_each_with_sources`
   — the default `KnowledgeRegistry` seed has no NEU sources (NEU documents
