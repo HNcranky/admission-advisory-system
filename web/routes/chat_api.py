@@ -1,7 +1,7 @@
 from functools import lru_cache
 
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from services.chat.conversation_service import ConversationService
 from services.chat.hybrid_dispatcher import HybridDispatcher
@@ -13,7 +13,7 @@ from services.tracing.trace_service import TraceService
 router = APIRouter(prefix="/api/sessions", tags=["chat"])
 
 class ChatMessageCreate(BaseModel):
-    content: str
+    content: str = Field(max_length=4000)
     
 def get_session_service():
     return AnonymousSessionService()

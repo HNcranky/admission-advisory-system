@@ -258,3 +258,12 @@ def test_get_session_endpoint_returns_404_when_missing(monkeypatch):
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Session not found"
+
+
+def test_post_message_rejects_oversized_content():
+    client = TestClient(build_app())
+    response = client.post(
+        "/api/sessions/session-123/messages",
+        json={"content": "x" * 4001},
+    )
+    assert response.status_code == 422
