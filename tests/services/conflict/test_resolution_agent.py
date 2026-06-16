@@ -1,6 +1,6 @@
-from services.conflict.comparison_agent import compare
+from services.conflict.comparison import compare
 from services.conflict.models import ConflictRecord, EvidenceOption
-from services.conflict.resolution_agent import resolve
+from services.conflict.resolution import resolve
 
 
 def option(value, trust=2, source="mock://a"):

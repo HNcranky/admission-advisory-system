@@ -1,7 +1,7 @@
-from services.conflict.comparison_agent import compare
+from services.conflict.comparison import compare
 from services.conflict.detection import detect_cutoff_conflicts, detect_quota_conflicts
-from services.conflict.evidence_agent import package_evidence
-from services.conflict.resolution_agent import resolve, resolve_cutoff_conflict
+from services.conflict.evidence import package_evidence
+from services.conflict.resolution import resolve, resolve_cutoff_conflict
 from state import AgentState
 
 

@@ -1,6 +1,6 @@
 from domain.models import CandidateProgram, Evidence
 from services.conflict.detection import detect_quota_conflicts
-from services.conflict.evidence_agent import package_evidence
+from services.conflict.evidence import package_evidence
 
 
 def candidate(source_url, quota, trust=2):

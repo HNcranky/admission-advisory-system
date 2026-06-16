@@ -1,4 +1,4 @@
-from services.conflict.comparison_agent import compare
+from services.conflict.comparison import compare
 from services.conflict.models import EvidenceOption
 
 
