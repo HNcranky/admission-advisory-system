@@ -74,8 +74,12 @@ Integrating vectors into the existing PostgreSQL instance keeps the knowledge co
 
 The advisory consultation is not a single \gls{LLM} call but a sequence of distinct reasoning stages --- completing the profile, retrieving candidate programs, checking source conflicts, ranking by eligibility, applying admission-regulation policy, and explaining the result.
 Coordinating such stages is the role of an \textit{agentic pipeline}.
-A common implementation is a function-calling loop, in which a single model is given a set of tools and decides at each step which tool to call next until it judges the task complete.
-This pattern is flexible, but the control flow is determined by the model at run time, which makes individual runs hard to reproduce and to trace --- a poor fit for a system that must explain why a recommendation changed and must expose a per-stage trace to operators.
+Designs for such pipelines occupy a spectrum: at one end sit fully autonomous tool-use loops, in which a single model is given a set of tools and decides at each step which tool to call next until it judges the task complete; at the other end sit structured workflows, in which the stages and their order are fixed in advance and the model is invoked only inside each stage.
+A survey of \gls{LLM}-based autonomous agents organizes the field along exactly this axis of how much control is delegated to the model at run time~\cite{wang2024agentsurvey}.
+
+The concrete autonomous alternative considered here is a \textit{ReAct}-style reason-act loop, in which the model interleaves free-text reasoning with tool calls and uses the observations they return to decide its next action~\cite{yao2023react}.
+This pattern is flexible and well suited to open-ended tasks, but its control flow is decided by the model at run time, so two runs on the same input can take different paths.
+That non-determinism is a poor fit for this system's requirements: a consultation must be reproducible so that a profile correction's effect is attributable (UC-04, NFR-02), and it must expose a fixed per-stage trace to operators, neither of which a run-time-decided loop guarantees.
 
 The system instead uses LangGraph~\cite{langgraph, langgraph_docs}, a library for expressing an agent as an explicit state graph: nodes are functions that read and write a shared typed state, and edges fix the order in which nodes run.
 The advisory pipeline is wired as a fixed linear graph over the six stages, with one shared state object passed from node to node.
@@ -83,8 +87,7 @@ A fixed graph is the deliberate choice for three reasons that map onto Chapter~\
 First, \textit{determinism}: the same profile produces the same stage sequence, so a correction can re-run the pipeline and the change in output is attributable to the changed input (UC-04, NFR-02).
 Second, \textit{traceability}: because the stages are fixed and named, each one can be wrapped to emit a trace event, which is what populates the operator's debug panel (the observability use case in Section~\ref{subsection:2.2.1}).
 Third, \textit{separation of concerns}: each stage is an independently testable function with a single responsibility, which supports the testability requirement NFR-05.
-The cost of a fixed graph is reduced flexibility --- it cannot improvise a new stage order for an unusual query --- but the advisory task has a stable shape, so this cost is acceptable.
-A survey of \gls{LLM}-based autonomous agents~\cite{wang2024agentsurvey} frames this as a spectrum between fully autonomous tool-use loops and structured, controllable workflows; this system sits deliberately at the structured end.
+The cost of a fixed graph is reduced flexibility --- it cannot improvise a new stage order for an unusual query --- but the advisory task has a stable shape, so the system sits deliberately at the structured end of the spectrum and accepts that cost.
 
 \section{Document processing}
 \label{section:3.4}
