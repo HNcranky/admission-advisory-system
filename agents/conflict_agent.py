@@ -1,21 +1,14 @@
 from services.conflict.comparison import compare
 from services.conflict.detection import detect_cutoff_conflicts, detect_quota_conflicts
 from services.conflict.evidence import package_evidence
+from services.conflict.keys import quota_key_text
 from services.conflict.resolution import resolve, resolve_cutoff_conflict
 from state import AgentState
 
 
 def _mark_uncertain(state: AgentState, conflict_key: str, field_name: str) -> None:
     for candidate in state.retrieved_programs:
-        key = ":".join(
-            [
-                candidate.school_id,
-                str(candidate.admission_year),
-                candidate.program_id or candidate.program_name,
-                candidate.admission_method or "unknown_method",
-            ]
-        )
-        if key == conflict_key and field_name not in candidate.data_uncertain_fields:
+        if quota_key_text(candidate) == conflict_key and field_name not in candidate.data_uncertain_fields:
             candidate.data_uncertain_fields.append(field_name)
 
 
