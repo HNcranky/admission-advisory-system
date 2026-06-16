@@ -112,4 +112,47 @@ These scenarios describe the offline pipeline that populates the canonical store
 \textit{User action:} the source is ingested.
 \textit{Required behavior:} the run completes with a warning and writes nothing to the canonical store, rather than persisting empty or fabricated records.
 
+\section*{A.6 Edge case to scenario mapping}
+
+The 25 edge cases of the behavioral specification trace the system's requirements to the evaluation outcomes reported in Section~\ref{section:4.4}. The table below pairs each edge case with the appendix scenario (where one exists) and its current status: \textit{Satisfied} when the required behavior is met, \textit{Partial} when it is only partly met, and \textit{Not yet} when it is not yet implemented. The status column reflects the same counts as the edge-case evaluation, namely seventeen satisfied, four partial, and four not yet.
+
+\noindent\begin{tabular}{@{}p{1.3cm}p{6.0cm}p{2.2cm}p{2.0cm}@{}}
+\hline
+\textbf{Case} & \textbf{Requirement} & \textbf{Scenario} & \textbf{Status} \\
+\hline
+EC-01 & Very short answer to the pending slot & UC-01.1 & Satisfied \\
+EC-02 & Off-slot but valid information stored, slot re-asked & UC-01.2 & Partial \\
+EC-03 & Multiple slots filled in one message & UC-01.3 & Satisfied \\
+EC-04 & Out-of-range value rejected & UC-01.4 & Satisfied \\
+EC-05 & Score correction replaces value and re-ranks & UC-01.5 & Satisfied \\
+EC-06 & Added major appended, not replacing existing & UC-01.6 & Satisfied \\
+EC-07 & Removing a major from the list & --- & Not yet \\
+EC-08 & Relaxing a location constraint to a soft preference & UC-01.7 & Not yet \\
+EC-09 & Inferred interest not treated as a chosen major & UC-01.8 & Satisfied \\
+EC-10 & Short token not mis-matched to a wrong major & --- & Satisfied \\
+EC-11 & Out-of-taxonomy major kept as an unresolved mention & --- & Not yet \\
+EC-12 & High score but unsupported subject combination & --- & Satisfied \\
+EC-13 & Score present but admission method unknown & --- & Satisfied \\
+\hline
+\end{tabular}
+
+\noindent\begin{tabular}{@{}p{1.3cm}p{6.0cm}p{2.2cm}p{2.0cm}@{}}
+\hline
+\textbf{Case} & \textbf{Requirement} & \textbf{Scenario} & \textbf{Status} \\
+\hline
+EC-14 & Score on the cutoff border, no over-confident claim & --- & Satisfied \\
+EC-15 & Volatile historical cutoffs lower the certainty & --- & Satisfied \\
+EC-16 & Two sources disagree on the cutoff & UC-01.9 & Satisfied \\
+EC-17 & Quota conflict not affecting eligibility & UC-01.9 & Satisfied \\
+EC-18 & No data for the requested admission year & --- & Satisfied \\
+EC-19 & Good academic fit but over budget & --- & Partial \\
+EC-20 & Budget stated as a soft, non-strict preference & --- & Not yet \\
+EC-21 & User stops the advisory flow mid-collection & --- & Satisfied \\
+EC-22 & User asks to restart the profile & --- & Satisfied \\
+EC-23 & User asks why a recommendation changed & UC-01.5 & Partial \\
+EC-24 & No program satisfies all constraints & UC-01.10 & Satisfied \\
+EC-25 & Missing tuition data ranked as unknown, not satisfied & --- & Partial \\
+\hline
+\end{tabular}
+
 \end{document}
