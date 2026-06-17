@@ -41,13 +41,36 @@ def get_langfuse():
             )
             _client = None
             return _client
+        # environment separates dev/prod traces in one project (Langfuse best
+        # practice); release tags the deployed version for filtering. Both
+        # optional — the SDK also honours LANGFUSE_TRACING_ENVIRONMENT/
+        # LANGFUSE_RELEASE on its own, but we pass an explicit default.
+        environment = os.getenv("LANGFUSE_TRACING_ENVIRONMENT", "development")
+        release = os.getenv("LANGFUSE_RELEASE") or None
         try:
             from langfuse import Langfuse
-            _client = Langfuse(public_key=public_key, secret_key=secret_key, host=host)
+            _client = Langfuse(
+                public_key=public_key,
+                secret_key=secret_key,
+                host=host,
+                environment=environment,
+                release=release,
+                # Centralized masking seam: the SDK runs this over every
+                # observation input/output. Passthrough today (raw capture on a
+                # local self-host); swap _mask to redact PII without touching
+                # any call site.
+                mask=_mask,
+            )
         except Exception as exc:  # SDK import or init failure must not break the app
             logger.warning("Langfuse client init failed; observability disabled: %r", exc)
             _client = None
         return _client
+
+
+def _mask(data):
+    """Global masking hook passed to the Langfuse SDK. Phase-1 passthrough;
+    the single place to add PII redaction over all traced input/output."""
+    return data
 
 
 def flush_langfuse() -> None:

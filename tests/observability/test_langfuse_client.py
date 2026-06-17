@@ -47,6 +47,53 @@ def test_enabled_with_keys_builds_client_once(monkeypatch):
     assert built[0]["host"] == "http://localhost:3000"
 
 
+def test_client_built_with_environment_and_mask(monkeypatch):
+    monkeypatch.setenv("ADVISORY_LANGFUSE_ENABLED", "true")
+    monkeypatch.setenv("LANGFUSE_PUBLIC_KEY", "pk")
+    monkeypatch.setenv("LANGFUSE_SECRET_KEY", "sk")
+    monkeypatch.setenv("LANGFUSE_TRACING_ENVIRONMENT", "production")
+    monkeypatch.setenv("LANGFUSE_RELEASE", "v1.2.3")
+    _reset()
+
+    built = []
+
+    class _FakeLangfuse:
+        def __init__(self, **kwargs):
+            built.append(kwargs)
+
+    import langfuse
+    monkeypatch.setattr(langfuse, "Langfuse", _FakeLangfuse)
+
+    lc.get_langfuse()
+    assert built[0]["environment"] == "production"
+    assert built[0]["release"] == "v1.2.3"
+    # masking hook is wired (passthrough today, redaction seam for later)
+    assert callable(built[0]["mask"])
+    assert built[0]["mask"]({"x": 1}) == {"x": 1}
+
+
+def test_environment_defaults_to_development(monkeypatch):
+    monkeypatch.setenv("ADVISORY_LANGFUSE_ENABLED", "true")
+    monkeypatch.setenv("LANGFUSE_PUBLIC_KEY", "pk")
+    monkeypatch.setenv("LANGFUSE_SECRET_KEY", "sk")
+    monkeypatch.delenv("LANGFUSE_TRACING_ENVIRONMENT", raising=False)
+    monkeypatch.delenv("LANGFUSE_RELEASE", raising=False)
+    _reset()
+
+    built = []
+
+    class _FakeLangfuse:
+        def __init__(self, **kwargs):
+            built.append(kwargs)
+
+    import langfuse
+    monkeypatch.setattr(langfuse, "Langfuse", _FakeLangfuse)
+
+    lc.get_langfuse()
+    assert built[0]["environment"] == "development"
+    assert built[0]["release"] is None
+
+
 def test_flush_is_noop_when_disabled(monkeypatch):
     monkeypatch.setenv("ADVISORY_LANGFUSE_ENABLED", "false")
     _reset()
