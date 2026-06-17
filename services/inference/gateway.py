@@ -1,3 +1,6 @@
+import time
+
+from observability.run_trace import record_generation
 from services.inference.models import InferenceError
 from services.inference.providers.gemini_provider import GeminiProvider
 
@@ -20,6 +23,7 @@ class LLMGateway:
         result = None
         primary_error = None
         for attempt in range(policy.max_retries + 1):
+            start = time.perf_counter()
             try:
                 result = provider.generate(request, policy)
             except InferenceError as exc:
@@ -28,12 +32,19 @@ class LLMGateway:
                 primary_error = exc
                 self._record(request, policy.primary_model, attempt, "API_ERROR", used_fallback=False)
                 break
+            latency_ms = (time.perf_counter() - start) * 1000.0
             self._record(request, policy.primary_model, attempt, result.failure_type, used_fallback=False)
+            record_generation(
+                request=request, result=result, usage=result.usage, latency_ms=latency_ms,
+                attempt=attempt, used_fallback=False, model=policy.primary_model,
+                failure_type=result.failure_type,
+            )
             if result.failure_type != "STRUCTURE_FAILURE":
                 return result
 
         if policy.allow_fallback and policy.fallback_model:
             fallback_policy = policy.model_copy(update={"primary_model": policy.fallback_model})
+            start = time.perf_counter()
             try:
                 result = provider.generate(request, fallback_policy)
             except InferenceError as exc:
@@ -42,9 +53,15 @@ class LLMGateway:
                     "API_ERROR", used_fallback=True,
                 )
                 raise
+            latency_ms = (time.perf_counter() - start) * 1000.0
             self._record(
                 request, fallback_policy.primary_model, policy.max_retries + 1,
                 result.failure_type, used_fallback=True,
+            )
+            record_generation(
+                request=request, result=result, usage=result.usage, latency_ms=latency_ms,
+                attempt=policy.max_retries + 1, used_fallback=True,
+                model=fallback_policy.primary_model, failure_type=result.failure_type,
             )
             return result
 
