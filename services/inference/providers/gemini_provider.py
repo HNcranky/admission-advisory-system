@@ -66,6 +66,7 @@ class GeminiProvider:
 
     def _build_result(self, response, request, policy):
         text = (getattr(response, "text", "") or "").strip()
+        usage = self._extract_usage(response)
 
         def _result(**kwargs):
             return InferenceResult(
@@ -73,6 +74,7 @@ class GeminiProvider:
                 model=policy.primary_model,
                 provider=self.provider_name,
                 content=text,
+                usage=usage,
                 **kwargs,
             )
 
@@ -85,3 +87,19 @@ class GeminiProvider:
         except (ValueError, TypeError):
             return _result(failure_type="STRUCTURE_FAILURE")
         return _result(parsed_data=parsed)
+
+    @staticmethod
+    def _extract_usage(response):
+        meta = getattr(response, "usage_metadata", None)
+        if meta is None:
+            return None
+
+        def _count(name):
+            value = getattr(meta, name, None)
+            return int(value) if isinstance(value, (int, float)) else None
+
+        return {
+            "input": _count("prompt_token_count"),
+            "output": _count("candidates_token_count"),
+            "total": _count("total_token_count"),
+        }
