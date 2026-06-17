@@ -53,4 +53,12 @@ def build_app() -> FastAPI:
         except Exception:
             logger.exception("queue worker startup skipped")
 
+    @app.on_event("shutdown")
+    def _flush_langfuse():
+        try:
+            from observability.langfuse_client import flush_langfuse
+            flush_langfuse()
+        except Exception:
+            logger.exception("langfuse flush skipped")
+
     return app
