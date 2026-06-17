@@ -259,6 +259,38 @@ After any UI change run this checklist locally:
 8. Disconnect network mid-run → toast appears, polling auto-retries with backoff.
 ```
 
+## Observability (Langfuse, optional)
+
+Self-hosted, off by default. To enable:
+
+1. Generate secrets (Git Bash / WSL):
+   ```bash
+   cp .env.langfuse.example .env.langfuse
+   for k in LANGFUSE_SALT LANGFUSE_ENCRYPTION_KEY NEXTAUTH_SECRET CLICKHOUSE_PASSWORD MINIO_ROOT_PASSWORD POSTGRES_PASSWORD; do
+     echo "$k=$(openssl rand -hex 32)"
+   done
+   ```
+   Paste the values into `.env.langfuse`. (`LANGFUSE_ENCRYPTION_KEY` must be 64 hex chars — `openssl rand -hex 32` satisfies this.)
+
+2. Start the stack:
+   ```bash
+   docker compose -f docker-compose.langfuse.yml --env-file .env.langfuse up -d
+   ```
+
+3. Open http://localhost:3000, create an account + project, copy the project's
+   public/secret keys.
+
+4. In the app `.env`, set:
+   ```
+   ADVISORY_LANGFUSE_ENABLED=true
+   LANGFUSE_HOST=http://localhost:3000
+   LANGFUSE_PUBLIC_KEY=pk-...
+   LANGFUSE_SECRET_KEY=sk-...
+   ```
+
+5. Run an advisory conversation; each run appears as a trace under the project,
+   grouped by session.
+
 ## Troubleshooting
 
 - **"GEMINI_API_KEY is not configured"** — step 3 was skipped or run in a different shell than step 6. Re-run the export block in the same PowerShell window before starting uvicorn.
