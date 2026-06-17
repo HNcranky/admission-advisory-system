@@ -2,6 +2,7 @@ import logging
 
 from services.chat.advisory_runner import run_advisory_for_session
 from services.chat.base_dispatcher import BaseRunDispatcher
+from observability.run_trace import advisory_run_trace
 
 logger = logging.getLogger(__name__)
 
@@ -15,8 +16,13 @@ class RunDispatcher(BaseRunDispatcher):
                 correction_note: dict | None = None, closing_seed: int = 0):
         try:
             self.repository.mark_run_running(run_id)
-            result = self.runner(profile_state, latest_user_message, trace_run_id=run_id,
-                                 correction_note=correction_note, closing_seed=closing_seed)
+            with advisory_run_trace(
+                run_id, session_token, latest_user_message,
+                intent=getattr(profile_state, "intent", None),
+                admission_year=getattr(profile_state, "admission_year", None),
+            ):
+                result = self.runner(profile_state, latest_user_message, trace_run_id=run_id,
+                                     correction_note=correction_note, closing_seed=closing_seed)
             final_answer = result.get("final_answer") or result.get("advisory") or ""
             self.repository.complete_run(run_id, result, final_answer)
             self.repository.append_message(session_token, "assistant", final_answer, "assistant_result")
