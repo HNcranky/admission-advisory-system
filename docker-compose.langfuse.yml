@@ -162,7 +162,8 @@ services:
       TZ: UTC
       PGTZ: UTC
     ports:
-      - 127.0.0.1:5432:5432
+      # Host 5433 to avoid clashing with the app's pgvector DB on 5432.
+      - 127.0.0.1:5433:5432
     volumes:
       - langfuse_postgres_data:/var/lib/postgresql/data
 
