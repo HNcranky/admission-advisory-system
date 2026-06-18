@@ -37,7 +37,7 @@ class LLMGateway:
             record_generation(
                 request=request, result=result, usage=result.usage, latency_ms=latency_ms,
                 attempt=attempt, used_fallback=False, model=policy.primary_model,
-                failure_type=result.failure_type,
+                failure_type=result.failure_type, prompt=request.prompt,
             )
             if result.failure_type != "STRUCTURE_FAILURE":
                 return result
@@ -62,6 +62,7 @@ class LLMGateway:
                 request=request, result=result, usage=result.usage, latency_ms=latency_ms,
                 attempt=policy.max_retries + 1, used_fallback=True,
                 model=fallback_policy.primary_model, failure_type=result.failure_type,
+                prompt=request.prompt,
             )
             return result
 
