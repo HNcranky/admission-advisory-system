@@ -53,6 +53,8 @@ class ConversationService:
         self.extract_profile = extract_profile or self._extract_profile
         self.intent_router = intent_router or IntentRouter()
         self.knowledge_qa = knowledge_qa or KnowledgeQAService()
+        from services.chat.turn_graph import build_turn_graph
+        self._turn_graph = build_turn_graph(self)
 
     def start_run(self, session_token: str, content: str, result: ConversationTurnResult) -> None:
         """Enqueue the run into chat_advisory_runs for the durable poller."""
@@ -145,26 +147,20 @@ class ConversationService:
         if corrected is not None:
             return corrected
 
-        intent = self.intent_router.classify(content, profile_state, history=history_ctx)
         session_status = session.status if session else "collecting_profile"
-
-        if intent.route == "ADVISORY_FLOW":
-            return self._handle_advisory(session_token, profile_state, flow_state, delta)
-        if intent.route == "KNOWLEDGE_QA":
-            return self._handle_knowledge_qa(session_token, content, intent, profile_state, flow_state, session_status, history_ctx, prev_user)
-        if intent.route == "HYBRID":
-            return self._handle_hybrid(session_token, content, intent, profile_state, flow_state, session_status, history_ctx, prev_user)
-        if intent.route == "OUT_OF_SCOPE":
-            return self._handle_out_of_scope(session_token, profile_state, flow_state, session_status)
-        if intent.route == "CONVERSATIONAL":
-            return self._handle_conversational(
-                session_token, content, intent, profile_state, flow_state, session_status
-            )
-        if intent.route == "RESET_PROFILE":
-            return self._handle_reset(session_token, delta, flow_state)
-        return self._handle_clarification(
-            session_token, intent, profile_state, flow_state, session_status
+        from services.chat.turn_graph import TurnState
+        state = TurnState(
+            session_token=session_token,
+            content=content,
+            history_ctx=history_ctx,
+            prev_user=prev_user,
+            profile_state=profile_state,
+            flow_state=flow_state,
+            delta=delta,
+            session_status=session_status,
         )
+        final = self._turn_graph.invoke(state)
+        return final["result"] if isinstance(final, dict) else final.result
 
     @staticmethod
     def _deterministic_safety_net(delta: dict, content: str, active_slot) -> dict:

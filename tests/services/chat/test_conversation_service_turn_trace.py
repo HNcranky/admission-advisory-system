@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 
 from services.chat import conversation_service as cs_mod
 from services.chat.conversation_service import ConversationService
+from services.chat.intent_router import IntentResult
 from services.chat.models import ChatProfileState, ConversationTurnResult, FlowState
 
 
@@ -18,7 +19,7 @@ def _service_with_stubs(monkeypatch):
     repo.get_session_by_token.return_value = None
     repo.get_profile_state.return_value = ChatProfileState()
     repo.get_flow_state.return_value = FlowState()
-    svc.intent_router.classify.return_value = MagicMock(route="CONVERSATIONAL", subtype="GREETING")
+    svc.intent_router.classify.return_value = IntentResult(route="CONVERSATIONAL", subtype="GREETING")
     return svc
 
 
