@@ -5,8 +5,36 @@ via services.db.cursor. The row store/lookup half is added in Plan 02; this
 module starts with the scope-key helpers and the version-stamping operations
 that the invalidation strategy rests on.
 """
-from services.db import cursor as _cursor
+import json
+from dataclasses import dataclass
+
+from services.db import cursor as _cursor, vector_literal as _vector_literal
+from services.knowledge.models import Citation, KnowledgeQAResult
 from services.knowledge.scope import NATIONAL_SCHOOL
+
+
+def _load_json(value):
+    """psycopg2 decodes jsonb to a Python object by default; tolerate a raw
+    string/bytes too (defensive — keeps unit fakes simple)."""
+    if isinstance(value, (str, bytes, bytearray)):
+        return json.loads(value)
+    return value or {}
+
+
+@dataclass
+class CachedAnswer:
+    answer: str
+    citations: list
+    confidence: float
+
+    def to_result(self, from_cache: bool = False) -> KnowledgeQAResult:
+        return KnowledgeQAResult(
+            has_data=True,
+            answer=self.answer,
+            citations=list(self.citations),
+            confidence=self.confidence,
+            from_cache=from_cache,
+        )
 
 
 def scope_key_for(school: str, topic: str | None) -> str:
@@ -65,4 +93,32 @@ class QACacheRepository:
                     bumped_at = NOW()
                 """,
                 (scope_key,),
+            )
+
+    def store(self, school, topic, question, embedding, result,
+              dep_versions, ttl_days) -> None:
+        answer_json = {
+            "answer": result.answer or "",
+            "citations": [
+                {"source_url": c.source_url, "chunk_text": c.chunk_text}
+                for c in result.citations
+            ],
+            "confidence": result.confidence,
+        }
+        with _cursor(self.connection_factory, commit=True) as cur:
+            cur.execute(
+                """
+                INSERT INTO knowledge_qa_cache
+                    (school, topic, question, embedding, answer_json,
+                     confidence, dep_versions, expires_at)
+                VALUES (%s, %s, %s, %s::vector, %s::jsonb, %s, %s::jsonb,
+                        NOW() + make_interval(days => %s))
+                """,
+                (
+                    school, topic, question, _vector_literal(embedding),
+                    json.dumps(answer_json, ensure_ascii=False),
+                    result.confidence,
+                    json.dumps(dep_versions, ensure_ascii=False),
+                    ttl_days,
+                ),
             )
