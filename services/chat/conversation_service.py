@@ -15,6 +15,7 @@ from services.profile.slots import (
 from services.profile.extractor import apply_profile_delta, extract_profile_update
 from services.profile.validation import validate_profile_delta
 from services.profile_service import normalize_text
+from observability.run_trace import turn_trace
 
 logger = logging.getLogger(__name__)
 
@@ -93,10 +94,16 @@ class ConversationService:
     }
 
     def handle_user_message(self, session_token: str, content: str) -> ConversationTurnResult:
-        # Build history from turns BEFORE this one — fetch prior to appending so
-        # the message being processed is excluded. The last user turn in that
-        # history is the referent for an elided follow-up (used by retrieval).
         prior_messages = self.repository.list_message(session_token)
+        turn_id = f"{session_token}:{len(prior_messages) + 1}"
+        with turn_trace(turn_id, session_token, content):
+            return self._handle_user_message_inner(session_token, content, prior_messages)
+
+    def _handle_user_message_inner(self, session_token: str, content: str, prior_messages) -> ConversationTurnResult:
+        # Build history from turns BEFORE this one — prior_messages was fetched
+        # before appending so the message being processed is excluded. The last
+        # user turn in that history is the referent for an elided follow-up
+        # (used by retrieval).
         history_ctx = build_history_context(prior_messages)
         prev_user = next(
             (m.content for m in reversed(prior_messages) if m.role == "user"), ""
