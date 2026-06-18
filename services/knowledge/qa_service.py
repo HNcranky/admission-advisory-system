@@ -4,6 +4,7 @@ from typing import Optional
 from ingestion.config.settings import (
     KNOWLEDGE_QA_MIN_SCORE, KNOWLEDGE_QA_NATIONAL_TOP_K, KNOWLEDGE_QA_TOP_K,
 )
+from observability.prompts import get_prompt_service
 from services.inference.embedder import GeminiEmbedder
 from services import build_default_gateway
 from services.inference.models import InferenceRequest
@@ -130,11 +131,13 @@ class KnowledgeQAService:
 
     def _generate(self, question, chunks, confidence, conversation_context) -> KnowledgeQAResult:
         try:
+            cp = get_prompt_service().get("knowledge-qa", fallback=KNOWLEDGE_QA_SYSTEM_PROMPT)
             result = self._gateway.run(
                 InferenceRequest(
                     agent_name="knowledge_qa_agent",
                     task_type="knowledge_qa",
-                    system_prompt=KNOWLEDGE_QA_SYSTEM_PROMPT,
+                    system_prompt=cp.text,
+                    prompt=cp.handle,
                     user_prompt=self._build_user_prompt(question, chunks, conversation_context),
                     output_mode="json",
                     temperature=0.0,
