@@ -17,6 +17,7 @@ class TurnState(BaseModel):
     flow_state: FlowState
     delta: dict = Field(default_factory=dict)
     session_status: str = "collecting_profile"
+    session: Any = None
 
     intent: Optional[IntentResult] = None
     route: Optional[str] = None
@@ -39,6 +40,41 @@ def build_turn_graph(service):
     """Compile: classify → (conditional by route) → one handler node → END.
     Handler nodes wrap the existing ConversationService._handle_* methods, so
     behaviour mirrors the former inline if/elif block (conversation_service.py)."""
+
+    from services.profile.validation import validate_profile_delta
+
+    def reset_guard(state: TurnState) -> TurnState:
+        from services.chat.conversation_service import _is_reset_request
+        if _is_reset_request(state.content):
+            state.result = service._handle_reset(state.session_token, state.delta, state.flow_state)
+        return state
+
+    def rejection_guard(state: TurnState) -> TurnState:
+        clean_delta, rejections = validate_profile_delta(state.delta, state.profile_state)
+        state.delta = clean_delta
+        if rejections:
+            state.result = service._handle_rejection(
+                state.session_token, state.profile_state, state.flow_state, clean_delta, rejections)
+        return state
+
+    def continue_guard(state: TurnState) -> TurnState:
+        r = service._maybe_continue_advisory(
+            state.session_token, state.content, state.profile_state, state.flow_state, state.delta)
+        if r is not None:
+            state.result = r
+        return state
+
+    def correction_guard(state: TurnState) -> TurnState:
+        r = service._maybe_correction_rerun(
+            state.session_token, state.profile_state, state.flow_state, state.delta, state.session)
+        if r is not None:
+            state.result = r
+        return state
+
+    def _guard_gate(next_node):
+        def gate(state: TurnState) -> str:
+            return "end" if state.result is not None else next_node
+        return gate
 
     def classify(state: TurnState) -> TurnState:
         if state.intent is None:
@@ -97,7 +133,20 @@ def build_turn_graph(service):
     ]:
         builder.add_node(name, fn)
 
-    builder.set_entry_point("classify")
+    builder.add_node("reset_guard", reset_guard)
+    builder.add_node("rejection_guard", rejection_guard)
+    builder.add_node("continue_guard", continue_guard)
+    builder.add_node("correction_guard", correction_guard)
+
+    builder.set_entry_point("reset_guard")
+    builder.add_conditional_edges("reset_guard", _guard_gate("rejection_guard"),
+                                  {"end": END, "rejection_guard": "rejection_guard"})
+    builder.add_conditional_edges("rejection_guard", _guard_gate("continue_guard"),
+                                  {"end": END, "continue_guard": "continue_guard"})
+    builder.add_conditional_edges("continue_guard", _guard_gate("correction_guard"),
+                                  {"end": END, "correction_guard": "correction_guard"})
+    builder.add_conditional_edges("correction_guard", _guard_gate("classify"),
+                                  {"end": END, "classify": "classify"})
     builder.add_conditional_edges("classify", route_selector, {
         "advisory": "advisory", "knowledge_qa": "knowledge_qa", "hybrid": "hybrid",
         "out_of_scope": "out_of_scope", "conversational": "conversational",

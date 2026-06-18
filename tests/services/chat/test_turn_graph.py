@@ -24,6 +24,9 @@ def _fake_service():
     svc._handle_knowledge_qa.return_value = _result("kqa")
     svc._handle_conversational.return_value = _result("conv")
     svc._handle_clarification.return_value = _result("clar")
+    # guards (run before classify) must pass through for routing tests
+    svc._maybe_continue_advisory.return_value = None
+    svc._maybe_correction_rerun.return_value = None
     return svc
 
 
@@ -55,3 +58,23 @@ def test_turn_graph_unknown_route_falls_to_clarification():
     result = final["result"] if isinstance(final, dict) else final.result
     assert result.assistant_message == "clar"
     svc._handle_clarification.assert_called_once()
+
+
+def test_guard_short_circuits_before_classify():
+    from services.chat.turn_graph import TurnState, build_turn_graph
+    from services.chat.models import ChatProfileState, ConversationTurnResult, FlowState
+    from unittest.mock import MagicMock
+    svc = MagicMock()
+    svc._maybe_continue_advisory.return_value = ConversationTurnResult(
+        session_status="collecting_profile", assistant_message="continued",
+        profile_state=ChatProfileState())
+    svc._maybe_correction_rerun.return_value = None
+    graph = build_turn_graph(svc)
+    final = graph.invoke(TurnState(session_token="tok", content="năm 2026",
+                                   profile_state=ChatProfileState(),
+                                   flow_state=FlowState(active_flow="ADVISORY_FLOW",
+                                                        pending_question="năm nào?"),
+                                   delta={"admission_year": 2026}))
+    result = final["result"] if isinstance(final, dict) else final.result
+    assert result.assistant_message == "continued"
+    svc.intent_router.classify.assert_not_called()  # classify skipped
