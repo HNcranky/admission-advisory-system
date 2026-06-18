@@ -39,3 +39,4 @@ class KnowledgeQAResult(BaseModel):
     answer: str | None = None
     citations: list[Citation] = Field(default_factory=list)
     confidence: float = 0.0
+    from_cache: bool = False
