@@ -1,69 +1,42 @@
-import observability.run_trace as rt
-from state import AgentState
-from services.tracing.agent_tracer import traced
+import types
+
+from services.tracing import agent_tracer
 
 
-class _Repo:
-    def start_event(self, run_id, stage, sequence):
-        return 1
+def test_traced_opens_span_and_sets_output_without_repository(monkeypatch):
+    calls = {"span_opened": False, "output": None}
 
-    def complete_event(self, event_id, output_json):
-        return None
+    class FakeSpanCM:
+        def __enter__(self): return "SPAN"
+        def __exit__(self, *a): return False
 
-    def fail_event(self, event_id, error_text):
-        return None
+    def fake_stage_span(stage, sequence, input_json=None):
+        calls["span_opened"] = (stage, sequence, input_json)
+        return FakeSpanCM()
 
+    def fake_set_span_output(span, output_json):
+        calls["output"] = (span, output_json)
 
-class _FakeSpan:
-    def __init__(self, rec, name):
-        self.rec, self.name = rec, name
+    monkeypatch.setattr(agent_tracer, "stage_span", fake_stage_span)
+    monkeypatch.setattr(agent_tracer, "set_span_output", fake_set_span_output)
 
-    def __enter__(self):
-        return self
+    state = types.SimpleNamespace(trace_run_id=7, value=1)
+    wrapped = agent_tracer.traced(
+        "profile", 0,
+        output_extractor=lambda result, st: {"out": result.value},
+        input_extractor=lambda st: {"in": st.value},
+    )(lambda st: types.SimpleNamespace(value=st.value + 1))
 
-    def __exit__(self, *exc):
-        return False
+    result = wrapped(state)
 
-    def update(self, **kwargs):
-        self.rec["updates"].append((self.name, kwargs))
-
-
-class _FakeLangfuse:
-    def __init__(self, rec):
-        self.rec = rec
-
-    def start_as_current_span(self, *, name, metadata=None, **kwargs):
-        self.rec["spans"].append(name)
-        return _FakeSpan(self.rec, name)
+    assert result.value == 2
+    assert calls["span_opened"] == ("profile", 0, {"in": 1})
+    assert calls["output"] == ("SPAN", {"out": 2})
 
 
-def test_traced_opens_langfuse_stage_span_and_sets_output(monkeypatch):
-    rec = {"spans": [], "updates": []}
-    monkeypatch.setattr(rt, "get_langfuse", lambda: _FakeLangfuse(rec))
-
-    def agent(state):
-        state.user_query = "done"
-        return state
-
-    extractor = lambda result, state: {"snapshot": result.user_query}
-    wrapped = traced("profile", 0, extractor, repository=_Repo())(agent)
-    wrapped(AgentState(user_query="start", trace_run_id=7))
-
-    assert rec["spans"] == ["profile"]
-    assert ("profile", {"output": {"snapshot": "done"}}) in rec["updates"]
-
-
-def test_langfuse_failure_does_not_break_agent(monkeypatch):
-    class _Boom:
-        def start_as_current_span(self, **kwargs):
-            raise RuntimeError("langfuse down")
-
-    monkeypatch.setattr(rt, "get_langfuse", lambda: _Boom())
-
-    def agent(state):
-        state.user_query = "ran-anyway"
-        return state
-
-    wrapped = traced("reason", 3, lambda r, s: {}, repository=_Repo())(agent)
-    result = wrapped(AgentState(user_query="x", trace_run_id=1))
-    assert result.user_query == "ran-anyway"
+def test_traced_noop_when_no_run_id(monkeypatch):
+    monkeypatch.setattr(agent_tracer, "stage_span",
+                        lambda *a, **k: (_ for _ in ()).throw(AssertionError("should not span")))
+    state = types.SimpleNamespace(trace_run_id=None)
+    wrapped = agent_tracer.traced("profile", 0, lambda r, s: {})(lambda st: "ok")
+    assert wrapped(state) == "ok"

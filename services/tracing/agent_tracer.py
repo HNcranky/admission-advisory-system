@@ -1,34 +1,24 @@
 import logging
 from typing import Callable
 
-from services.tracing.trace_repository import TraceRepository
 from observability.run_trace import stage_span, set_span_output
-
-STAGE_ORDER = ["profile", "retrieve", "conflict", "reason", "policy", "explain"]
 
 logger = logging.getLogger(__name__)
 
-_default_repo = TraceRepository()
-
-
-def _safe(call, *args, **kwargs):
-    try:
-        return call(*args, **kwargs)
-    except Exception as exc:
-        logger.warning("trace persistence failed: %r", exc)
-        return None
-
 
 def traced(stage: str, sequence: int, output_extractor: Callable,
-           input_extractor: Callable | None = None, repository: TraceRepository | None = None):
-    repo = repository or _default_repo
+           input_extractor: Callable | None = None):
+    """Wrap a graph node so it emits one Langfuse stage span.
 
+    The span's input is `input_extractor(state)` and its output is
+    `output_extractor(result, state)`. No-ops (runs the node bare) when the
+    state carries no `trace_run_id`, i.e. outside a traced run.
+    """
     def decorator(agent_fn):
         def wrapped(state):
             run_id = getattr(state, "trace_run_id", None)
             if run_id is None:
                 return agent_fn(state)
-            event_id = _safe(repo.start_event, run_id, stage, sequence)
             input_json = None
             if input_extractor is not None:
                 try:
@@ -37,20 +27,13 @@ def traced(stage: str, sequence: int, output_extractor: Callable,
                     logger.warning("trace input extractor failed for stage=%s: %r", stage, exc)
                     input_json = {"_extractor_error": repr(exc)}
             with stage_span(stage, sequence, input_json=input_json) as span:
-                try:
-                    result = agent_fn(state)
-                except Exception as exc:
-                    if event_id is not None:
-                        _safe(repo.fail_event, event_id, repr(exc))
-                    raise
+                result = agent_fn(state)
                 try:
                     output_json = output_extractor(result, state)
                 except Exception as exc:
                     logger.warning("trace extractor failed for stage=%s: %r", stage, exc)
                     output_json = {"_extractor_error": repr(exc)}
                 set_span_output(span, output_json)
-            if event_id is not None:
-                _safe(repo.complete_event, event_id, output_json)
             return result
 
         return wrapped
