@@ -120,35 +120,14 @@ class ConversationService:
         delta = self.extract_profile(content, profile_state, active_slot)
         delta = self._deterministic_safety_net(delta, content, active_slot)
 
-        # EC-22: reset tường minh phải thắng mọi nhánh khác — kể cả
-        # _maybe_continue_advisory (tránh "xoá hết..., năm 2026" bị nuốt vào hồ sơ cũ).
-        if _is_reset_request(content):
-            return self._handle_reset(session_token, delta, flow_state)
-
-        delta, rejections = validate_profile_delta(delta, profile_state)
-        if rejections:
-            return self._handle_rejection(
-                session_token, profile_state, flow_state, delta, rejections
-            )
-
-        # A reply to a pending advisory follow-up is an *answer*, not a fresh
-        # intent. Route it back into the advisory flow when it actually fills the
-        # slot we just asked about — the stateless intent classifier otherwise
-        # misreads a bare answer like "năm 2026" as small talk and silently drops
-        # the value. See docs/admission-advisory-conversational-architecture.md §4, §9.
-        continued = self._maybe_continue_advisory(session_token, content, profile_state, flow_state, delta)
-        if continued is not None:
-            return continued
-
-        # A value-changing correction after a run already produced recommendations
-        # must deterministically re-rank (the stateless router would mis-handle a
-        # phrasing like "à em tính lại 25.75, không phải 27"). See AC7.
-        corrected = self._maybe_correction_rerun(session_token, profile_state, flow_state, delta, session)
-        if corrected is not None:
-            return corrected
-
-        session_status = session.status if session else "collecting_profile"
+        # The pre-intent guards (reset / rejection / continue-advisory /
+        # correction-rerun) and the intent routing now run inside the turn graph
+        # as conditional-edge nodes — see services/chat/turn_graph.py. Each guard
+        # either short-circuits the turn (setting result) or passes through to
+        # classify, mirroring the former imperative if/return chain (EC-22 reset
+        # wins, EC-04 rejection, continue-advisory slot fill, AC7 correction).
         from services.chat.turn_graph import TurnState
+        session_status = session.status if session else "collecting_profile"
         state = TurnState(
             session_token=session_token,
             content=content,
@@ -158,6 +137,7 @@ class ConversationService:
             flow_state=flow_state,
             delta=delta,
             session_status=session_status,
+            session=session,
         )
         final = self._turn_graph.invoke(state)
         return final["result"] if isinstance(final, dict) else final.result
