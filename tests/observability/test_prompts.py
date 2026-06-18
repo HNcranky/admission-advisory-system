@@ -92,3 +92,9 @@ def test_compile_substitutes_variables(monkeypatch):
     cp = svc.get("fact-extractor", fallback="X", variables={"year": 2026})
     assert cp.text == "Năm tuyển sinh 2026"
     assert cp.handle is fake._prompt
+
+
+def test_get_prompt_service_is_singleton():
+    from observability.prompts import get_prompt_service
+    assert get_prompt_service() is get_prompt_service()
+    assert isinstance(get_prompt_service(), PromptService)

@@ -58,3 +58,14 @@ class PromptService:
         except Exception as exc:  # fetch/compile failure must not break the call site
             logger.warning("prompt fetch failed for %s; using fallback: %r", name, exc)
             return CompiledPrompt(text=fallback, handle=None, is_fallback=True)
+
+
+_service: Optional[PromptService] = None
+
+
+def get_prompt_service() -> PromptService:
+    """Process-wide PromptService, mirroring get_langfuse()."""
+    global _service
+    if _service is None:
+        _service = PromptService()
+    return _service
