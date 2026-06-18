@@ -24,6 +24,10 @@ class InferenceRequest(BaseModel):
     # Default empty => every existing text-only call site is unaffected.
     media: List[Tuple[str, bytes]] = Field(default_factory=list)
     metadata: Dict[str, Any] = Field(default_factory=dict)
+    # Optional Langfuse prompt client (from PromptService) used to link this
+    # generation to its prompt version in Langfuse. Default None => existing
+    # callers and the no-Langfuse path are unaffected.
+    prompt: Optional[Any] = None
 
 
 class InferencePolicy(BaseModel):
