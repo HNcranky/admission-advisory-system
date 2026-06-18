@@ -66,6 +66,14 @@ KNOWLEDGE_QA — câu hỏi thực tế về thông tin cụ thể của trườ
   Ví dụ: "có bao nhiêu phương thức xét tuyển của HUST"
        → {"route":"KNOWLEDGE_QA","topic":"admission_policy","school":"HUST"}
 
+FOLLOWUP — câu hỏi nối tiếp chỉ cần SUY LUẬN / TÍNH TOÁN / LÀM RÕ dựa trên
+  thông tin ĐÃ có trong lịch sử hội thoại, KHÔNG cần tra cứu dữ liệu/tài liệu mới.
+  Chỉ dùng khi câu trả lời nằm ngay trong lịch sử hội thoại ở trên; nếu cần dữ
+  kiện mới (mà lịch sử chưa nêu) → KNOWLEDGE_QA.
+  Ví dụ (sau khi trợ lý vừa trả lời học phí theo tháng):
+    "vậy một năm đóng bao nhiêu?", "thế tổng 4 năm là bao nhiêu?",
+    "ý bạn là mỗi kỳ đúng không?", "quy ra mỗi tháng thì sao?"
+
 CLARIFICATION — câu quá mơ hồ, thiếu context để phân loại chính xác
   Ví dụ: "thế còn cái đó thì sao" (không rõ đối tượng), "ý bạn là gì"
 
@@ -123,6 +131,7 @@ class IntentResult(BaseModel):
         "ADVISORY_FLOW",
         "KNOWLEDGE_QA",
         "HYBRID",
+        "FOLLOWUP",
         "CLARIFICATION",
         "OUT_OF_SCOPE",
         "CONVERSATIONAL",

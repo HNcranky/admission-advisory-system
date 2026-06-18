@@ -1006,3 +1006,63 @@ def test_advisory_recaps_when_two_or_more_slots_filled():
     result = service.handle_user_message("tok", "Xét điểm thi THPT")
     assert "Mình đã nắm:" in result.assistant_message
     assert "Còn thiếu:" in result.assistant_message
+
+
+# ─── FOLLOWUP route: answer from conversation context, no RAG ──────────────────
+
+class _FakeGateway:
+    """Stand-in for build_default_gateway(): .run() returns canned parsed_data
+    and records the agent_name + user_prompt it was called with."""
+
+    def __init__(self, parsed_data):
+        self._parsed = parsed_data
+        self.calls = []
+
+    def run(self, request):
+        self.calls.append(request)
+        return SimpleNamespace(parsed_data=self._parsed, content="")
+
+
+def _seed_prior_tuition_turn(repo):
+    # A prior assistant answer the follow-up reasons over (monthly tuition).
+    repo.messages.append(("user", "user_message", "Học phí ngành CNTT của UET?"))
+    repo.messages.append(("assistant", "assistant_result",
+                          "Học phí ngành CNTT của UET là 1.850.000 đồng/tháng."))
+
+
+def test_followup_answers_from_context_without_retrieval(monkeypatch):
+    import services.chat.conversation_service as cs
+    gateway = _FakeGateway({"answer": "Một năm (10 tháng) là 18.500.000 đồng.", "sufficient": True})
+    monkeypatch.setattr(cs, "build_default_gateway", lambda: gateway)
+
+    fake_qa = FakeKnowledgeQA()
+    service, repo = _make_service(
+        intent_result=IntentResult(route="FOLLOWUP"), knowledge_qa=fake_qa)
+    _seed_prior_tuition_turn(repo)
+
+    result = service.handle_user_message("tok", "vậy một năm đóng bao nhiêu?")
+
+    assert "18.500.000" in result.assistant_message
+    assert fake_qa.calls == []                      # RAG path was NOT touched
+    assert gateway.calls[0].agent_name == "followup_reasoner"
+    # the reasoner saw the prior tuition figure in its prompt
+    assert "1.850.000" in gateway.calls[0].user_prompt
+
+
+def test_followup_falls_back_to_retrieval_when_context_insufficient(monkeypatch):
+    import services.chat.conversation_service as cs
+    gateway = _FakeGateway({"answer": "", "sufficient": False})
+    monkeypatch.setattr(cs, "build_default_gateway", lambda: gateway)
+
+    fake_qa = FakeKnowledgeQA(
+        result=KnowledgeQAResult(has_data=True, answer="Theo tài liệu: 18,5 triệu/năm.",
+                                 citations=[], confidence=0.8))
+    service, repo = _make_service(
+        intent_result=IntentResult(route="FOLLOWUP", topic="tuition", school="VNU-UET"),
+        knowledge_qa=fake_qa)
+    _seed_prior_tuition_turn(repo)
+
+    result = service.handle_user_message("tok", "vậy một năm đóng bao nhiêu?")
+
+    assert len(fake_qa.calls) == 1                   # fell back to retrieval
+    assert "18,5 triệu" in result.assistant_message

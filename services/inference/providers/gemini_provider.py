@@ -1,9 +1,12 @@
 import json
+import logging
 
 from google.genai import types
 
 from services.inference.models import InferenceResult
 from services.inference.providers.key_pool import GeminiKeyPool, get_key_pool
+
+logger = logging.getLogger(__name__)
 
 
 class GeminiProvider:
@@ -78,15 +81,37 @@ class GeminiProvider:
                 **kwargs,
             )
 
+        def _structure_failure():
+            # A truncated response (finish_reason=MAX_TOKENS) yields invalid/empty
+            # JSON that looks identical to a model mistake but is really a token
+            # budget too small for this agent. Surface it so it doesn't silently
+            # degrade to "no data" across every retry (see knowledge_qa_agent).
+            if self._is_truncated(response):
+                out = (usage or {}).get("output")
+                logger.warning(
+                    "%s output truncated at max_tokens=%s (output_tokens=%s) → "
+                    "STRUCTURE_FAILURE; raise the agent's max_tokens budget.",
+                    request.agent_name, policy.max_tokens, out,
+                )
+            return _result(failure_type="STRUCTURE_FAILURE")
+
         if request.output_mode != "json":
             return _result()
         if not text:
-            return _result(failure_type="STRUCTURE_FAILURE")
+            return _structure_failure()
         try:
             parsed = json.loads(text)
         except (ValueError, TypeError):
-            return _result(failure_type="STRUCTURE_FAILURE")
+            return _structure_failure()
         return _result(parsed_data=parsed)
+
+    @staticmethod
+    def _is_truncated(response) -> bool:
+        try:
+            reason = response.candidates[0].finish_reason
+        except (AttributeError, IndexError, TypeError):
+            return False
+        return getattr(reason, "name", str(reason)) == "MAX_TOKENS"
 
     @staticmethod
     def _extract_usage(response):

@@ -1,6 +1,7 @@
 import logging
 
 from services import build_default_gateway
+from services.inference.models import InferenceRequest
 from services.chat.intent_router import IntentRouter
 from services.chat.models import ChatProfileState, ConversationTurnResult
 from services.chat.history import build_history_context
@@ -369,6 +370,76 @@ class ConversationService:
             profile_state=profile_state,
             citations=citations,
         )
+
+    _FOLLOWUP_SYSTEM_PROMPT = (
+        "Bạn là trợ lý tư vấn tuyển sinh đại học Việt Nam. Đây là một câu hỏi NỐI "
+        "TIẾP: hãy trả lời CHỈ bằng cách suy luận / tính toán / làm rõ dựa trên LỊCH "
+        "SỬ HỘI THOẠI được cung cấp. Tuyệt đối không bịa thêm số liệu mới.\n"
+        "Quy tắc:\n"
+        "- Nếu lịch sử đã đủ dữ kiện để trả lời, trả lời ngắn gọn bằng tiếng Việt; "
+        "nêu rõ phép tính nếu có (ví dụ: 1.850.000đ/tháng × 10 tháng = 18.500.000đ/năm).\n"
+        "- Nếu lịch sử KHÔNG đủ dữ kiện cần thiết, để \"sufficient\": false và "
+        "\"answer\": \"\".\n"
+        'Trả về JSON hợp lệ: {"answer": "<câu trả lời hoặc rỗng>", "sufficient": <true|false>}'
+    )
+
+    def _handle_followup(self, session_token, content, intent, profile_state, flow_state,
+                         session_status, history_ctx="", prev_user=""):
+        """Answer a follow-up that is derivable from the conversation so far — no
+        retrieval. Avoids diluting an already-long, history-bearing prompt with
+        irrelevant RAG chunks. Falls back to the retrieval-backed KNOWLEDGE_QA path
+        when the history turns out to lack the facts needed (router's call isn't
+        infallible, and the default history window can truncate a figure)."""
+        # Rebuild a richer history than the routing window: the prior assistant
+        # answer (e.g. a long tuition breakdown) is exactly what we reason over,
+        # so the 3×500 truncation that suits intent routing can cut the figure.
+        prior = self.repository.list_message(session_token)
+        if prior and prior[-1].role == "user":
+            prior = prior[:-1]  # drop the just-appended current turn
+        rich_history = build_history_context(prior, max_pairs=4, max_chars=1500)
+
+        answer = self._answer_from_context(content, rich_history)
+        if not answer:
+            # History insufficient (or LLM failure) → safe fallback to retrieval.
+            return self._handle_knowledge_qa(
+                session_token, content, intent, profile_state, flow_state,
+                session_status, history_ctx, prev_user)
+
+        response = self._maybe_offer_resume(answer, flow_state)
+        self.repository.append_message(session_token, "assistant", response, "assistant_result")
+        return ConversationTurnResult(
+            session_status=session_status,
+            assistant_message=response,
+            should_start_run=False,
+            profile_state=profile_state,
+        )
+
+    def _answer_from_context(self, content, history):
+        """Single LLM call grounded only on conversation history. Returns the
+        answer text, or None when the model reports the history is insufficient
+        (or the call fails) so the caller can fall back to retrieval."""
+        if not history:
+            return None
+        gateway = build_default_gateway()
+        user_prompt = f"Lịch sử hội thoại:\n{history}\n\nCâu hỏi nối tiếp: {content}"
+        try:
+            result = gateway.run(
+                InferenceRequest(
+                    agent_name="followup_reasoner",
+                    task_type="followup_reasoning",
+                    system_prompt=self._FOLLOWUP_SYSTEM_PROMPT,
+                    user_prompt=user_prompt,
+                    output_mode="json",
+                    temperature=0.0,
+                )
+            )
+        except Exception as exc:
+            logger.warning("followup reasoning failed, falling back to retrieval: %r", exc)
+            return None
+        data = result.parsed_data or {}
+        if not data.get("sufficient"):
+            return None
+        return str(data.get("answer") or "").strip() or None
 
     def _handle_hybrid(self, session_token, content, intent, profile_state, flow_state, session_status, history_ctx="", prev_user=""):
         missing = missing_critical_slots(profile_state)

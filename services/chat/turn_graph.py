@@ -30,6 +30,7 @@ _ROUTE_TO_NODE = {
     "ADVISORY_FLOW": "advisory",
     "KNOWLEDGE_QA": "knowledge_qa",
     "HYBRID": "hybrid",
+    "FOLLOWUP": "followup",
     "OUT_OF_SCOPE": "out_of_scope",
     "CONVERSATIONAL": "conversational",
     "RESET_PROFILE": "reset",
@@ -95,6 +96,12 @@ def build_turn_graph(service):
             state.flow_state, state.session_status, state.history_ctx, state.prev_user)
         return state
 
+    def followup(state: TurnState) -> TurnState:
+        state.result = service._handle_followup(
+            state.session_token, state.content, state.intent, state.profile_state,
+            state.flow_state, state.session_status, state.history_ctx, state.prev_user)
+        return state
+
     def hybrid(state: TurnState) -> TurnState:
         state.result = service._handle_hybrid(
             state.session_token, state.content, state.intent, state.profile_state,
@@ -128,6 +135,7 @@ def build_turn_graph(service):
     builder = StateGraph(TurnState)
     for name, fn in [
         ("classify", classify), ("advisory", advisory), ("knowledge_qa", knowledge_qa),
+        ("followup", followup),
         ("hybrid", hybrid), ("out_of_scope", out_of_scope), ("conversational", conversational),
         ("reset", reset), ("clarification", clarification),
     ]:
@@ -149,10 +157,11 @@ def build_turn_graph(service):
                                   {"end": END, "classify": "classify"})
     builder.add_conditional_edges("classify", route_selector, {
         "advisory": "advisory", "knowledge_qa": "knowledge_qa", "hybrid": "hybrid",
+        "followup": "followup",
         "out_of_scope": "out_of_scope", "conversational": "conversational",
         "reset": "reset", "clarification": "clarification",
     })
-    for name in ["advisory", "knowledge_qa", "hybrid", "out_of_scope",
+    for name in ["advisory", "knowledge_qa", "followup", "hybrid", "out_of_scope",
                  "conversational", "reset", "clarification"]:
         builder.add_edge(name, END)
     return builder.compile()
