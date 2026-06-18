@@ -404,6 +404,6 @@ trễ ~1s đổi lấy backend không phải quản lý kết nối.
 | Ingest điểm chuẩn lịch sử | `python -m ingestion.ingest_cutoffs --seed` |
 | Ingest kho kiến thức | `python -m ingestion.knowledge.pipeline --all` (+ `ingest_manifest`, `ingest_national`) |
 | Kiểm tra corpus RAG | `python -m ingestion.knowledge.verify_corpus` |
-| Chạy web app | `python -m uvicorn web.app:app --reload` |
+| Chạy web app | `python -m uvicorn web.app:build_app --factory --reload` |
 | Demo advisory qua CLI (không cần web) | `python main.py --query "..."` |
 | Test (tự cô lập sang `admission_test`) | `python -m pytest -q` |

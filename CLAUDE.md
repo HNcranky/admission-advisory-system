@@ -48,7 +48,7 @@ docker compose up -d --wait db        # pgvector/pgvector:pg16 on localhost:5432
 .\.venv\Scripts\python.exe -m ingestion.main --school vnu_uet
 
 # Run the web app
-.\.venv\Scripts\python.exe -m uvicorn web.app:app --reload
+.\.venv\Scripts\python.exe -m uvicorn web.app:build_app --factory --reload
 
 # Tests (testpaths is limited to tests/; integration/e2e need the Docker DB up)
 # pytest runs against the auto-created `admission_test` database — it never
