@@ -30,9 +30,7 @@ function applyCollapsed(shell, state) {
   shell.classList.toggle("left-collapsed", state.left);
   shell.classList.toggle("right-collapsed", state.right);
   const leftPanel = document.getElementById("profile-panel");
-  const rightPanel = document.getElementById("trace-panel");
   if (leftPanel) leftPanel.setAttribute("aria-hidden", String(state.left));
-  if (rightPanel) rightPanel.setAttribute("aria-hidden", String(state.right));
 }
 
 function wireCollapseButton(shell, state, side) {
@@ -55,7 +53,7 @@ function backdrop() {
 }
 
 function panelIdForSide(side) {
-  return side === "right" ? "trace-panel" : "profile-panel";
+  return "profile-panel";
 }
 
 export function openDrawer(side) {
@@ -106,7 +104,7 @@ function wireDrawerButton(side) {
 }
 
 function wireDrawerDismiss() {
-  const panels = ["profile-panel", "trace-panel"];
+  const panels = ["profile-panel"];
   panels.forEach((id) => {
     const closeBtn = document.getElementById(id)?.querySelector(".panel__drawer-close");
     if (closeBtn) closeBtn.addEventListener("click", closeDrawer);
@@ -125,9 +123,7 @@ export function initCollapseHandles() {
   applyCollapsed(shell, state);
 
   wireCollapseButton(shell, state, "left");
-  wireCollapseButton(shell, state, "right");
   wireDrawerButton("left");
-  wireDrawerButton("right");
   wireDrawerDismiss();
 
   const mql = window.matchMedia(MOBILE_QUERY);

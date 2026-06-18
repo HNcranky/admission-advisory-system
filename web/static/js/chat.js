@@ -8,12 +8,6 @@ import {
   renderRecommendationCard,
 } from "./modules/messages.js";
 import { revealBubble } from "./modules/typewriter.js";
-import {
-  renderTrace,
-  startTracePolling,
-  stopTracePolling,
-  debugUiEnabled,
-} from "./modules/trace.js";
 import { toast } from "./modules/toasts.js";
 
 const COMPOSER_MAX_PX = 240;
@@ -55,11 +49,6 @@ function setThinking(active) {
 let revealedCount = 0;
 let suppressTypewriter = true;
 let currentReveal = null;
-
-const traceOpts = () => ({
-  debug: debugUiEnabled(),
-  stageLabels: window.__stageLabels || [],
-});
 
 function getProfileState(snapshot) {
   return snapshot?.session?.profile_state_json || {};
@@ -279,13 +268,11 @@ function schedulePolling(sessionToken) {
       renderSnapshot(snapshot);
       if (status === "completed") {
         stopPolling();
-        stopTracePolling();
         return;
       }
       if (status === "failed") {
         toast("Quá trình phân tích bị gián đoạn.", { variant: "error" });
         stopPolling();
-        stopTracePolling();
         return;
       }
       schedulePolling(sessionToken);
@@ -356,17 +343,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  if (debugUiEnabled()) {
-    const panel = document.getElementById("trace-panel");
-    if (panel) panel.hidden = false;
-  }
-
   try {
     const bootstrap = await ensureSession();
     renderSnapshot(bootstrap);
-    if (debugUiEnabled() && bootstrap.session && bootstrap.session.status === "running") {
-      startTracePolling(currentSessionToken, traceOpts());
-    }
   } catch (error) {
     toast("Không thể khởi tạo phiên chat.", { variant: "error" });
     form.querySelector("button[type='submit']").disabled = true;
@@ -408,7 +387,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         // A background run starts; keep "thinking" until polling sees it finish.
         renderSnapshot(snapshot);
         schedulePolling(currentSessionToken);
-        startTracePolling(currentSessionToken, traceOpts());
         return;
       }
 
@@ -424,7 +402,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   resetButton?.addEventListener("click", async () => {
     stopPolling();
-    stopTracePolling();
     setThinking(false);
     if (currentReveal) {
       currentReveal.cancel();

@@ -28,20 +28,6 @@ def _read_app_version() -> str:
 _APP_VERSION = _read_app_version()
 
 
-STAGE_LABELS: list[dict[str, str]] = [
-    {"id": "profile",  "label": "Phân tích hồ sơ",         "icon": "user-circle"},
-    {"id": "retrieve", "label": "Tra cứu chương trình",    "icon": "search"},
-    {"id": "conflict", "label": "Đối chiếu nguồn dữ liệu", "icon": "git-compare"},
-    {"id": "reason",   "label": "Suy luận khuyến nghị",    "icon": "lightbulb"},
-    {"id": "policy",   "label": "Đối chiếu quy chế",       "icon": "shield-check"},
-    {"id": "explain",  "label": "Soạn lời giải thích",     "icon": "message-square"},
-]
-
-
-def _debug_ui_enabled() -> bool:
-    return os.environ.get("ADVISORY_DEBUG_UI") == "1"
-
-
 def _theme_default() -> str:
     value = (os.environ.get("ADVISORY_THEME_DEFAULT") or "").strip().lower()
     return value if value in _VALID_THEMES else "light"
@@ -54,9 +40,7 @@ def chat_page(request: Request):
         "chat.html",
         {
             "page_title": "Student Advisory Chat",
-            "debug_ui_enabled": _debug_ui_enabled(),
             "theme_default": _theme_default(),
-            "stage_labels": STAGE_LABELS,
             "app_version": _APP_VERSION,
         },
     )

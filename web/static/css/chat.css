@@ -178,6 +178,14 @@ body {
   min-height: 0;
 }
 
+.grid-2col {
+  display: grid;
+  grid-template-columns: var(--col-left) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 /* ----- Panel base ----- */
 
 .panel {
@@ -513,7 +521,8 @@ body {
 
 /* Mobile — both side panels become drawers. */
 @media (max-width: 899px) {
-  .grid-3col {
+  .grid-3col,
+  .grid-2col {
     grid-template-columns: minmax(0, 1fr);
   }
 
