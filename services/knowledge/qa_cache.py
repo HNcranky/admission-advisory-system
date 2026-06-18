@@ -122,3 +122,38 @@ class QACacheRepository:
                     ttl_days,
                 ),
             )
+
+    def lookup(self, embedding, school, topic, threshold) -> "CachedAnswer | None":
+        literal = _vector_literal(embedding)
+        with _cursor(self.connection_factory) as cur:
+            cur.execute(
+                """
+                SELECT answer_json, confidence, dep_versions,
+                       1 - (embedding <=> %s::vector) AS score
+                FROM knowledge_qa_cache
+                WHERE school = %s AND topic = %s AND expires_at > NOW()
+                ORDER BY embedding <=> %s::vector
+                LIMIT 1
+                """,
+                (literal, school, topic, literal),
+            )
+            row = cur.fetchone()
+        if row is None:
+            return None
+        answer_json, confidence, dep_versions, score = row
+        if score is None or float(score) < threshold:
+            return None
+        stored = {k: int(v) for k, v in _load_json(dep_versions).items()}
+        current = self.current_versions(self.scope_keys(school, topic))
+        if stored != current:
+            return None
+        data = _load_json(answer_json)
+        citations = [
+            Citation(source_url=c.get("source_url", ""), chunk_text=c.get("chunk_text", ""))
+            for c in data.get("citations", [])
+        ]
+        return CachedAnswer(
+            answer=str(data.get("answer") or ""),
+            citations=citations,
+            confidence=float(confidence),
+        )
