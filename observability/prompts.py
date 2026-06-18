@@ -42,4 +42,19 @@ class PromptService:
         client = get_langfuse()
         if client is None:
             return CompiledPrompt(text=fallback, handle=None, is_fallback=True)
-        raise NotImplementedError  # enabled path implemented in Task 2
+        try:
+            prompt = client.get_prompt(
+                name,
+                label=_label(),
+                cache_ttl_seconds=_cache_ttl(),
+                fallback=fallback,
+                type="text",
+            )
+            text = prompt.compile(**(variables or {}))
+            is_fallback = bool(getattr(prompt, "is_fallback", False))
+            # Never link a fallback client: it maps to no stored prompt version.
+            handle = None if is_fallback else prompt
+            return CompiledPrompt(text=text, handle=handle, is_fallback=is_fallback)
+        except Exception as exc:  # fetch/compile failure must not break the call site
+            logger.warning("prompt fetch failed for %s; using fallback: %r", name, exc)
+            return CompiledPrompt(text=fallback, handle=None, is_fallback=True)
