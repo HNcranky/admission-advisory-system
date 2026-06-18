@@ -54,15 +54,19 @@ def advisory_run_trace(run_id, session_token, user_message, intent=None, admissi
 
 
 @contextlib.contextmanager
-def stage_span(stage, sequence):
+def stage_span(stage, sequence, input_json=None):
     """Child span for one pipeline stage. Generations created while this span
-    is active nest under it (OTEL contextvars, same worker thread)."""
+    is active nest under it (OTEL contextvars, same worker thread).
+
+    ``input_json`` is the state slice the node consumes; without it the span's
+    input shows null (output is set separately via ``set_span_output``)."""
     client = get_langfuse()
     cm = None
     span = None
     if client is not None:
         try:
-            cm = client.start_as_current_span(name=stage, metadata={"sequence": sequence})
+            cm = client.start_as_current_span(
+                name=stage, input=_redact(input_json), metadata={"sequence": sequence})
             span = cm.__enter__()
         except Exception as exc:
             logger.warning("langfuse stage_span open failed for %s: %r", stage, exc)

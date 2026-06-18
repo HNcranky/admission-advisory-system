@@ -39,6 +39,11 @@ class RunQueueWorker:
             return False
         args = claimed.get("dispatch_args") or {}
         run_kind = args.get("run_kind", "advisory")
+        # dispatch_args round-trips through JSONB, so profile_state arrives as a
+        # plain dict — rehydrate the model the dispatchers/runner expect (mirrors
+        # the intent rehydration below).
+        from services.chat.models import ChatProfileState
+        profile_state = ChatProfileState.model_validate(args.get("profile_state") or {})
         try:
             if run_kind == "hybrid":
                 from services.chat.intent_router import IntentResult
@@ -47,13 +52,13 @@ class RunQueueWorker:
                 )
                 self._get_hybrid_dispatcher().execute(
                     claimed["session_token"], claimed["run_id"],
-                    args.get("content", ""), args.get("profile_state"),
+                    args.get("content", ""), profile_state,
                     intent,
                 )
             else:
                 self._get_run_dispatcher().execute(
                     claimed["session_token"], claimed["run_id"],
-                    args.get("latest_user_message", ""), args.get("profile_state"),
+                    args.get("latest_user_message", ""), profile_state,
                     args.get("correction_note"), args.get("closing_seed", 0),
                 )
         except Exception:

@@ -17,17 +17,23 @@ from services.tracing.extractors import (
     extract_reasoning,
     extract_policy,
     extract_explanation,
+    input_profile,
+    input_retrieve,
+    input_conflict,
+    input_reason,
+    input_policy,
+    input_explanation,
 )
 
 
 builder = StateGraph(AgentState)
 
-builder.add_node("profile",  traced("profile",  0, extract_profile)(profile_agent))
-builder.add_node("retrieve", traced("retrieve", 1, extract_candidates)(retrieval_agent))
-builder.add_node("conflict", traced("conflict", 2, extract_conflicts)(conflict_agent))
-builder.add_node("reason",   traced("reason",   3, extract_reasoning)(reasoning_agent))
-builder.add_node("policy",   traced("policy",   4, extract_policy)(policy_agent))
-builder.add_node("explain",  traced("explain",  5, extract_explanation)(explanation_agent))
+builder.add_node("profile",  traced("profile",  0, extract_profile,     input_profile)(profile_agent))
+builder.add_node("retrieve", traced("retrieve", 1, extract_candidates,  input_retrieve)(retrieval_agent))
+builder.add_node("conflict", traced("conflict", 2, extract_conflicts,   input_conflict)(conflict_agent))
+builder.add_node("reason",   traced("reason",   3, extract_reasoning,   input_reason)(reasoning_agent))
+builder.add_node("policy",   traced("policy",   4, extract_policy,      input_policy)(policy_agent))
+builder.add_node("explain",  traced("explain",  5, extract_explanation, input_explanation)(explanation_agent))
 
 
 builder.set_entry_point("profile")

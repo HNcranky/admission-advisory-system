@@ -19,7 +19,8 @@ def _safe(call, *args, **kwargs):
         return None
 
 
-def traced(stage: str, sequence: int, output_extractor: Callable, repository: TraceRepository | None = None):
+def traced(stage: str, sequence: int, output_extractor: Callable,
+           input_extractor: Callable | None = None, repository: TraceRepository | None = None):
     repo = repository or _default_repo
 
     def decorator(agent_fn):
@@ -28,7 +29,14 @@ def traced(stage: str, sequence: int, output_extractor: Callable, repository: Tr
             if run_id is None:
                 return agent_fn(state)
             event_id = _safe(repo.start_event, run_id, stage, sequence)
-            with stage_span(stage, sequence) as span:
+            input_json = None
+            if input_extractor is not None:
+                try:
+                    input_json = input_extractor(state)
+                except Exception as exc:
+                    logger.warning("trace input extractor failed for stage=%s: %r", stage, exc)
+                    input_json = {"_extractor_error": repr(exc)}
+            with stage_span(stage, sequence, input_json=input_json) as span:
                 try:
                     result = agent_fn(state)
                 except Exception as exc:
