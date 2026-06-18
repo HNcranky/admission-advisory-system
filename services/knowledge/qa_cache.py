@@ -39,3 +39,30 @@ class QACacheRepository:
             scope_key_for(NATIONAL_SCHOOL, topic),
             scope_key_for(NATIONAL_SCHOOL, None),
         ]
+
+    def current_versions(self, scope_keys) -> dict[str, int]:
+        keys = list(scope_keys)
+        if not keys:
+            return {}
+        with _cursor(self.connection_factory) as cur:
+            cur.execute(
+                "SELECT scope_key, version FROM knowledge_qa_cache_version "
+                "WHERE scope_key = ANY(%s)",
+                (keys,),
+            )
+            rows = cur.fetchall()
+        found = {k: int(v) for k, v in rows}
+        return {k: found.get(k, 0) for k in keys}
+
+    def bump_version(self, scope_key: str) -> None:
+        with _cursor(self.connection_factory, commit=True) as cur:
+            cur.execute(
+                """
+                INSERT INTO knowledge_qa_cache_version (scope_key)
+                VALUES (%s)
+                ON CONFLICT (scope_key) DO UPDATE SET
+                    version = knowledge_qa_cache_version.version + 1,
+                    bumped_at = NOW()
+                """,
+                (scope_key,),
+            )
