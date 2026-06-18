@@ -122,7 +122,7 @@ def set_span_output(span, output_json):
 
 
 def record_generation(request, result, usage=None, latency_ms=None, attempt=None,
-                      used_fallback=None, failure_type=None, model=None):
+                      used_fallback=None, failure_type=None, model=None, prompt=None):
     """Emit one generation observation under the active span. Each retry/fallback
     call site emits its own generation."""
     client = get_langfuse()
@@ -144,6 +144,7 @@ def record_generation(request, result, usage=None, latency_ms=None, attempt=None
                 "user": getattr(request, "user_prompt", None),
             }),
             model_parameters={"temperature": getattr(request, "temperature", None)},
+            prompt=prompt,
         ) as gen:
             gen.update(
                 output=_redact(getattr(result, "content", None)),

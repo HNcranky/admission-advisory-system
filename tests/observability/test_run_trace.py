@@ -34,8 +34,10 @@ class _FakeLangfuse:
         return _FakeSpan(self.recorder, name)
 
     def start_as_current_generation(self, *, name, model=None, input=None,
-                                    model_parameters=None, metadata=None):
-        self.recorder["generations"].append({"name": name, "model": model, "input": input})
+                                    model_parameters=None, metadata=None, prompt=None):
+        self.recorder["generations"].append(
+            {"name": name, "model": model, "input": input, "prompt": prompt}
+        )
         return _FakeSpan(self.recorder, "gen:" + name)
 
 
@@ -120,3 +122,44 @@ def test_errors_are_swallowed(monkeypatch):
         with rt.stage_span("profile", 0) as s:
             assert s is None
     rt.record_generation(object(), object())
+
+
+def test_record_generation_forwards_prompt_handle(monkeypatch):
+    rec = _recorder()
+    monkeypatch.setattr(rt, "get_langfuse", lambda: _FakeLangfuse(rec))
+
+    class _Req:
+        agent_name = "intent_router"
+        task_type = "intent_classification"
+        system_prompt = "sys"
+        user_prompt = "usr"
+        temperature = 0.0
+
+    class _Res:
+        model = "gemini-2.5-flash-lite"
+        content = "answer"
+        failure_type = None
+
+    handle = object()
+    rt.record_generation(_Req(), _Res(), prompt=handle)
+    assert rec["generations"][0]["prompt"] is handle
+
+
+def test_record_generation_prompt_defaults_none(monkeypatch):
+    rec = _recorder()
+    monkeypatch.setattr(rt, "get_langfuse", lambda: _FakeLangfuse(rec))
+
+    class _Req:
+        agent_name = "intent_router"
+        task_type = "t"
+        system_prompt = "sys"
+        user_prompt = "usr"
+        temperature = 0.0
+
+    class _Res:
+        model = "m"
+        content = "a"
+        failure_type = None
+
+    rt.record_generation(_Req(), _Res())
+    assert rec["generations"][0]["prompt"] is None
