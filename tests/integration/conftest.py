@@ -62,3 +62,24 @@ def clean_db(db_available):
     finally:
         conn.close()
     yield
+
+
+@pytest.fixture
+def qa_cache_clean(db_available):
+    """Truncate the QA cache tables before a test. Guarded so it can only ever
+    run against the isolated `*_test` database."""
+    assert DB_CONFIG["database"].endswith("_test"), (
+        f"qa_cache_clean would truncate {DB_CONFIG['database']!r} — refusing; "
+        "it must only run against the isolated test database."
+    )
+    conn = psycopg2.connect(**DB_CONFIG)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "TRUNCATE knowledge_qa_cache, knowledge_qa_cache_version "
+                "RESTART IDENTITY"
+            )
+        conn.commit()
+    finally:
+        conn.close()
+    yield
