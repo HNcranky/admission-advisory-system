@@ -44,6 +44,8 @@ class KnowledgeQAService:
         self._top_k = top_k
         self._min_score = min_score
         self._national_top_k = national_top_k
+        from services.knowledge.qa_graph import build_kqa_graph
+        self._graph = build_kqa_graph(self)
 
     def embed_query(self, question: str):
         """Embed a retrieval query. Exposed so callers (e.g. the fan-out) can
@@ -60,23 +62,23 @@ class KnowledgeQAService:
         national=None,
         retrieval_query: Optional[str] = None,
     ) -> KnowledgeQAResult:
-        # Embedding precedence: caller-supplied vector > retrieval_query (e.g. a
-        # context-augmented follow-up) > the raw question. Generation always uses
-        # `question` (see _generate), so the augmented text never reaches the prompt.
-        if query_vector is not None:
-            embedding = query_vector
-        elif retrieval_query:
-            embedding = self.embed_query(retrieval_query)
-        else:
-            embedding = self.embed_query(question)
-        chunks = self._chunk_repository.vector_search(
-            embedding, school=school, topic=topic, limit=self._top_k
+        # Facade over the compiled subgraph. The graph nodes call the very same
+        # helpers (embed_query, vector_search, _augment_with_national, _generate)
+        # with identical embedding precedence and confidence gate — no behaviour
+        # change. The root span wrapping the chat turn parents any generations
+        # emitted while the graph runs.
+        from services.knowledge.qa_graph import KQAState
+        state = KQAState(
+            question=question,
+            school=school,
+            topic=topic,
+            conversation_context=conversation_context,
+            query_vector=query_vector,
+            national=national,
+            retrieval_query=retrieval_query,
         )
-        chunks = self._augment_with_national(embedding, school, topic, chunks, national=national)
-        confidence = chunks[0].score if chunks else 0.0
-        if not chunks or confidence < self._min_score:
-            return KnowledgeQAResult(has_data=False, confidence=confidence)
-        return self._generate(question, chunks, confidence, conversation_context)
+        final = self._graph.invoke(state)
+        return final["result"] if isinstance(final, dict) else final.result
 
     def retrieve(self, question: str, school, topic):
         """Production-equivalent retrieval (embed → vector_search → national
