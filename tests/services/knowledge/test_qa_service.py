@@ -60,6 +60,7 @@ def _build(chunks, parsed_data=None, raise_exc=False, vector=None, min_score=0.5
         gateway=gateway,
         min_score=min_score,
         top_k=top_k,
+        cache_enabled=False,
     )
     return service, embedder, repo, gateway
 
@@ -216,7 +217,7 @@ def test_answer_uses_supplied_query_vector_without_embedding():
 
     embedder = _CountingEmbedder()
     repo = _FakeRepo()
-    service = KnowledgeQAService(chunk_repository=repo, embedder=embedder, gateway=object())
+    service = KnowledgeQAService(chunk_repository=repo, embedder=embedder, gateway=object(), cache_enabled=False)
     result = service.answer("học phí?", school="VNU-UET", topic="tuition",
                             query_vector=[0.1, 0.2, 0.3])
 
@@ -283,6 +284,7 @@ def _service_with(repo, parsed_data, min_score=0.5, top_k=5):
         gateway=FakeGateway(parsed_data=parsed_data),
         min_score=min_score,
         top_k=top_k,
+        cache_enabled=False,
     )
 
 
@@ -328,7 +330,7 @@ def test_answer_uses_supplied_national_without_research():
             return []
 
     repo = _Repo()
-    service = KnowledgeQAService(chunk_repository=repo, embedder=object(), gateway=object())
+    service = KnowledgeQAService(chunk_repository=repo, embedder=object(), gateway=object(), cache_enabled=False)
     service.answer("q", school="VNU-UET", topic="tuition",
                    query_vector=[0.1], national=[])
 

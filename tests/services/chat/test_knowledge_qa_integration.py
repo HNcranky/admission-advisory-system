@@ -87,6 +87,7 @@ def _service(corpus, parsed, intent, profile=None):
         embedder=_Embedder(),
         gateway=_Gateway(parsed),
         min_score=0.5,
+        cache_enabled=False,
     )
     repo = _ChatRepo(profile or ChatProfileState(), FlowState())
     return ConversationService(

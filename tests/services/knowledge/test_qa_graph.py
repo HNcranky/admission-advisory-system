@@ -36,6 +36,7 @@ def _service(chunks, min_score=0.2, answer="Học phí 15 triệu/năm."):
         embedder=_FakeEmbedder(),
         gateway=_FakeGateway(answer),
         min_score=min_score,
+        cache_enabled=False,
     )
 
 
