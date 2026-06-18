@@ -3,6 +3,7 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+from observability.prompts import get_prompt_service
 from services import build_default_gateway
 from services.chat.models import ChatProfileState
 from services.inference.models import InferenceRequest
@@ -216,11 +217,13 @@ class IntentRouter:
         try:
             if hasattr(self._gateway, "is_available") and not self._gateway.is_available():
                 return self._fallback_classify(message)
+            cp = get_prompt_service().get("intent-router", fallback=INTENT_SYSTEM_PROMPT)
             result = self._gateway.run(
                 InferenceRequest(
                     agent_name="intent_router",
                     task_type="intent_classification",
-                    system_prompt=INTENT_SYSTEM_PROMPT,
+                    system_prompt=cp.text,
+                    prompt=cp.handle,
                     user_prompt=self._build_user_prompt(message, profile_state, history),
                     output_mode="json",
                     response_schema=IntentResult,
