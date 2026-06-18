@@ -180,21 +180,11 @@ uvicorn web.app:build_app --factory --reload --host 127.0.0.1 --port 8000
 
 Open <http://127.0.0.1:8000/> in a browser. The first visit creates an anonymous session; the session token is persisted in `localStorage` so refreshing rejoins the same conversation.
 
-### Optional: enable the trace viewer (dev-only)
+### Agent tracing
 
-Set the env flag before starting uvicorn:
-
-```powershell
-$env:ADVISORY_DEBUG_UI="1"
-uvicorn web.app:build_app --factory --reload --port 8000
-```
-
-Then open `http://127.0.0.1:8000/?debug=1`. The right-hand "Phân tích của AI" panel
-shows one card per agent stage with a Vietnamese label and an inline SVG icon
-(`Phân tích hồ sơ`, `Tra cứu chương trình`, `Đối chiếu nguồn dữ liệu`, ...).
-In debug mode each card becomes clickable and expands to pretty-printed
-`output_json` for that stage. Without the env flag or query param the panel
-remains visible during a run but cards are non-interactive.
+Per-stage tracing now goes to Langfuse spans (`agent_tracer.traced` →
+`stage_span`); the in-app trace viewer panel was retired (spec 2026-06-18).
+See the Langfuse stack helper for self-hosted setup.
 
 ## 7. Demo flow
 

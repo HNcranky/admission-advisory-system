@@ -28,12 +28,16 @@ UI that walks students through profile collection and program recommendations.
     advisory/hybrid run dispatchers (background `ThreadPoolExecutor`), repository.
   - `services/knowledge/` — pgvector RAG (`qa_service.py`, `repository.py`).
   - `services/conflict/` — deterministic conflict detection + resolution (no LLM).
-  - `services/tracing/` — per-stage trace events for the debug panel.
+  - `services/tracing/` — per-stage Langfuse spans (`agent_tracer.traced` →
+    `stage_span`); the in-app trace viewer was retired in favour of Langfuse
+    (spec 2026-06-18).
 - **Ingestion** (`ingestion/`) — fetchers → parsers → extractors → normalization
   → `pipeline/ingestion_pipeline.py` → `storage/db_writer.py` (canonical store).
   Per-school config drives parsers/dictionaries.
 - **Web** (`web/`) — FastAPI + Jinja2 + vanilla JS chat UI. Entry: `web/app.py`.
 - **DB** (`db/`) — numbered idempotent SQL migrations `001–013` in `db/migrations/`.
+  `011_advisory_trace_events` is dormant after 2026-06-18 (no longer written);
+  drop via a future migration if desired.
 
 ## Commands
 
