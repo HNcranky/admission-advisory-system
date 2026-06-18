@@ -54,6 +54,39 @@ def advisory_run_trace(run_id, session_token, user_message, intent=None, admissi
 
 
 @contextlib.contextmanager
+def turn_trace(turn_id, session_token, user_message):
+    """Root span/trace for one synchronous chat turn. Yields the span (or None
+    when disabled). Generations emitted while active (intent router, inline
+    knowledge QA) nest under it via OTEL contextvars. Errors are swallowed."""
+    client = get_langfuse()
+    cm = None
+    span = None
+    if client is not None:
+        try:
+            trace_id = client.create_trace_id(seed=str(turn_id))
+            cm = client.start_as_current_span(
+                name="chat-turn",
+                input=_redact({"user_message": user_message}),
+                trace_context={"trace_id": trace_id},
+            )
+            span = cm.__enter__()
+            span.update_trace(
+                session_id=str(session_token),
+                metadata={"turn_id": turn_id},
+                tags=["turn"],
+            )
+        except Exception as exc:
+            logger.warning("langfuse turn_trace open failed: %r", exc)
+            _safe_exit(cm)
+            cm = None
+            span = None
+    try:
+        yield span
+    finally:
+        _safe_exit(cm)
+
+
+@contextlib.contextmanager
 def stage_span(stage, sequence, input_json=None):
     """Child span for one pipeline stage. Generations created while this span
     is active nest under it (OTEL contextvars, same worker thread).
