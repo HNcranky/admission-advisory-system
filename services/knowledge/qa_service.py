@@ -3,6 +3,8 @@ from typing import Optional
 
 from ingestion.config.settings import (
     KNOWLEDGE_QA_MIN_SCORE, KNOWLEDGE_QA_NATIONAL_TOP_K, KNOWLEDGE_QA_TOP_K,
+    KNOWLEDGE_QA_CACHE_ENABLED, KNOWLEDGE_QA_CACHE_THRESHOLD,
+    KNOWLEDGE_QA_CACHE_TTL_DAYS,
 )
 from observability.prompts import get_prompt_service
 from services.inference.embedder import GeminiEmbedder
@@ -38,6 +40,10 @@ class KnowledgeQAService:
         top_k: int = KNOWLEDGE_QA_TOP_K,
         min_score: float = KNOWLEDGE_QA_MIN_SCORE,
         national_top_k: int = KNOWLEDGE_QA_NATIONAL_TOP_K,
+        cache=None,
+        cache_enabled: bool = KNOWLEDGE_QA_CACHE_ENABLED,
+        cache_threshold: float = KNOWLEDGE_QA_CACHE_THRESHOLD,
+        cache_ttl_days: int = KNOWLEDGE_QA_CACHE_TTL_DAYS,
     ):
         self._chunk_repository = chunk_repository or KnowledgeChunkRepository()
         self._embedder = embedder or GeminiEmbedder()
@@ -45,6 +51,17 @@ class KnowledgeQAService:
         self._top_k = top_k
         self._min_score = min_score
         self._national_top_k = national_top_k
+        # Cache resolution: an explicit repo wins (tests inject a fake); else
+        # auto-create when enabled (the production no-arg path); else disabled.
+        if cache is not None:
+            self._cache = cache
+        elif cache_enabled:
+            from services.knowledge.qa_cache import QACacheRepository
+            self._cache = QACacheRepository()
+        else:
+            self._cache = None
+        self._cache_threshold = cache_threshold
+        self._cache_ttl_days = cache_ttl_days
         from services.knowledge.qa_graph import build_kqa_graph
         self._graph = build_kqa_graph(self)
 
@@ -63,11 +80,61 @@ class KnowledgeQAService:
         national=None,
         retrieval_query: Optional[str] = None,
     ) -> KnowledgeQAResult:
+        # No cache for cross-school / no-topic calls (the fanout always supplies
+        # a concrete (school, topic); direct school=None calls bypass).
+        if self._cache is None or school is None or topic is None:
+            return self._run_graph(
+                question, school, topic, conversation_context,
+                query_vector, national, retrieval_query,
+            )
+
+        # Embed once: reuse the fanout's vector, else embed the retrieval query.
+        embedding = query_vector
+        if embedding is None:
+            embedding = self.embed_query(retrieval_query or question)
+
+        try:
+            hit = self._cache.lookup(embedding, school, topic, self._cache_threshold)
+            if hit is not None:
+                return hit.to_result(from_cache=True)
+        except Exception as exc:  # never let the cache break QA
+            logger.warning("knowledge QA cache lookup failed: %r", exc)
+
+        # MISS → normal generation, reusing the embedding (no second embed).
+        result = self._run_graph(
+            question, school, topic, conversation_context,
+            embedding, national, retrieval_query,
+        )
+
+        # Quality gate: only cache grounded, confident answers, so a later,
+        # better answer (after more docs arrive) is regenerated, not blocked.
+        try:
+            if result.has_data and result.confidence >= self._min_score:
+                dep_versions = self._cache.current_versions(
+                    self._cache.scope_keys(school, topic)
+                )
+                self._cache.store(
+                    school, topic, question, embedding, result,
+                    dep_versions, self._cache_ttl_days,
+                )
+        except Exception as exc:
+            logger.warning("knowledge QA cache store failed: %r", exc)
+        return result
+
+    def _run_graph(
+        self,
+        question: str,
+        school: Optional[str],
+        topic: Optional[str],
+        conversation_context: str,
+        query_vector,
+        national,
+        retrieval_query: Optional[str],
+    ) -> KnowledgeQAResult:
         # Facade over the compiled subgraph. The graph nodes call the very same
         # helpers (embed_query, vector_search, _augment_with_national, _generate)
-        # with identical embedding precedence and confidence gate — no behaviour
-        # change. The root span wrapping the chat turn parents any generations
-        # emitted while the graph runs.
+        # with identical embedding precedence and confidence gate. The graph's
+        # embed node reuses a supplied query_vector instead of re-embedding.
         from services.knowledge.qa_graph import KQAState
         state = KQAState(
             question=question,
