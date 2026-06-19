@@ -14,7 +14,7 @@ from services.profile_service import normalize_text
 # classification (a secondary field must never invalidate the route).
 KNOWLEDGE_TOPICS = frozenset({
     "tuition", "curriculum", "scholarship", "dormitory",
-    "career", "admission_policy", "program_overview",
+    "admission_policy", "program_overview",
 })
 _TOPIC_SYNONYMS = {
     "admission_method": "admission_policy",
@@ -23,6 +23,13 @@ _TOPIC_SYNONYMS = {
     "admissions": "admission_policy",
     "admission_regulation": "admission_policy",
     "quota": "admission_policy",
+    # Career / job-prospect questions are answered from the "Cơ hội việc làm"
+    # section of each program-overview page (no standalone career corpus), so
+    # they must retrieve under program_overview, not a dead "career" topic.
+    "career": "program_overview",
+    "career_opportunity": "program_overview",
+    "job": "program_overview",
+    "employment": "program_overview",
 }
 
 
@@ -58,11 +65,11 @@ ADVISORY_FLOW — câu hỏi tư vấn chọn ngành/trường dựa trên đi�
 KNOWLEDGE_QA — câu hỏi thực tế về thông tin cụ thể của trường/ngành
   Ví dụ: "học phí UET bao nhiêu", "chương trình CNTT gồm gì", "có học bổng không", "ký túc xá thế nào"
   Trường "topic" CHỈ được nhận đúng 1 trong các giá trị:
-    tuition | curriculum | scholarship | dormitory | career | admission_policy | program_overview
+    tuition | curriculum | scholarship | dormitory | admission_policy | program_overview
   Ánh xạ chủ đề về đúng giá trị trên, KHÔNG tự bịa giá trị mới:
     - phương thức xét tuyển / quy chế tuyển sinh / chỉ tiêu / điều kiện xét tuyển → admission_policy
     - học phí → tuition; học bổng → scholarship; chương trình/môn học → curriculum
-    - ký túc xá → dormitory; việc làm/ra trường → career; giới thiệu ngành → program_overview
+    - ký túc xá → dormitory; việc làm/ra trường/cơ hội nghề nghiệp/giới thiệu ngành → program_overview
   Nếu không khớp chủ đề nào ở trên, để topic là null (vẫn giữ route KNOWLEDGE_QA).
   Ví dụ: "có bao nhiêu phương thức xét tuyển của HUST"
        → {"route":"KNOWLEDGE_QA","topic":"admission_policy","school":"HUST"}
@@ -192,8 +199,9 @@ _FALLBACK_KNOWLEDGE_TOPICS = (
     ("chi tieu", "admission_policy"),
     ("chuong trinh hoc", "curriculum"),
     ("mon hoc", "curriculum"),
-    ("viec lam", "career"),
-    ("ra truong lam", "career"),
+    ("viec lam", "program_overview"),
+    ("ra truong lam", "program_overview"),
+    ("co hoi nghe nghiep", "program_overview"),
 )
 _FALLBACK_ADVISORY_PHRASES = (
     "tu van", "nen chon", "nen hoc", "nen nop",

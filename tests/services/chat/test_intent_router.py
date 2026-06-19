@@ -1,6 +1,6 @@
 import pytest
 
-from services.chat.intent_router import IntentResult
+from services.chat.intent_router import IntentResult, IntentRouter
 
 
 def test_intent_result_defaults():
@@ -40,6 +40,22 @@ def test_intent_result_normalizes_admission_methods_to_policy():
     map it to the canonical admission_policy topic instead of dropping it."""
     assert IntentResult(route="KNOWLEDGE_QA", topic="admission_methods").topic == "admission_policy"
     assert IntentResult(route="KNOWLEDGE_QA", topic="admission_method").topic == "admission_policy"
+
+
+def test_intent_result_normalizes_career_to_program_overview():
+    """Career/job questions are answered from the 'Cơ hội việc làm' section of
+    program-overview pages — there is no standalone career corpus — so 'career'
+    must normalize to program_overview, not a dead topic that retrieves nothing."""
+    assert IntentResult(route="KNOWLEDGE_QA", topic="career").topic == "program_overview"
+    assert IntentResult(route="KNOWLEDGE_QA", topics=["career"]).topics == ["program_overview"]
+
+
+def test_fallback_classify_career_question_routes_to_program_overview():
+    """Regression: 'cơ hội việc làm ngành X' must reach the program_overview
+    corpus where the career section lives (was routed to empty 'career')."""
+    res = IntentRouter._fallback_classify("cơ hội việc làm của ngành kỹ thuật ô tô")
+    assert res.route == "KNOWLEDGE_QA"
+    assert res.topic == "program_overview"
 
 
 def test_intent_result_model_validate_from_dict():
