@@ -76,6 +76,10 @@ class ParsedContent(BaseModel):
     """Output from a parser."""
     text: str = Field(description="Full extracted text")
     title: Optional[str] = None
+    content_label: Optional[str] = Field(
+        default=None,
+        description="Clean page label (e.g. program name) for chunk headers",
+    )
     headings: List[str] = Field(
         default_factory=list,
         description="Extracted headings"

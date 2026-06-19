@@ -33,6 +33,28 @@ HTML_WITH_HEADERLESS_TABLE = b"""
 </article></body></html>
 """
 
+# Mirrors the HUST program-page shape: sectioned <h2> headings, label/value
+# lists, bold labels, and whitespace-padded inline runs.
+HTML_STRUCTURED = b"""
+<html><body><div class="container">
+  <section>
+    <h2 class="sec-title">Tong quan</h2>
+    <div class="sec-con">
+      <ul>
+        <li>Ngon ngu dao tao: Tieng Anh</li>
+        <li>Ma xet tuyen:        IT-E15</li>
+      </ul>
+      <p><strong>Gioi thieu</strong></p>
+      <p>Chuong trinh dao tao chuyen gia an toan khong gian so.</p>
+    </div>
+  </section>
+  <section>
+    <h2 class="sec-title">Co hoi viec lam</h2>
+    <div class="sec-con"><p>Chuyen gia van hanh, quan tri he thong.</p></div>
+  </section>
+</div></body></html>
+"""
+
 
 def test_selector_extracts_only_targeted_region():
     parsed = parse_html(HTML, "https://x", selector="#content")
@@ -77,3 +99,70 @@ def test_table_without_th_uses_first_row_as_header():
     assert "| A | B |" in text
     assert "| --- | --- |" in text
     assert "| C | D |" in text
+
+
+def test_headings_rendered_as_markdown():
+    text = parse_html(HTML_STRUCTURED, "https://x").text
+    assert "## Tong quan" in text
+    assert "## Co hoi viec lam" in text
+
+
+def test_list_items_rendered_as_markdown_bullets():
+    text = parse_html(HTML_STRUCTURED, "https://x").text
+    assert "- Ngon ngu dao tao: Tieng Anh" in text
+    # inner whitespace runs collapsed to a single space
+    assert "- Ma xet tuyen: IT-E15" in text
+
+
+def test_bold_label_preserved():
+    text = parse_html(HTML_STRUCTURED, "https://x").text
+    assert "**Gioi thieu**" in text
+
+
+def test_blocks_separated_by_blank_lines_for_chunking():
+    # The chunker splits on blank lines; structured output must expose them so
+    # each section becomes its own chunk boundary instead of one giant block.
+    text = parse_html(HTML_STRUCTURED, "https://x").text
+    assert "\n\n" in text
+    # heading and following list are distinct blocks
+    assert "## Tong quan\n\n- Ngon ngu" in text
+    # no run of 3+ newlines
+    assert "\n\n\n" not in text
+
+
+HTML_WITH_BREADCRUMB = b"""
+<html><head><title>Title Tag</title></head><body><div class="container">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a>Trang chu</a></li>
+    <li class="breadcrumb-item active">Ky thuat O to</li>
+  </ol>
+  <section><h2 class="sec-title">Tong quan</h2><p>Noi dung.</p></section>
+</div></body></html>
+"""
+
+HTML_NO_BREADCRUMB = b"""
+<html><head><title>Title Tag</title></head><body><div class="container">
+  <section><h2 class="sec-title">Tong quan</h2><p>Noi dung.</p></section>
+</div></body></html>
+"""
+
+HTML_NO_LABEL_SOURCES = b"""
+<html><body><div class="container">
+  <section><h2 class="sec-title">Tong quan</h2><p>Noi dung.</p></section>
+</div></body></html>
+"""
+
+
+def test_content_label_from_breadcrumb_active():
+    parsed = parse_html(HTML_WITH_BREADCRUMB, "https://x/ky-thuat-o-to")
+    assert parsed.content_label == "Ky thuat O to"
+
+
+def test_content_label_falls_back_to_title():
+    parsed = parse_html(HTML_NO_BREADCRUMB, "https://x/ky-thuat-o-to")
+    assert parsed.content_label == "Title Tag"
+
+
+def test_content_label_falls_back_to_slug():
+    parsed = parse_html(HTML_NO_LABEL_SOURCES, "https://x/ky-thuat-o-to")
+    assert parsed.content_label == "ky thuat o to"
