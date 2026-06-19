@@ -79,6 +79,13 @@ EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM", 768))
 # QA service returns "no data" WITHOUT calling the LLM (zero-hallucination gate).
 KNOWLEDGE_QA_TOP_K = int(os.getenv("KNOWLEDGE_QA_TOP_K", 5))
 KNOWLEDGE_QA_MIN_SCORE = float(os.getenv("KNOWLEDGE_QA_MIN_SCORE", 0.5))
+# Query-side program resolution (services/knowledge): the minimum
+# word_similarity between a program label and the user's question for the
+# program scalar filter to apply. Below it, retrieval stays vector-only so a
+# weak/absent match never zeroes results.
+KNOWLEDGE_PROGRAM_MATCH_THRESHOLD = float(
+    os.getenv("KNOWLEDGE_PROGRAM_MATCH_THRESHOLD", 0.3)
+)
 # Separate, smaller budget for the national-scope (Bộ GD&ĐT) pass appended to
 # every school-scoped knowledge query, so national regs never crowd out the
 # school's own chunks.
