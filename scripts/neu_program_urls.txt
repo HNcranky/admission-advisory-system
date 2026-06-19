@@ -1,0 +1,82 @@
+# api-collection: https://courses.neu.edu.vn/api/curriculum-curricula
+# ingest: JSON branch in ingestion/knowledge/pipeline.py via neu_api.py
+An toàn thông tin	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=an-toan-thong-tin-k66-k667480202&populate=*
+Bảo hiểm	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=bao-hiem-k66-K667340204&populate=*
+Bất động sản	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=bat-dong-san-k66-K667340116&populate=*
+Công nghệ Logistics và Quản trị chuỗi cung ứng	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=cong-nghe-logistics-va-quan-tri-chuoi-cung-ung-k68ep20&populate=*
+Công nghệ Marketing	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=cong-nghe-marketing-k68ep19&populate=*
+Công nghệ môi trường và phát triển bền vững	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=cong-nghe-moi-truong-va-phat-trien-ben-vung-mnag4a50&populate=*
+Công nghệ thông tin	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=cong-nghe-thong-tin-k66-k667480201&populate=*
+Công nghệ thông tin và chuyển đổi số	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=cong-nghe-thong-tin-va-chuyen-doi-so-clc-k68&populate=*
+Công nghệ tài chính	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=cong-nghe-tai-chinh-k68-k68ep09&populate=*
+Công nghệ tài chính và Ngân hàng số	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=cong-nghe-tai-chinh-va-ngan-hang-so-k68ep09-1&populate=*
+Hệ thống thông tin	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=he-thong-thong-tin-k66-K667480104&populate=*
+Hệ thống thông tin quản lý	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=he-thong-thong-tin-quan-ly-k66-K667340405&populate=*
+Khoa học dữ liệu trong kinh tế & kinh doanh	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=khoa-hoc-du-lieu-trong-kinh-te-va-kinh-doanh-k66-K66EP03&populate=*
+Khoa học máy tính	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=khoa-hoc-may-tinh-k66-K667480101&populate=*
+Khoa học tính toán trong Tài chính và Bảo hiểm	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=khoa-hoc-tinh-toan-trong-tai-chinh-va-bao-hiem-k68ep02&populate=*
+Khởi nghiệp và phát triển kinh doanh (BBAE)	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=khoi-nghiep-va-phat-trien-kinh-doanhbbae-k66-K66EP01&populate=*
+Kinh doanh nông nghiệp	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=kinh-doanh-nong-nghiep-k66-K667620114&populate=*
+Kinh doanh quốc tế	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=kinh-doanh-quoc-te-k66-K667340120&populate=*
+Kinh doanh số (E-BDB)	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=kinh-doanh-so-e-bdb-K66EP05&populate=*
+Kinh doanh thương mại	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=kinh-doanh-thuong-mai-k66-K667340121&populate=*
+Kinh tế Y tế	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=kinh-te-y-te-mnag3ple&populate=*
+Kinh tế học	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=kinh-te-hoc-k66-7310101.1K66&populate=*
+Kinh tế học tài chính	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=kinh-te-hoc-tai-chinh-k66-K66EP13&populate=*
+Kinh tế nông nghiệp	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=kinh-te-nong-nghiep-k66-K667620115&populate=*
+Kinh tế phát triển	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=kinh-te-phat-trien-k66-K667310105&populate=*
+Kinh tế quốc tế	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=kinh-te-quoc-te-k68ep22&populate=*
+Kinh tế số	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=kinh-te-so-k68ep23&populate=*
+Kinh tế tài nguyên thiên nhiên	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=kinh-te-tai-nguyen-thien-nhien-k66-K667850102&populate=*
+Kinh tế và quản lý nguồn nhân lực	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=kinh-te-va-quan-ly-nguon-nhan-luc-k66-7310101.3K66&populate=*
+Kinh tế và quản lý đô thị	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=kinh-te-va-quan-ly-do-thi-k66-7310101.2K66&populate=*
+Kinh tế đầu tư	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=kinh-te-dau-tu-k66-K667310104&populate=*
+Kiểm toán	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=kiem-toan-k66-K667340302&populate=*
+Kiểm toán nội bộ	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=kiem-toan-noi-bo-k68ep21&populate=*
+Kiểm toán tích hợp chứng chỉ quốc tế ICAEW CFAB	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=kiem-toan-tich-hop-chung-chi-quoc-te-icaew-cfab-k66-K66EP12&populate=*
+Kế toán	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=ke-toan-k66-K667340301&populate=*
+Kế toán tích hợp chứng chỉ quốc tế ICAEW CFAB	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=ke-toan-tich-hop-chung-chi-quoc-te-icaew-cfab-k66-K66EP04&populate=*
+Kỹ thuật phần mềm	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=ky-thuat-phan-mem-k66-K66EP17&populate=*
+Logistics và quản lý chuỗi cung ứng	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=logistics-va-quan-ly-chuoi-cung-ung-k66-K667510605&populate=*
+Logistics và quản lý chuỗi cung ứng tích hợp chứng chỉ quốc tế	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=logistics-va-quan-ly-chuoi-cung-ung-tich-hop-chung-chi-quoc-te-k66-K66EP14&populate=*
+Luật	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=luat-k66-K667380101&populate=*
+Luật kinh doanh	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=luat-kinh-doanh-pohe-k66-7380107&populate=*
+Luật kinh tế	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=luat-kinh-te-k66-K667380107&populate=*
+Marketing	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=marketing-k66-K667340115&populate=*
+Ngân hàng	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=ngan-hang-k63-K637340205&populate=*
+Ngôn ngữ Anh	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=ngon-ngu-anh-k66-K667220201&populate=*
+Phát triển quốc tế	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=phat-trien-quoc-te-k68ep25&populate=*
+Phân tích kinh doanh	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=phan-tich-kinh-doanh-mnakp3bg&populate=*
+Quan hệ công chúng	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=quan-he-cong-chung-k66-K667320108&populate=*
+Quản lý công	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=quan-ly-cong-k66-K667340403&populate=*
+Quản lý công và chính sách	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=quan-ly-cong-va-chinh-sach-k66-K66EPMP&populate=*
+Quản lý dự án	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=quan-ly-du-an-k66-K667340409&populate=*
+Quản lý kinh tế	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=khoa-hoc-quan-ly-k66-K667340401&populate=*
+Quản lý thị trường	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=quan-ly-thi-truong-pohe-k66-7340121&populate=*
+Quản lý tài nguyên và môi trường	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=quan-ly-tai-nguyen-va-moi-truong-k66-K667850101&populate=*
+Quản lý đất đai	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=quan-ly-dat-dai-k66-K667850103&populate=*
+Quản trị chất lượng và đổi mới	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=quan-tri-chat-luong-va-doi-moi-k66-K66EP08&populate=*
+Quản trị công nghiệp sáng tạo	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=quan-tri-cong-nghiep-sang-tao-k68ep27&populate=*
+Quản trị dịch vụ du lịch và lữ hành	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=quan-tri-dich-vu-du-lich-va-lu-hanh-k66-K667810103&populate=*
+Quản trị khách sạn	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=quan-tri-khach-san-k66-K667810201&populate=*
+Quản trị khách sạn quốc tế	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=quan-tri-khach-san-quoc-te-k66-K66EP11&populate=*
+Quản trị kinh doanh	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=quan-tri-kinh-doanh-k66-K667340101&populate=*
+Quản trị kinh doanh (E-BBA)	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=quan-tri-kinh-doanh-e-bba-k66-K66.EBBA&populate=*
+Quản trị kinh doanh thương mại	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=quan-tri-kinh-doanh-thuong-mai-pohe-k66-7340121&populate=*
+Quản trị lữ hành	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=quan-tri-lu-hanh-pohe-k66-7810103&populate=*
+Quản trị nhân lực	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=quan-tri-nhan-luc-k66-K667340404&populate=*
+Quản trị nhân lực quốc tế	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=quan-tri-nhan-luc-quoc-te-k68ep28&populate=*
+Quản trị rủi ro định lượng	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=quan-tri-rui-ro-dinh-luong-k68ep29&populate=*
+Quản trị điều hành thông minh	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=quan-tri-dieu-hanh-thong-minh-k66-K66EP07&populate=*
+Thương mại điện tử	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=thuong-mai-dien-tu-k66-K667340122&populate=*
+Thẩm định giá	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=tham-inh-gia-k68ep31&populate=*
+Thống kê kinh tế	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=thong-ke-kinh-te-k66-K667310107&populate=*
+Thống kê và Trí tuệ Kinh doanh	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=thong-ke-va-tri-tue-kinh-doanh-k68ep32&populate=*
+Toán kinh tế	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=toan-kinh-te-k66-K667310108&populate=*
+Toán ứng dụng	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=toan-ung-dung-K68EP30&populate=*
+Truyền thông Marketing	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=truyen-thong-marketing-pohe-k66-7340115&populate=*
+Tài chính - Ngân hàng	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=tai-chinh-ngan-hang-k66-K667340201&populate=*
+Tài chính công	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=tai-chinh-cong-k63-K637340203&populate=*
+Tài chính doanh nghiệp	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=tai-chinh-doanh-nghiep-k63-K637340202N&populate=*
+Tài chính và Đầu tư (BFI)	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=tai-chinh-va-dau-tu-bfi-k66-K66EP10-1&populate=*
+Định phí bảo hiểm & Quản trị rủi ro	https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=dinh-phi-bao-hiem-va-quan-tri-rui-ro-k66-K66EP02&populate=*
