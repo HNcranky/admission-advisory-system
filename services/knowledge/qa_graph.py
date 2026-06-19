@@ -39,8 +39,12 @@ def build_kqa_graph(service):
         return state
 
     def retrieve_school(state: KQAState) -> KQAState:
+        program = service._chunk_repository.resolve_program(
+            state.retrieval_query or state.question, state.school
+        )
         state.chunks = service._chunk_repository.vector_search(
-            state.embedding, school=state.school, topic=state.topic, limit=service._top_k
+            state.embedding, school=state.school, topic=state.topic,
+            program=program, limit=service._top_k,
         )
         return state
 

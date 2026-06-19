@@ -149,12 +149,13 @@ class KnowledgeQAService:
         return final["result"] if isinstance(final, dict) else final.result
 
     def retrieve(self, question: str, school, topic):
-        """Production-equivalent retrieval (embed → vector_search → national
-        augment), exposed so the eval curation can freeze the same chunks
-        production would surface. Mirrors answer()'s retrieval branch."""
+        """Production-equivalent retrieval (embed → resolve program → vector_search
+        → national augment), exposed so the eval curation can freeze the same
+        chunks production would surface. Mirrors answer()'s retrieval branch."""
         embedding = self.embed_query(question)
+        program = self._chunk_repository.resolve_program(question, school)
         chunks = self._chunk_repository.vector_search(
-            embedding, school=school, topic=topic, limit=self._top_k
+            embedding, school=school, topic=topic, program=program, limit=self._top_k
         )
         return self._augment_with_national(embedding, school, topic, chunks)
 

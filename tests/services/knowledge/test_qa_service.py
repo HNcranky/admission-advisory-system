@@ -18,7 +18,10 @@ class FakeChunkRepo:
         self._chunks = chunks
         self.calls = []
 
-    def vector_search(self, embedding, school=None, topic=None, limit=5):
+    def resolve_program(self, question, school=None):
+        return None
+
+    def vector_search(self, embedding, school=None, topic=None, program=None, limit=5):
         self.calls.append(
             {"embedding": embedding, "school": school, "topic": topic, "limit": limit}
         )
@@ -211,7 +214,9 @@ def test_answer_uses_supplied_query_vector_without_embedding():
     class _FakeRepo:
         def __init__(self):
             self.searched_with = []
-        def vector_search(self, embedding, school, topic, limit):
+        def resolve_program(self, question, school=None):
+            return None
+        def vector_search(self, embedding, school, topic, program=None, limit=5):
             self.searched_with.append(list(embedding))
             return []  # no chunks → early no-data return, LLM never called
 
@@ -272,7 +277,10 @@ class RepoBySchool:
         self._by_school = by_school
         self.calls = []
 
-    def vector_search(self, embedding, school=None, topic=None, limit=5):
+    def resolve_program(self, question, school=None):
+        return None
+
+    def vector_search(self, embedding, school=None, topic=None, program=None, limit=5):
         self.calls.append({"school": school, "topic": topic, "limit": limit})
         return list(self._by_school.get(school, []))
 
@@ -324,7 +332,9 @@ def test_answer_uses_supplied_national_without_research():
     class _Repo:
         def __init__(self):
             self.national_searches = 0
-        def vector_search(self, embedding, school, topic, limit):
+        def resolve_program(self, question, school=None):
+            return None
+        def vector_search(self, embedding, school, topic, program=None, limit=5):
             if school == NATIONAL_SCHOOL:
                 self.national_searches += 1
             return []

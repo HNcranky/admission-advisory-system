@@ -71,12 +71,16 @@ class _Corpus:
     def __init__(self, chunks):
         self._chunks = chunks
 
-    def vector_search(self, embedding, school=None, topic=None, limit=5):
+    def resolve_program(self, question, school=None):
+        return None
+
+    def vector_search(self, embedding, school=None, topic=None, program=None, limit=5):
         matched = [
             c
             for c in self._chunks
             if (school is None or c.school == school)
             and (topic is None or c.topic == topic)
+            and (program is None or c.program == program)
         ]
         return matched[:limit]
 

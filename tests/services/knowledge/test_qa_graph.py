@@ -12,7 +12,10 @@ class _FakeRepo:
         self._chunks = chunks
         self.calls = []
 
-    def vector_search(self, embedding, school, topic, limit):
+    def resolve_program(self, question, school=None):
+        return None
+
+    def vector_search(self, embedding, school, topic, program=None, limit=5):
         self.calls.append((school, topic, limit))
         return list(self._chunks)
 

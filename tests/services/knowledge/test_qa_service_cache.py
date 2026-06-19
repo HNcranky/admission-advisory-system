@@ -17,7 +17,10 @@ class FakeChunkRepo:
     def __init__(self, chunks):
         self._chunks = chunks
 
-    def vector_search(self, embedding, school=None, topic=None, limit=5):
+    def resolve_program(self, question, school=None):
+        return None
+
+    def vector_search(self, embedding, school=None, topic=None, program=None, limit=5):
         return list(self._chunks)
 
 
