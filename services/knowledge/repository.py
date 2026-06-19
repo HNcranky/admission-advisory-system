@@ -1,5 +1,6 @@
 import hashlib
 
+from ingestion.config.settings import KNOWLEDGE_PROGRAM_MATCH_THRESHOLD
 from services.db import cursor as _cursor, vector_literal as _vector_literal
 from services.knowledge.db import get_knowledge_db_connection
 from services.knowledge.models import KnowledgeChunk, ScoredChunk, KnowledgeDocument
@@ -158,6 +159,34 @@ class KnowledgeChunkRepository:
             span_end=row[11],
             score=row[12],
         )
+
+    def resolve_program(self, question, school=None,
+                        threshold=KNOWLEDGE_PROGRAM_MATCH_THRESHOLD):
+        """Best program label whose name appears inside the question, or None.
+
+        word_similarity(program, question) scores the (short) program label
+        against the best-matching window of the (long) question. Scoped to
+        `school` when given so labels don't collide across schools. Returns the
+        top program only when its score clears `threshold`; otherwise None, so
+        callers degrade to vector-only retrieval.
+        """
+        if not question:
+            return None
+        sql = (
+            "SELECT program, MAX(word_similarity(program, %s)) AS sim "
+            "FROM knowledge_chunks WHERE program IS NOT NULL"
+        )
+        params = [question]
+        if school is not None:
+            sql += " AND school = %s"
+            params.append(school)
+        sql += " GROUP BY program ORDER BY sim DESC LIMIT 1"
+        with _cursor(self.connection_factory) as cur:
+            cur.execute(sql, tuple(params))
+            row = cur.fetchone()
+        if row is None or row[1] is None or row[1] < threshold:
+            return None
+        return row[0]
 
     def vector_search(self, embedding, school=None, topic=None, limit=5):
         literal = _vector_literal(embedding)
