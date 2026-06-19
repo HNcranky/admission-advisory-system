@@ -101,6 +101,10 @@ KNOWLEDGE_QA_CACHE_TTL_DAYS = int(os.getenv("KNOWLEDGE_QA_CACHE_TTL_DAYS", 30))
 # Spans are character offsets → deterministic → stable idempotency key.
 CHUNK_SIZE = int(os.getenv("KNOWLEDGE_CHUNK_SIZE", 1800))
 CHUNK_OVERLAP = int(os.getenv("KNOWLEDGE_CHUNK_OVERLAP", 256))
+# "whole_page" chunk strategy: emit the full page as ONE chunk, up to this many
+# chars. Longer pages fall back to size-based splitting so a single embed call
+# never exceeds the model's input limit (~2048 tokens ≈ 8000 Vietnamese chars).
+WHOLE_PAGE_MAX_CHARS = int(os.getenv("KNOWLEDGE_WHOLE_PAGE_MAX_CHARS", 8000))
 
 
 EMBED_CACHE_SIZE = int(os.getenv("EMBED_CACHE_SIZE", 512))
