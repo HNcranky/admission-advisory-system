@@ -25,4 +25,4 @@ def test_program_match_threshold_default():
     import importlib
     import ingestion.config.settings as s
     importlib.reload(s)
-    assert s.KNOWLEDGE_PROGRAM_MATCH_THRESHOLD == 0.3
+    assert s.KNOWLEDGE_PROGRAM_MATCH_THRESHOLD == 0.5

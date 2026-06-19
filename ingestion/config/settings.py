@@ -82,9 +82,12 @@ KNOWLEDGE_QA_MIN_SCORE = float(os.getenv("KNOWLEDGE_QA_MIN_SCORE", 0.5))
 # Query-side program resolution (services/knowledge): the minimum
 # word_similarity between a program label and the user's question for the
 # program scalar filter to apply. Below it, retrieval stays vector-only so a
-# weak/absent match never zeroes results.
+# weak/absent match never zeroes results. Tuned to 0.5 against the live NEU/UET
+# corpus: a named program scores ~1.0 (best window == the label), while policy/
+# tuition questions that merely share a common word (e.g. "trường" vs the
+# program "Quản lý thị trường") top out ~0.44 — so 0.5 cleanly rejects them.
 KNOWLEDGE_PROGRAM_MATCH_THRESHOLD = float(
-    os.getenv("KNOWLEDGE_PROGRAM_MATCH_THRESHOLD", 0.3)
+    os.getenv("KNOWLEDGE_PROGRAM_MATCH_THRESHOLD", 0.5)
 )
 # Separate, smaller budget for the national-scope (Bộ GD&ĐT) pass appended to
 # every school-scoped knowledge query, so national regs never crowd out the
