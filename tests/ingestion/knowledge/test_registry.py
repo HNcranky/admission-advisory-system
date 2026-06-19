@@ -26,7 +26,7 @@ def test_all_sources_returns_models():
     assert len(sources) >= 6
     assert sources[0].topic in {
         "tuition", "curriculum", "scholarship", "dormitory",
-        "career", "admission_policy", "program_overview",
+        "admission_policy", "program_overview",
     }
 
 

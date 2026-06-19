@@ -11,7 +11,7 @@ from ingestion.knowledge.registry.models import (
 def test_taxonomy_sets_match_spec():
     assert KNOWLEDGE_TOPICS == {
         "tuition", "curriculum", "scholarship", "dormitory",
-        "career", "admission_policy", "program_overview",
+        "admission_policy", "program_overview",
     }
     assert "tuition_page" in KNOWLEDGE_DOCUMENT_TYPES
     assert "curriculum_pdf" in KNOWLEDGE_DOCUMENT_TYPES

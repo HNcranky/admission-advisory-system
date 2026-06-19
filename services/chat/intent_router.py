@@ -7,39 +7,16 @@ from observability.prompts import get_prompt_service
 from services import build_default_gateway
 from services.chat.models import ChatProfileState
 from services.inference.models import InferenceRequest
+from services.knowledge.taxonomy import (
+    KNOWLEDGE_TOPICS,
+    TOPIC_SYNONYMS,
+    normalize_topic as _normalize_topic,
+)
 from services.profile_service import normalize_text
 
-# Canonical knowledge topics. Synonyms the LLM commonly emits are normalized to
-# these; anything unrecognized degrades to None rather than failing the whole
-# classification (a secondary field must never invalidate the route).
-KNOWLEDGE_TOPICS = frozenset({
-    "tuition", "curriculum", "scholarship", "dormitory",
-    "admission_policy", "program_overview",
-})
-_TOPIC_SYNONYMS = {
-    "admission_method": "admission_policy",
-    "admission_methods": "admission_policy",
-    "admission": "admission_policy",
-    "admissions": "admission_policy",
-    "admission_regulation": "admission_policy",
-    "quota": "admission_policy",
-    # Career / job-prospect questions are answered from the "Cơ hội việc làm"
-    # section of each program-overview page (no standalone career corpus), so
-    # they must retrieve under program_overview, not a dead "career" topic.
-    "career": "program_overview",
-    "career_opportunity": "program_overview",
-    "job": "program_overview",
-    "employment": "program_overview",
-}
-
-
-def _normalize_topic(value):
-    if value is None:
-        return None
-    key = str(value).strip().lower()
-    if key in KNOWLEDGE_TOPICS:
-        return key
-    return _TOPIC_SYNONYMS.get(key)  # None if unrecognized
+# Canonical topics + synonym normalization live in services.knowledge.taxonomy
+# (single source of truth shared with ingestion seed validation). Re-exported
+# names above keep this module's public surface unchanged.
 
 logger = logging.getLogger(__name__)
 
