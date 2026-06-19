@@ -188,7 +188,7 @@ class KnowledgeChunkRepository:
             return None
         return row[0]
 
-    def vector_search(self, embedding, school=None, topic=None, limit=5):
+    def vector_search(self, embedding, school=None, topic=None, program=None, limit=5):
         literal = _vector_literal(embedding)
         sql = (
             f"SELECT id, {_CHUNK_COLUMNS}, "
@@ -204,6 +204,10 @@ class KnowledgeChunkRepository:
             # multi-topic, so they stay candidates for every topic filter.
             sql += " AND (topic = %s OR topic IS NULL)"
             params.append(topic)
+        if program is not None:
+            # Exact match: the value comes FROM the DB via resolve_program.
+            sql += " AND program = %s"
+            params.append(program)
         sql += " ORDER BY embedding <=> %s::vector LIMIT %s"
         params.append(literal)
         params.append(limit)
