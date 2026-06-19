@@ -31,6 +31,7 @@ Figure~\ref{fig:package-overview} shows the package structure and the principal 
 
 The \texttt{web} package is the entry layer: it exposes the chat \gls{HTTP} \gls{API} and serves the interface.
 The \texttt{services} package holds the domain logic, divided into focused sub-packages --- \texttt{chat} (session, routing, dispatch), \texttt{inference} (the \gls{LLM} gateway), \texttt{knowledge} (\gls{RAG}), \texttt{conflict}, \texttt{cutoff}, \texttt{profile}, and \texttt{tracing}.
+Two further top-level packages cross-cut the services: \texttt{domain} holds the shared Pydantic models, and \texttt{observability} holds the Langfuse client and the run-trace helpers that emit a span per pipeline stage and a generation record per \gls{LLM} call.
 The advisory pipeline --- the orchestration graph, its shared state object, and the \texttt{agents} package --- is the orchestration layer driven by the chat dispatchers.
 The \texttt{ingestion} package is an independent layer feeding the database offline.
 All layers converge on a single PostgreSQL instance.
@@ -42,10 +43,10 @@ Three packages carry the core logic and are described in detail.
 
 \textbf{Advisory pipeline.}
 The pipeline is defined as a LangGraph state graph over the shared state object \texttt{AgentState}.
-That single Pydantic model threads the entire run: it carries the parsed \texttt{student\_profile} and \texttt{retrieval\_filters} the early stages write, the \texttt{retrieved\_programs}, \texttt{conflict\_records}, and \texttt{resolution\_outcomes} the middle stages attach, the \texttt{eligibility\_checks} and \texttt{ranked\_recommendations} the reasoning stage produces, and a \texttt{trace\_run\_id} that ties every stage's event to one run.
+That single Pydantic model threads the entire run: it carries the parsed \texttt{student\_profile} and \texttt{retrieval\_filters} the early stages write, the \texttt{retrieved\_programs}, \texttt{conflict\_records}, and \texttt{resolution\_outcomes} the middle stages attach, the \texttt{eligibility\_checks} and \texttt{ranked\_recommendations} the reasoning stage produces, and a \texttt{trace\_run\_id} from which the run's observability trace identifier is derived, tying every stage's span to one run.
 Six nodes are registered and connected in a fixed linear order --- \texttt{profile}, \texttt{retrieve}, \texttt{conflict}, \texttt{reason}, \texttt{policy}, \texttt{explain} --- as shown in Figure~\ref{fig:advisory-graph} and in the wiring excerpt of Listing~\ref{lst:graph}.
 Each node is a thin function in the \texttt{agents} package that reads fields from the state, calls a service for the real work, writes its results back, and returns the state; for example, the reasoning node calls \texttt{reason\_candidates} and stores the resulting eligibility checks and ranked recommendations.
-Every node is wrapped by a \texttt{traced(...)} decorator from the tracing service that records a per-stage event, so the fixed structure of the graph is exactly what makes the pipeline observable: because the edges are static rather than chosen at runtime, the stage sequence is identical on every run and each stage maps to one predictable trace event.
+Every node is wrapped by a \texttt{traced(...)} decorator from the tracing service that opens a per-stage observability span, so the fixed structure of the graph is exactly what makes the pipeline observable: because the edges are static rather than chosen at runtime, the stage sequence is identical on every run and each stage maps to one predictable span in the run's trace (Section~\ref{section:5.4}).
 
 \begin{figure}[H]
     \centering
@@ -90,18 +91,23 @@ The pipeline can run for one source, for all sources of a school, or for an ad-h
 
 \subsection{User interface design}
 
-The interface is a single-page chat application with a three-pane layout, shown in Figure~\ref{fig:ui-landing}.
+The interface is a single-page chat application with a two-pane layout, shown in Figure~\ref{fig:ui-landing}.
 The center pane is the conversation.
 The left pane shows the profile the system has collected so far and the latest recommendation, making the incremental profile collection visible to the student.
-The right pane is the advisory analysis panel: it lists the six pipeline stages and, when the operator debug mode is enabled, shows each stage moving from \textit{pending} to \textit{running} to \textit{completed} as the background run progresses.
-This panel is the user-facing surface of the tracing subsystem and realizes the operator observability use case.
+An earlier draft of the system also rendered a third, right-hand pane that mirrored the six pipeline stages from the in-app trace store; that panel was retired in favor of an external observability backend, so per-stage diagnostics now live in Langfuse rather than in the student-facing interface (Section~\ref{section:5.4}).
+The student-facing surface is therefore deliberately minimal: a conversation and a running profile summary, with no operator instrumentation mixed into it.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{screenshot_chat_landing.png}
-    \caption{The chat interface: profile pane (left), conversation (center), and the six-stage advisory analysis panel (right)}
+    \caption{The chat interface: profile pane (left) and conversation (center)}
     \label{fig:ui-landing}
 \end{figure}
+
+% TODO: recapture screenshot_chat_landing.png against the current two-pane UI
+% (profile + conversation only). The committed image predates the trace-panel
+% retirement and still shows the old three-pane layout; it must be retaken by
+% the author from a live session.
 
 % TODO: add a second screenshot (screenshot_chat_conversation.png) of a
 % completed advisory consultation showing ranked recommendations and a conflict
@@ -117,8 +123,8 @@ Figure~\ref{fig:seq-advisory} traces a student message that triggers an advisory
 The message endpoint in the \texttt{chat\_api} route calls the conversation service, which classifies intent, updates the profile, and decides whether to start a run.
 When a run is warranted, \texttt{start\_run} inserts a row into \texttt{chat\_advisory\_runs} in the \textit{queued} state, recording the dispatch arguments and a profile snapshot, and the endpoint returns immediately so the request does not block (NFR-04).
 The work is drained off that queue by a separate \texttt{RunQueueWorker}: it polls for the oldest queued run and claims it atomically with an \texttt{UPDATE \ldots FOR UPDATE SKIP LOCKED} statement, so several worker replicas can run without ever claiming the same row.
-Holding a claim, the worker hands the run to the \texttt{RunDispatcher}, which marks the run \textit{running}, invokes the LangGraph pipeline through \texttt{advisory\_runner}, persists the final answer and the per-stage trace, and marks the session \textit{completed} (or appends a recovery message and marks it \textit{failed} on an exception).
-The browser polls the session and trace endpoints until the run completes and then renders the answer together with the stage ladder.
+Holding a claim, the worker opens the run's observability trace, hands the run to the \texttt{RunDispatcher}, which marks the run \textit{running}, invokes the LangGraph pipeline through \texttt{advisory\_runner} (each stage emitting a span and each \gls{LLM} call a generation record), persists the final answer, and marks the session \textit{completed} (or appends a recovery message and marks it \textit{failed} on an exception).
+The browser polls the session endpoint until the run completes and then renders the answer.
 Routing the run through a persisted queue rather than an in-process executor is what lets a run survive a restart of the web process and lets the application scale to more than one worker.
 
 \begin{figure}[H]
@@ -145,7 +151,7 @@ Routing the run through a persisted queue rather than an in-process executor is 
     $c \leftarrow$ \textsc{ClaimNextQueued}() \tcp*[r]{UPDATE \ldots FOR UPDATE SKIP LOCKED}\;
     \eIf{$c = \textsc{None}$}{wait \textit{pollSeconds}\;}{
       \textsc{MarkRunning}($c.\textit{runId}$)\;
-      \eIf{\textsc{InvokeGraph}($c$) succeeds $\to a$ \tcp*[r]{LangGraph pipeline + per-stage trace}}{
+      \eIf{\textsc{InvokeGraph}($c$) succeeds $\to a$ \tcp*[r]{LangGraph pipeline + per-stage spans}}{
         \textsc{CompleteRun}($c.\textit{runId}$, $a$); \textsc{MarkSession}($c.\textit{token}$, \textit{completed})\;
       }{
         append recovery message; \textsc{MarkSession}($c.\textit{token}$, \textit{failed})\;
@@ -157,6 +163,7 @@ Routing the run through a persisted queue rather than an in-process executor is 
 
 \textbf{Knowledge question answering.}
 Figure~\ref{fig:seq-knowledge} traces a factual question, and Algorithm~\ref{alg:retrieval} gives the retrieval control flow that backs it.
+This flow is implemented as a reusable LangGraph subgraph (embed $\to$ retrieve $\to$ augment $\to$ gate $\to$ generate) hidden behind the knowledge service's \texttt{answer} method, so the inline turn path, the hybrid path, and the batch fan-out all share one definition (Section~\ref{section:5.5}); a semantic cache is consulted before the subgraph runs and short-circuits a sufficiently similar earlier question (Section~\ref{section:5.6}).
 The knowledge service embeds the question, runs a vector search over the knowledge chunks scoped to the requested school and topic, and additionally retrieves national (ministry) chunks with their own separate budget, because national regulations apply to every school; the two scopes keep independent top-$k$ limits so national chunks never crowd out the school's own, and the merged set is re-sorted by score.
 If the best match falls below a confidence threshold, the service returns a ``no data'' result rather than calling the model, satisfying the honest-degradation behavior of UC-02.
 Otherwise it asks the model to answer strictly from the retrieved passages, returns no-data again if the model produces no grounded answer, and resolves the cited sources from the passages the model says it used.
@@ -213,7 +220,7 @@ def cursor(connection_factory, commit: bool = False):
 
 \subsection{Database design}
 
-The persistent state is one PostgreSQL schema built by nineteen numbered, idempotent migrations (numbered \texttt{001}--\texttt{018}; two files share the \texttt{014} prefix, so the file count is one above the highest number).
+The persistent state is one PostgreSQL schema built by twenty numbered, idempotent migrations (numbered \texttt{001}--\texttt{019}; two files share the \texttt{014} prefix, so the file count is one above the highest number).
 Figure~\ref{fig:erd} shows the entity-relationship structure, grouped into four areas.
 
 \begin{figure}[H]
@@ -226,9 +233,11 @@ Figure~\ref{fig:erd} shows the entity-relationship structure, grouped into four 
 The \textit{ingestion working store} (\texttt{source\_registry}, \texttt{discovered\_resources}, \texttt{raw\_documents}, \texttt{extracted\_facts}) records the provenance chain from a registered source to the raw facts extracted from a fetched document.
 The \textit{canonical store} (\texttt{canonical\_admission\_records}, \texttt{cutoff\_records}) holds the normalized, query-ready admission data.
 A design decision central to conflict awareness lives here: both canonical tables are unique \textit{per source} --- the uniqueness key includes the source \gls{URL} --- so two official publications that disagree about the same program coexist as two rows rather than overwriting each other.
-The \textit{chat and tracing} area (\texttt{chat\_sessions}, \texttt{chat\_messages}, \texttt{chat\_advisory\_runs}, \texttt{advisory\_trace\_events}) stores anonymous sessions keyed by a random token, their transcripts, the advisory runs, and the per-stage trace events that drive the analysis panel.
-The latest migration (\texttt{018\_advisory\_run\_queue}) turns \texttt{chat\_advisory\_runs} into a durable claim-based queue by adding claim-metadata columns (\texttt{worker\_id}, \texttt{claimed\_at}, \texttt{dispatch\_args\_json}) and a partial index over queued rows, which is the table behind the run-queue worker of Section~\ref{section:4.2}.
+The \textit{chat} area (\texttt{chat\_sessions}, \texttt{chat\_messages}, \texttt{chat\_advisory\_runs}) stores anonymous sessions keyed by a random token, their transcripts, and the advisory runs.
+The \texttt{advisory\_trace\_events} table from migration \texttt{011} also belongs here but is now dormant: when the in-app trace viewer was retired, its writer was removed and no rows are inserted any longer, with observability moved to the external backend of Section~\ref{section:5.4}.
+Migration \texttt{018\_advisory\_run\_queue} turns \texttt{chat\_advisory\_runs} into a durable claim-based queue by adding claim-metadata columns (\texttt{worker\_id}, \texttt{claimed\_at}, \texttt{dispatch\_args\_json}) and a partial index over queued rows, which is the table behind the run-queue worker of Section~\ref{section:4.2}.
 The \textit{knowledge corpus} area (\texttt{knowledge\_documents}, \texttt{knowledge\_chunks}, \texttt{program\_catalog\_embeddings}) holds the \gls{RAG} documents and their 768-dimensional embeddings, indexed with \gls{HNSW} for vector search.
+The latest migration (\texttt{019\_knowledge\_qa\_cache}) adds a \texttt{knowledge\_qa\_cache} table --- itself an embedding-indexed store of past answers --- plus a companion version table, which together back the semantic answer cache of Section~\ref{section:5.6}.
 
 \section{Application building}
 \label{section:4.3}
@@ -252,6 +261,8 @@ Table~\ref{table:libraries} lists the principal libraries and their versions, ta
         langchain~\cite{langchain} & 1.2.17 & \gls{LLM} orchestration primitives \\
         \hline
         google-genai & 1.75.0 & Gemini \gls{API} client \\
+        \hline
+        langfuse~\cite{langfuse} & 3.x & \gls{LLM} observability and prompt management \\
         \hline
         pydantic & 2.13.4 & Typed data validation \\
         \hline
@@ -280,13 +291,13 @@ Table~\ref{table:libraries} lists the principal libraries and their versions, ta
 
 \subsection{Achievement}
 
-The implemented system comprises 31{,}076 lines of Python across 376 tracked source files, of which 15{,}664 lines are tests.
-By layer, ingestion is the largest at 6{,}695 lines, followed by the services layer at 6{,}089 lines.
-The database schema is defined by nineteen idempotent migration files.
+The implemented system comprises 34{,}413 lines of Python across 414 tracked source files, of which 17{,}569 lines are tests.
+By layer, ingestion is the largest at 6{,}909 lines, followed by the services layer at 6{,}777 lines.
+The database schema is defined by twenty idempotent migration files.
 
 The data layer is populated from real official sources.
-The canonical store holds 136 admission records for HUST and 20 for VNU-UET, together with 715 historical cutoff-score records (699 for HUST, 16 for VNU-UET) and 81 program-catalog embeddings used to resolve free-text major names.
-The knowledge corpus for grounded question answering holds 18 documents and 406 embedded chunks, drawn from HUST, NEU, VNU-UET, and national \gls{MOET} regulation documents.
+The canonical store holds 136 admission records for HUST and 20 for VNU-UET, together with 715 historical cutoff-score records (699 for HUST, 16 for VNU-UET) and 82 program-catalog embeddings used to resolve free-text major names.
+The knowledge corpus for grounded question answering holds 93 documents and 692 embedded chunks, drawn from HUST, NEU, VNU-UET, and national \gls{MOET} regulation documents; it grew from an initial 18 documents once a program-overview scraper and a section-aware chunking strategy were added.
 These figures are summarized in Table~\ref{table:achievement}.
 
 \begin{table}[H]
@@ -297,23 +308,23 @@ These figures are summarized in Table~\ref{table:achievement}.
         \hline
         \textbf{Metric} & \textbf{Value} \\
         \hline
-        Python source lines (total) & 31{,}076 \\
+        Python source lines (total) & 34{,}413 \\
         \hline
-        Python source files (tracked) & 376 \\
+        Python source files (tracked) & 414 \\
         \hline
-        Test lines & 15{,}664 \\
+        Test lines & 17{,}569 \\
         \hline
-        Database migrations (files) & 19 \\
+        Database migrations (files) & 20 \\
         \hline
         Canonical admission records (HUST / VNU-UET) & 136 / 20 \\
         \hline
         Historical cutoff records (total) & 715 \\
         \hline
-        Program-catalog embeddings & 81 \\
+        Program-catalog embeddings & 82 \\
         \hline
-        Knowledge documents / chunks & 18 / 406 \\
+        Knowledge documents / chunks & 93 / 692 \\
         \hline
-        Automated tests & 1{,}011 \\
+        Automated tests & 1{,}123 \\
         \hline
     \end{tabular}
 \end{table}
@@ -321,21 +332,21 @@ These figures are summarized in Table~\ref{table:achievement}.
 \subsection{Illustration of main functions}
 
 The chat interface in Figure~\ref{fig:ui-landing} greets the student and invites a free-form description of their score, intended major, and preferred region.
-As the conversation proceeds, the left pane fills with the collected profile and the right pane animates the six advisory stages for each run.
+As the conversation proceeds, the left pane fills with the collected profile while the background advisory run progresses, and its completion is signaled in the conversation itself.
 A completed consultation presents ranked program recommendations in the conversation pane, each with a fit assessment and, where the underlying sources disagree, an explicit note advising the student to verify against the latest official announcement.
 
 \section{Testing}
 \label{section:4.4}
 
-The system is verified by an automated test suite that currently collects 1{,}011 tests across 167 test files, built with the pytest framework~\cite{pytest} and spanning unit tests of individual services, integration tests that exercise real \gls{SQL} paths, and end-to-end tests of the advisory and ingestion flows.
+The system is verified by an automated test suite that currently collects 1{,}123 tests across 194 test files, built with the pytest framework~\cite{pytest} and spanning unit tests of individual services, integration tests that exercise real \gls{SQL} paths, and end-to-end tests of the advisory and ingestion flows.
 
 The defining feature of the test strategy is \textit{database isolation}.
 An autouse fixture in the test configuration redirects the entire suite to an automatically created \texttt{admission\_test} database, so integration and end-to-end tests can create, mutate, and drop data without ever touching the development database.
 This makes the integration tests safe to run repeatedly and satisfies the testability requirement NFR-05.
 
-The most recent full run on the isolated database completed in approximately 22 seconds with 1{,}009 tests passing, one skipped, and one erroring.
+The most recent full run on the isolated database completed in approximately 14 seconds with 1{,}122 tests passing, one skipped, and no errors.
 The skipped test is an end-to-end conflict-resolution scenario that requires an external dataset dump not committed to the repository.
-The single error is an integration test of the trace endpoint that passes when run in isolation but errors only under full-suite execution, owing to a test-ordering interaction over shared database-connection-pool state; it is therefore a test-harness sequencing issue rather than a defect in the advisory or question-answering behavior.
+An earlier run reported a single full-suite error from an integration test of the in-app trace endpoint; that endpoint and its test were removed when the trace viewer was retired, so the suite now runs clean.
 
 Beyond the automated suite, the system's conversational behavior was evaluated against a catalogue of 25 edge cases documented in the project's requirements (\texttt{docs/edge-case.md}), covering short answers to pending questions, multi-slot messages, profile corrections, ambiguous major terms, conflicting source data, budget filtering, and conversation control.
 In the most recent evaluation, 17 of the 25 cases were fully satisfied, 4 partially, and 4 not yet, up from 8 of 25 at an earlier baseline.
@@ -380,7 +391,7 @@ uvicorn web.app:build_app --factory --reload    # serve the chat application
 
 This separation --- a containerized database, a one-command schema setup, an application server, and an offline ingestion \gls{CLI} --- keeps the runtime dependencies minimal (a Python environment and a Docker engine) while the idempotent migrations and upsert-based ingestion let the operator refresh school data at any time during the admission season, as required by NFR-02.
 
-This chapter presented the system's layered architecture, the design of its core packages, the three-pane interface, the layer interactions behind the two central flows, the database schema, and the deployment, then evaluated the result against an automated suite of more than 1{,}000 tests and a 25-case edge-case catalogue.
+This chapter presented the system's layered architecture, the design of its core packages, the two-pane interface, the layer interactions behind the two central flows, the database schema, and the deployment, then evaluated the result against an automated suite of more than 1{,}000 tests and a 25-case edge-case catalogue.
 The evaluation showed a system that is functionally substantial and well tested, with a clearly identified cluster of unmet preference-handling cases.
 Chapter~\ref{chapter:SolutionAndContribution} steps back from the full system to present its three principal contributions in depth.
 

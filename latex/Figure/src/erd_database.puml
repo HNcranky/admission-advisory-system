@@ -67,7 +67,7 @@ package "Canonical store" {
   }
 }
 
-package "Chat & tracing" {
+package "Chat" {
   entity chat_sessions {
     * id : SERIAL <<PK>>
     --
@@ -89,7 +89,7 @@ package "Chat & tracing" {
     status, profile_snapshot_json
     result_json, final_answer
   }
-  entity advisory_trace_events {
+  entity "advisory_trace_events\n(dormant since 2026-06-18)" as advisory_trace_events {
     * id : SERIAL <<PK>>
     --
     run_id <<FK>>
@@ -127,6 +127,20 @@ package "Knowledge corpus (pgvector)" {
     canonical_name, aliases_text
     embed_input, content_hash
     embedding : vector(768) <<HNSW>>
+  }
+  entity knowledge_qa_cache {
+    * id : BIGSERIAL <<PK>>
+    --
+    school, topic, question
+    embedding : vector(768) <<HNSW>>
+    answer_json, confidence
+    dep_versions : JSONB
+    expires_at
+  }
+  entity knowledge_qa_cache_version {
+    * scope_key : TEXT <<PK>>
+    --
+    version
   }
 }
 

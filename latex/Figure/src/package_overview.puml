@@ -33,7 +33,17 @@ package "ingestion" as ingestion {
   package "knowledge corpus" as ingknow {}
 }
 
+package "domain" as domain {
+  package "models.py (shared)" as dmodels {}
+}
+
+package "observability" as obs {
+  package "langfuse_client / run_trace" as lf {}
+  package "prompts (PromptService)" as prompts {}
+}
+
 package "PostgreSQL 16 + pgvector" as db {}
+package "Langfuse (self-hosted)" as langfuse {}
 
 routes --> chat
 chat --> knowledge
@@ -47,7 +57,10 @@ agents --> inference
 knowledge --> inference
 conflict --> inference
 chat --> tracing
-tracing --> db
+tracing --> obs
+inference --> obs
+chat --> obs
+obs --> langfuse
 chat --> db
 knowledge --> db
 agents --> db
@@ -55,4 +68,6 @@ ingpipe --> db
 fpe --> ingpipe
 norm --> ingpipe
 ingknow --> db
+inference ..> dmodels
+agents ..> dmodels
 @enduml

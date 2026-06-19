@@ -26,7 +26,8 @@ Sources: `docs/happy-path.md`, `docs/edge-case.md`,
 `docs/admission-advisory-conversational-architecture.md`.
 - [~] 2.1 Status survey: existing advisory products; comparison table.
 - [~] 2.2.1 General use case diagram: actors = student (anonymous chat),
-      operator (ingestion CLI, debug/trace panel).
+      operator (ingestion CLI, observability via Langfuse — in-app trace panel
+      retired 2026-06-18).
 - [~] 2.2.2 Detailed use case diagrams: advisory conversation; knowledge Q&A;
       data ingestion.
 - [~] 2.2.3 Business process: profile collection → retrieval → conflict
@@ -47,32 +48,40 @@ Rule: each technology must map to a Chapter 2 requirement + name alternatives.
       traceability).
 - [~] 3.4 Document processing: PDF parsing, OCR for scanned proposals,
       degenerate-OCR detection rationale.
-- [~] 3.5 Web stack: FastAPI (cite), Jinja2, background ThreadPoolExecutor.
+- [~] 3.5 Web stack: FastAPI (cite), Jinja2, durable run queue + background worker.
+- [~] 3.6 Observability and answer caching: LLM observability (Langfuse, cite) as
+      span-tree tracing (OpenTelemetry convention, cite); alternative: bespoke
+      in-app trace panel (rejected). Semantic answer cache (GPTCache, cite);
+      alternative: exact-match cache / no cache.
 
 ## Chapter 4 — Design, implementation, and evaluation
 - [~] 4.1.1 Architecture selection: layered service-oriented monolith.
 - [~] 4.1.2 Overall design: package diagram from real packages: `web/`,
-      `services/{chat,inference,knowledge,conflict,tracing}`, `agents/`,
-      `ingestion/`, `db/`.
+      `services/{chat,inference,knowledge,conflict,cutoff,profile,tracing}`,
+      `agents/`, `ingestion/`, `db/`, `observability/`, `domain/`.
 - [~] 4.1.3 Detailed package design: advisory graph
       (`graph.py`, `state.py::AgentState`, `agents/*`); inference gateway
       (`services/inference/gateway.py`, `registry.py`,
       `providers/gemini_provider.py`); ingestion
       (`ingestion/pipeline/ingestion_pipeline.py`, fetchers/parsers/
       extractors/normalization, `storage/db_writer.py`).
-- [~] 4.2.1 UI design: chat UI, debug/trace panel (`services/tracing/`).
+- [~] 4.2.1 UI design: two-pane chat UI (profile + conversation); the right-hand
+      trace panel was retired (observability moved to Langfuse). NOTE: committed
+      `screenshot_chat_landing.png` is stale (old 3-pane) — author must recapture.
 - [~] 4.2.2 Layer design: sequence diagrams for advisory run dispatch
       (`services/chat/` background executor) and knowledge Q&A
       (`services/knowledge/qa_service.py`).
 - [~] 4.2.3 Database design: E-R of canonical store; migrations
-      `db/migrations/001-016`; pgvector tables; repository pattern with
-      injectable `connection_factory` + `_cursor` context manager.
+      `db/migrations/001-019` (20 files, two share `014`); pgvector tables incl.
+      `knowledge_qa_cache` (019); `advisory_trace_events` (011) dormant;
+      repository pattern with injectable `connection_factory` + `_cursor`.
 - [~] 4.3.1 Libraries/tools table: versions from `requirements.txt` /
       `pyproject.toml` (verify).
 - [~] 4.3.2 Achievement: LOC, package/test counts, ingested schools
       HUST/NEU/UET + MOET documents — all measured values in `latex/FACTS.md`
-      (2026-06-08: hust 136 programs, cutoffs 715 total, catalog 81,
-      knowledge docs 18 / chunks 406, 28,055 Python LOC, 856 tests).
+      (2026-06-19: hust 136 programs, cutoffs 715 total, catalog 82,
+      knowledge docs 93 / chunks 692, 34,413 Python LOC, 1,123 tests collected
+      / 1,122 passing).
 - [~] 4.3.3 Screenshots of main flows.
 - [~] 4.4 Testing: pytest suite on isolated `admission_test` DB
       (`tests/conftest.py::_isolate_test_db`); edge-case compliance matrix
@@ -81,6 +90,7 @@ Rule: each technology must map to a Chapter 2 requirement + name alternatives.
 
 ## Chapter 5 — Solution and contribution (≥ 5 pages)
 Each: problem → solution → results. Cross-referenced from Chapters 2/4.
+Three domain-gap contributions (5.1-5.3) + three engineering contributions (5.4-5.6).
 - [~] 5.1 Conflict-aware data consolidation: contradictory quota/cutoff data
       across sources; `services/conflict/` deterministic detection + resolution;
       conflict surfacing in advisory answers.
@@ -90,17 +100,28 @@ Each: problem → solution → results. Cross-referenced from Chapters 2/4.
 - [~] 5.3 End-to-end heterogeneous ingestion: per-school configs, OCR with
       degenerate-output detection and retry (commit b41dd9f), normalization
       into the canonical store.
+- [~] 5.4 Unified observability: single Langfuse sink (`observability/`),
+      root span per run + stage spans + per-call generations with token usage;
+      InferenceResult.usage from Gemini usage_metadata; retired in-app panel.
+- [~] 5.5 Declarative orchestration: turn-graph (`services/chat/turn_graph.py`)
+      + reusable knowledge_qa subgraph (`services/knowledge/qa_graph.py`) behind
+      `answer()` facade + hybrid-graph; determinism preserved, characterization tests.
+- [~] 5.6 Version-gated semantic cache: `knowledge_qa_cache` (migration 019),
+      embedding-similarity reuse gated on per-scope version stamp; ingest bumps
+      version → invalidation; disabled by default. No measured hit-rate (cache empty in dev).
 
 ## Chapter 6 — Conclusion and future work
 - [~] 6.1 Conclusion: achieved vs not; comparison with existing products.
 - [~] 6.2 Future work: structured preferences (remaining edge cases
       EC-07/08/11/19/20/25), location/budget-aware retrieval and reasoning,
-      more schools, production hardening.
+      more schools, production hardening, and extending the Langfuse prompt-
+      management pilot (intent_router/synthesis/knowledge_qa) system-wide with
+      eval datasets + scoring.
 
 ## Appendix A — Use case descriptions
 - [~] Full specifications overflowing from §2.3.
 
 ## Reference collection backlog
 - Academic: RAG (Lewis et al. 2020), LLM agents survey, conflict resolution /
-  data-fusion literature — find and add to `reference.bib`.
-- Official: LangGraph, pgvector, FastAPI, Gemini (already seeded).
+  data-fusion literature, GPTCache (Bang 2023) — all in `reference.bib`.
+- Official: LangGraph, pgvector, FastAPI, Gemini, Langfuse, OpenTelemetry (seeded).

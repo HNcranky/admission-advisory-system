@@ -6,7 +6,7 @@
 Chapter~\ref{chapter:Related_works} derived the system's functional and non-functional requirements.
 This chapter reviews the theoretical background and the technologies chosen to meet them.
 Each technology is presented together with the requirement it serves and the main alternative that was considered, so that the design decisions in Chapter~\ref{chapter:Experiment} rest on an explicit rationale rather than convention.
-Section~\ref{section:3.1} covers large language models and structured output, Section~\ref{section:3.2} retrieval-augmented generation over vector search, Section~\ref{section:3.3} the agentic pipeline, Section~\ref{section:3.4} document processing, and Section~\ref{section:3.5} the web stack.
+Section~\ref{section:3.1} covers large language models and structured output, Section~\ref{section:3.2} retrieval-augmented generation over vector search, Section~\ref{section:3.3} the agentic pipeline, Section~\ref{section:3.4} document processing, Section~\ref{section:3.5} the web stack, and Section~\ref{section:3.6} observability and answer caching.
 
 \section{Large language models and structured output}
 \label{section:3.1}
@@ -95,7 +95,7 @@ That state object, \texttt{AgentState}, is a single Pydantic model whose fields 
 Because every stage is wrapped by a tracing decorator that records the state it produced under a run identifier, the same fixed structure that orders the computation also yields the per-stage trace, so observability is a by-product of the design rather than a separate instrumentation effort.
 A fixed graph is the deliberate choice for three reasons that map onto Chapter~\ref{chapter:Related_works}'s requirements.
 First, \textit{determinism}: the same profile produces the same stage sequence, so a correction can re-run the pipeline and the change in output is attributable to the changed input (UC-04, NFR-02).
-Second, \textit{traceability}: because the stages are fixed and named, each one can be wrapped to emit a trace event, which is what populates the operator's debug panel (the observability use case in Section~\ref{subsection:2.2.1}).
+Second, \textit{traceability}: because the stages are fixed and named, each one can be wrapped to emit a span to the observability backend, which is what realizes the operator observability use case in Section~\ref{subsection:2.2.1} (detailed in Section~\ref{section:5.4}).
 Third, \textit{separation of concerns}: each stage is an independently testable function with a single responsibility, which supports the testability requirement NFR-05.
 The cost of a fixed graph is reduced flexibility --- it cannot improvise a new stage order for an unusual query --- but the advisory task has a stable shape, so the system sits deliberately at the structured end of the spectrum and accepts that cost.
 
@@ -122,16 +122,34 @@ The rationale and the controlling thresholds are revisited as a contribution in 
 The user-facing layer is a web application that must acknowledge a student message immediately and run the advisory pipeline without blocking the request (NFR-04).
 The application is built on FastAPI~\cite{fastapi}, a Python web framework built on the \gls{ASGI} standard, and is served by the Uvicorn \gls{ASGI} server~\cite{uvicorn}.
 The asynchronous model is what allows a single worker process to keep many slow, \gls{API}-bound consultations in flight concurrently: while one request awaits a network call it yields control rather than holding a thread, so concurrency is bounded by outstanding work rather than by a fixed thread count.
-The chat interface is rendered server-side with the Jinja2 template engine~\cite{jinja2} and progressively updated by client-side JavaScript that polls for run completion and renders the stage trace.
+The chat interface is rendered server-side with the Jinja2 template engine~\cite{jinja2} and progressively updated by client-side JavaScript that polls for run completion and renders the answer.
 
 Because a full advisory run issues several \gls{LLM} calls and database queries and can take tens of seconds, it cannot run inside the request that triggered it.
 The message endpoint instead writes a run record to the database in a \texttt{queued} state and returns immediately, decoupling acknowledgement from execution.
-A background run-queue worker polls that table, claims the next queued run, executes the pipeline on its own thread, and writes the result and per-stage trace back to the database, from which the interface retrieves them by polling.
+A background run-queue worker polls that table, claims the next queued run, executes the pipeline on its own thread, writes the result back to the database --- from which the interface retrieves it by polling --- and emits the run's per-stage trace to the external observability backend.
 Claims use a \texttt{SELECT \dots\ FOR UPDATE SKIP LOCKED} query, so several worker processes or replicas can drain the same queue without ever claiming the same run twice, and a run that is interrupted by a restart survives in the table to be recovered rather than being lost with an in-memory thread pool.
 This database-backed queue is sufficient here because the workload is a small number of long, \gls{API}-bound tasks rather than thousands of concurrent connections; a dedicated task queue with a separate message broker would add operational components disproportionate to that scale (NFR-04).
 The data-validation layer throughout the application uses Pydantic~\cite{pydantic}, whose typed models define the inference requests and results, the agent state, and the chat schemas, giving every boundary in the system a validated, typed contract.
 
-This chapter reviewed the theoretical background and the technologies underpinning the system, tying each to a requirement and to the main alternative considered: instruction-tuned hosted multimodal \gls{LLM}s with validated structured output to contain hallucination in the reasoning and \gls{OCR} steps, rather than a self-hosted or unconstrained model; \gls{RAG} over pgvector's \gls{HNSW} \gls{ANN} index for grounded knowledge answering, rather than a separate vector database; a fixed LangGraph pipeline for deterministic and traceable advising, rather than a run-time-decided ReAct loop; a hybrid text-and-\gls{OCR} extractor for heterogeneous documents; and an asynchronous FastAPI stack with a database-backed run queue for a responsive interface, rather than a broker-backed task queue.
+\section{Observability and answer caching}
+\label{section:3.6}
+
+A multi-stage \gls{LLM} application is hard to debug from logs alone: a single advisory consultation fans out into six pipeline stages and several model calls, each with its own prompt, response, token usage, latency, and retry or fallback behavior.
+\textit{\gls{LLM} observability} is the practice of capturing this execution as a structured, queryable \textit{trace} --- a tree of \textit{spans}, one per logical step, with model calls recorded as \textit{generation} observations carrying the prompt, the raw output, and token counts~\cite{langfuse}.
+The data model follows the span-tree convention established by distributed tracing, in which a root span has nested child spans that record the timing and attributes of each sub-operation~\cite{opentelemetry}.
+This serves the operator observability use case of Section~\ref{subsection:2.2.1} and the traceability rationale of Section~\ref{section:3.3}: because the advisory graph is fixed, its trace tree has the same shape on every run, so a stage's latency or a malformed model response can be located precisely.
+
+An earlier iteration of this system captured stage events in its own database table and rendered them in an in-app panel, which exposed stage timings but nothing about the underlying model calls --- no prompt, no token usage, no per-attempt retry visibility.
+The system therefore adopts Langfuse, a self-hostable observability backend for \gls{LLM} applications, as a single trace sink~\cite{langfuse}; the alternative of extending the bespoke in-app panel was rejected because it would have duplicated, at higher maintenance cost, a capability the external tool already provides, including token and cost accounting the bespoke panel never had.
+Self-hosting keeps the traces --- which contain student messages and raw prompts --- on the same machine as the rest of the system, consistent with the anonymity posture of NFR-03.
+The realization of this design is presented as a contribution in Section~\ref{section:5.4}.
+
+A second concern at this layer is the cost and latency of repeated model calls.
+Because many students ask near-identical factual questions (``how much is tuition?''), a \textit{semantic cache} can reuse a previous answer when a new question is close enough in embedding space, rather than re-running retrieval and generation~\cite{bang2023gptcache}.
+A semantic cache generalizes an exact-match cache: instead of requiring identical question strings, it embeds the question and treats a stored answer as a hit when the nearest cached embedding is within a similarity threshold.
+The risk is staleness --- a cached answer can outlive the document it summarizes --- so the cache must be invalidated when the underlying corpus changes; the system's version-gated design that addresses this is detailed in Section~\ref{section:5.6}.
+
+This chapter reviewed the theoretical background and the technologies underpinning the system, tying each to a requirement and to the main alternative considered: instruction-tuned hosted multimodal \gls{LLM}s with validated structured output to contain hallucination in the reasoning and \gls{OCR} steps, rather than a self-hosted or unconstrained model; \gls{RAG} over pgvector's \gls{HNSW} \gls{ANN} index for grounded knowledge answering, rather than a separate vector database; a fixed LangGraph pipeline for deterministic and traceable advising, rather than a run-time-decided ReAct loop; a hybrid text-and-\gls{OCR} extractor for heterogeneous documents; an asynchronous FastAPI stack with a database-backed run queue for a responsive interface, rather than a broker-backed task queue; and self-hosted \gls{LLM} observability with a version-gated semantic answer cache, rather than a bespoke in-app trace panel or no caching at all.
 Chapter~\ref{chapter:Experiment} applies these technologies, presenting the system's design, implementation, and evaluation.
 
 \end{document}

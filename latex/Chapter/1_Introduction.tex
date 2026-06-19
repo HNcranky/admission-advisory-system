@@ -63,8 +63,9 @@ The thesis makes three principal contributions, developed in Chapter~\ref{chapte
 The first is conflict-aware data consolidation: contradictory quota and cutoff figures are preserved per source and surfaced in recommendations, with model judgment confined to the narrow cases where it is safe.
 The second is the resilient inference gateway, which keeps the assistant usable through model outages by treating the two failure modes differently and providing a deterministic fallback for intent routing.
 The third is end-to-end ingestion of heterogeneous official sources, including a hybrid text-and-\gls{OCR} extractor with an explicit safeguard against model transcription failures on scanned documents.
+Three further contributions concern the engineering of the application itself: unified observability that makes every advisory run a single queryable trace, the declarative orchestration of the conversation and knowledge flows as reusable graphs, and a version-gated semantic cache that reuses past answers without serving stale ones.
 
-The resulting system comprises more than 28{,}000 lines of Python, exercised by a suite of 856 automated tests, and is backed by a populated canonical store and knowledge corpus drawn from real official sources, as quantified in Chapter~\ref{chapter:Experiment}.
+The resulting system comprises more than 34{,}000 lines of Python, exercised by a suite of 1{,}123 automated tests, and is backed by a populated canonical store and knowledge corpus drawn from real official sources, as quantified in Chapter~\ref{chapter:Experiment}.
 
 \section{Thesis organization}
 \label{section:1.4}
@@ -73,7 +74,7 @@ The remainder of this thesis is organized into five chapters.
 Chapter~\ref{chapter:Related_works} surveys the admission-information channels students rely on today, identifies their shared limitations, and from that analysis derives the system's functional and non-functional requirements as a use-case model.
 Chapter~\ref{chapter:Methodology} reviews the theoretical background and the technologies selected to meet those requirements, presenting each technology together with the requirement it serves and the alternative that was rejected.
 Chapter~\ref{chapter:Experiment} presents the design, implementation, and evaluation of the system: its layered architecture, the design of its core packages, the user interface, the database schema, and the results of testing it against an automated suite and a catalogue of conversational edge cases.
-Chapter~\ref{chapter:SolutionAndContribution} steps back from the full system to examine its three principal contributions in depth, each framed as a problem, a solution, and a result.
+Chapter~\ref{chapter:SolutionAndContribution} steps back from the full system to examine its contributions in depth --- three that close the gaps identified above and three that concern the engineering of the system --- each framed as a problem, a solution, and a result.
 Chapter~\ref{chapter:conclusion} concludes by assessing what was and was not achieved relative to existing products and outlines directions for future work.
 
 \end{document}

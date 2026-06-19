@@ -80,7 +80,7 @@ The system described in this thesis is designed to close these three gaps for th
 
 The system serves two actors.
 The \textit{student} interacts anonymously with the chat interface: no account or personal identifier is required, and a session is addressed only by a random token.
-The \textit{operator} maintains the system: they run the data-ingestion \gls{CLI} against configured sources and inspect the per-stage trace panel when diagnosing an advisory run.
+The \textit{operator} maintains the system: they run the data-ingestion \gls{CLI} against configured sources and inspect the per-stage and per-call trace of an advisory run in the external observability backend when diagnosing it.
 Figure~\ref{fig:usecase-general} shows the general use case diagram.
 
 \begin{figure}[H]
@@ -91,7 +91,7 @@ Figure~\ref{fig:usecase-general} shows the general use case diagram.
 \end{figure}
 
 The student's use cases correspond to the conversation routes the system distinguishes: a full advisory consultation, a factual knowledge question, a hybrid comparison that needs both, and profile control actions such as resetting the collected profile.
-The operator's use cases cover the ingestion lifecycle (running ingestion per school, per source, or for an ad-hoc \gls{URL}) and observability (inspecting the stage-by-stage trace of an advisory run).
+The operator's use cases cover the ingestion lifecycle (running ingestion per school, per source, or for an ad-hoc \gls{URL}) and observability (inspecting the stage-by-stage and call-by-call trace of an advisory run in the observability backend).
 
 \subsection{Detailed use case diagrams}
 \label{subsection:2.2.2}
@@ -154,8 +154,8 @@ Explicit control actions (resetting the profile, rejecting a suggested value) an
 Only when none of these shortcuts apply is the message classified by the intent router into one of seven routes: advisory flow, knowledge question, hybrid comparison, conversational small talk, clarification, out-of-scope, or profile reset.
 
 An advisory-flow message proceeds only when all critical profile slots are filled; otherwise the system asks the next missing question.
-Once the profile is sufficient, the run is dispatched to a background executor that drives the six-stage advisory pipeline --- profile, retrieve, conflict, reason, policy, explain --- and persists the final answer together with a per-stage trace.
-The chat interface polls for the result and renders both the recommendation and, for the operator, the stage trace.
+Once the profile is sufficient, the run is dispatched to a background worker that drives the six-stage advisory pipeline --- profile, retrieve, conflict, reason, policy, explain --- and persists the final answer, while emitting a per-stage trace to the observability backend.
+The chat interface polls for the result and renders the recommendation.
 
 \section{Functional description}
 \label{section:2.3}
