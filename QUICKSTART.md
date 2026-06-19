@@ -278,12 +278,11 @@ After any UI change run this locally:
 1. Light → click 🌙 → dark applied immediately, reload → still dark.
 2. Toggle left/right column collapse → reload → state persisted.
 3. Send "Em muốn học CNTT" → user bubble right, AI follow-up bubble left.
-4. Complete profile, trigger run → trace cards flip pending → running
-   (spinner) → completed (duration), Vietnamese labels visible.
-5. Visit /?debug=1 → trace cards become clickable, expand to show output_json.
-6. Final recommendation: bold school names + bullet list render correctly.
-7. Resize browser < 900px → side panels become drawers.
-8. Disconnect network mid-run → toast appears, polling auto-retries with backoff.
+4. Complete profile, trigger run → recommendation panel shows the skeleton
+   placeholder while status is `queued`/`running`, then resolves to the card.
+5. Final recommendation: bold school names + bullet list render correctly.
+6. Resize browser < 900px → side panels become drawers.
+7. Disconnect network mid-run → toast appears, polling auto-retries with backoff.
 ```
 
 ---

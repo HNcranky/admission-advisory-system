@@ -1,3 +1,8 @@
+# Pinned so the compose project name never follows the directory name. The data
+# volume + container were first created under project "advisory-agent"; keeping
+# this fixed lets `setup.sh` adopt them instead of colliding on `advisory-db`.
+name: advisory-agent
+
 services:
   db:
     image: pgvector/pgvector:pg16
