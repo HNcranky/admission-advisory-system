@@ -76,7 +76,15 @@ def _label_chunks(label, section_title, body, base_off, size, overlap):
 
 def chunk_by_section(text, context_label=None, *,
                      size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
-    """Split markdown text on '## ' headings; prepend '{label} — {section}'."""
+    """Structure-aware chunking with a size-split fallback.
+
+    Splits markdown text on '## ' headings when present; each section becomes a
+    chunk prefixed with '{label} — {section}'. When the page has NO '## '
+    headings (e.g. free-prose NEU/UET overviews), the whole body is size-split
+    via split_into_chunks, each part prefixed with just '{label}'. So the
+    strategy never degrades below size chunking and always carries the program
+    label — it is not HUST-section-specific despite the name.
+    """
     matches = list(_SECTION_HEADING.finditer(text))
     if not matches:
         body = text.strip()
@@ -111,6 +119,9 @@ def chunk_text(
     - "by_section": split on '## ' headings; each section becomes a chunk with a
       '{context_label} — {section_title}' header so program identity and topic
       live in the embedding. Oversized sections sub-split, header on each part.
+      Pages with NO '## ' headings (free-prose overviews) degrade to size
+      splitting, each part prefixed with just '{context_label}' — so the label
+      always travels regardless of page structure.
     - "whole_page": emit the whole text as ONE chunk (good for short, self-
       contained pages like program overviews). Pages longer than ``max_chars``
       fall back to size-based splitting so a single embed call never exceeds the

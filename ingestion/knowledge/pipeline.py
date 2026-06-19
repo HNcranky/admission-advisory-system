@@ -170,15 +170,18 @@ class KnowledgePipeline:
         ))
 
         strategy = getattr(source, "chunk_strategy", "size")
-        # by_section uses the page label as both the chunk header and program tag
-        program = content_label if strategy == "by_section" else source.program
+        # Program identity is seed-first (reliable on any school's HTML); the
+        # HUST breadcrumb-derived content_label is a fallback. The chunk header
+        # (context_label) carries the same chosen program so by_section embeds
+        # program identity regardless of page structure.
+        program = source.program or content_label
         total, embedded, reused = self._chunk_embed_upsert(
             doc_id, text,
             school=source.school, topic=source.topic, program=program,
             year=source.year, document_type=source.document_type,
             source_url=source.source_url,
             chunk_strategy=strategy,
-            context_label=content_label,
+            context_label=program,
         )
 
         self.doc_repo.mark_ingested(doc_id, content_hash)
