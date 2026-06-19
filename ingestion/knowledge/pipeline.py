@@ -12,7 +12,7 @@ from ingestion.knowledge.local_metadata import (
 )
 from ingestion.knowledge.pdf_ocr import build_gateway_ocr, extract_pages_hybrid
 from ingestion.knowledge.pdf_pages import extract_pages, pages_to_marked_text
-from ingestion.knowledge.chunker import split_into_chunks
+from ingestion.knowledge.chunker import chunk_text
 from services.inference.embedder import GeminiEmbedder
 from ingestion.knowledge.registry.knowledge_registry import KnowledgeRegistry
 from services.knowledge.models import KnowledgeChunk, KnowledgeDocument
@@ -86,21 +86,24 @@ class KnowledgePipeline:
                 school, topic, exc,
             )
 
-    def _extract_text(self, fetch_result, url: str, selector: str | None = None) -> str:
+    def _extract_text(self, fetch_result, url: str, selector: str | None = None):
+        """Returns (text, content_label). Label is None for PDFs."""
         ctype = (fetch_result.content_type or "").lower()
         if "pdf" in ctype or url.lower().endswith(".pdf"):
             if selector is not None:
                 logger.warning("selector %r ignored for PDF source %s", selector, url)
-            return pages_to_marked_text(extract_pages(fetch_result.raw_content))
-        return parse_html(fetch_result.raw_content, url, selector=selector).text
+            return pages_to_marked_text(extract_pages(fetch_result.raw_content)), None
+        parsed = parse_html(fetch_result.raw_content, url, selector=selector)
+        return parsed.text, parsed.content_label
 
     def _chunk_embed_upsert(self, doc_id, text, *, school, topic, program,
-                            year, document_type, source_url):
+                            year, document_type, source_url,
+                            chunk_strategy="size", context_label=None):
         """Chunk -> reuse/embed -> replace chunks for one document.
 
         Returns (chunks_total, chunks_embedded, chunks_reused).
         """
-        chunks = split_into_chunks(text)
+        chunks = chunk_text(text, chunk_strategy, context_label=context_label)
         hashes = [chunk_content_hash(c.chunk_text) for c in chunks]
         # Corpus-wide reuse: identical chunk text in ANY document reuses its
         # embedding, so re-ingestion never re-embeds text already seen.
@@ -152,7 +155,7 @@ class KnowledgePipeline:
             return KnowledgeIngestResult(source_url=source.source_url, skipped=True)
 
         try:
-            text = self._extract_text(fr, source.source_url, source.selector)
+            text, content_label = self._extract_text(fr, source.source_url, source.selector)
         except ContentSelectorNotFound:
             logger.warning(
                 "selector %r not found on %s — skipping (fix selector and re-run)",
@@ -166,11 +169,16 @@ class KnowledgePipeline:
             raw_text=text,
         ))
 
+        strategy = getattr(source, "chunk_strategy", "size")
+        # by_section uses the page label as both the chunk header and program tag
+        program = content_label if strategy == "by_section" else source.program
         total, embedded, reused = self._chunk_embed_upsert(
             doc_id, text,
-            school=source.school, topic=source.topic, program=source.program,
+            school=source.school, topic=source.topic, program=program,
             year=source.year, document_type=source.document_type,
             source_url=source.source_url,
+            chunk_strategy=strategy,
+            context_label=content_label,
         )
 
         self.doc_repo.mark_ingested(doc_id, content_hash)
