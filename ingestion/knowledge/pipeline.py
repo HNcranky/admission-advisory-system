@@ -13,6 +13,7 @@ from ingestion.knowledge.local_metadata import (
 from ingestion.knowledge.pdf_ocr import build_gateway_ocr, extract_pages_hybrid
 from ingestion.knowledge.pdf_pages import extract_pages, pages_to_marked_text
 from ingestion.knowledge.chunker import chunk_text
+from ingestion.knowledge.neu_api import curriculum_text_from_json
 from services.inference.embedder import GeminiEmbedder
 from ingestion.knowledge.registry.knowledge_registry import KnowledgeRegistry
 from services.knowledge.models import KnowledgeChunk, KnowledgeDocument
@@ -93,6 +94,13 @@ class KnowledgePipeline:
             if selector is not None:
                 logger.warning("selector %r ignored for PDF source %s", selector, url)
             return pages_to_marked_text(extract_pages(fetch_result.raw_content)), None
+        if "json" in ctype:
+            # NEU program overviews come from the courses.neu.edu.vn Strapi API as
+            # JSON (prose lives in *Html fields; the SPA's DOM has none). The
+            # program name doubles as the content_label fallback.
+            if selector is not None:
+                logger.warning("selector %r ignored for JSON source %s", selector, url)
+            return curriculum_text_from_json(fetch_result.raw_content)
         parsed = parse_html(fetch_result.raw_content, url, selector=selector)
         return parsed.text, parsed.content_label
 
