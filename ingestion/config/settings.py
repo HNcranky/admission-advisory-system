@@ -103,7 +103,7 @@ KNOWLEDGE_QA_NATIONAL_TOP_K = int(os.getenv("KNOWLEDGE_QA_NATIONAL_TOP_K", 3))
 KNOWLEDGE_QA_CACHE_ENABLED = os.getenv(
     "KNOWLEDGE_QA_CACHE_ENABLED", "true"
 ).strip().lower() in ("1", "true", "yes")
-KNOWLEDGE_QA_CACHE_THRESHOLD = float(os.getenv("KNOWLEDGE_QA_CACHE_THRESHOLD", 0.95))
+KNOWLEDGE_QA_CACHE_THRESHOLD = float(os.getenv("KNOWLEDGE_QA_CACHE_THRESHOLD", 0.8))
 KNOWLEDGE_QA_CACHE_TTL_DAYS = int(os.getenv("KNOWLEDGE_QA_CACHE_TTL_DAYS", 30))
 
 # --- Knowledge chunking (Phase 3) ----------------------------------------
