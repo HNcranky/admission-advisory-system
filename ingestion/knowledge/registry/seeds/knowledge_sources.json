@@ -81,5 +81,685 @@
     "fetch_strategy": "http",
     "selector": ".container > article:nth-child(1)",
     "year": 2026
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/an-toan-khong-gian-so-chuong-trinh-tien-tien",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/chuong-trinh-ky-thuat-vi-dien-tu-va-cong-nghe-nano",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/cntt-khoa-hoc-may-tinh",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/cntt-ky-thuat-may-tinh",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/co-dien-tu-dh-leibniz-hannover-duc",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/co-dien-tu-dh-nagaoka-nhat-ban",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/co-khi-che-tao-may-dh-griffith-uc",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/co-khi-hang-khong-chuong-trinh-viet-phap-pfiev",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/cong-nghe-det-may",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/cong-nghe-giao-duc",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/cong-nghe-thong-tin-global-ict",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/cong-nghe-thong-tin-viet-nhat-chuong-trinh-tien-tien",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/cong-nghe-thong-tin-viet-phap-chuong-trinh-tien-tien",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/cong-nghe-vat-lieu-polyme-va-compozit",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/dien-tu-va-vien-thong",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/dien-tu-vien-thong-dh-leibniz-hannover-duc",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/he-thong-dien-va-nang-luong-tai-tao-chuong-trinh-tien-tien",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/he-thong-nhung-thong-minh-va-iot-chuong-trinh-tien-tien",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/he-thong-thong-tin-quan-ly",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/hoa-hoc",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/hoa-hoc-my-pham-chuong-trinh-tien-tien",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ke-toan-chuong-trinh-tien-tien",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/khoa-hoc-du-lieu-va-tri-tue-nhan-tao",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/khoa-hoc-may-tinh-dh-troy-hoa-ky",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/khoa-hoc-tinh-toan-cho-cac-he-thong-thong-minh-cttt",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/khoa-hoc-va-ky-thuat-vat-lieu-chuong-trinh-tien-tien",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-co-dien-tu",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-co-dien-tu-chuong-trinh-tien-tien-",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-co-khi",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-co-khi-dong-luc",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-dien",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-dien-tu-vien-thong-chuong-trinh-tien-tien",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-dieu-khien-tu-dong-hoa",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-dieu-khien-tu-dong-hoa-chuong-trinh-tien-tien",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-hang-khong",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-hat-nhan",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-hoa-duoc-chuong-trinh-tien-tien",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-hoa-hoc",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-in",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-moi-truong",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-nhiet",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-o-to",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-o-to-chuong-trinh-tien-tien",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-sinh-hoc",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-sinh-hoc-chuong-trinh-tien-tien",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-thuc-pham",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-thuc-pham-chuong-trinh-tien-tien",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-vat-lieu",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-y-sinh",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-y-sinh-chuong-trinh-tien-tien",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/logistics-va-quan-ly-chuoi-cung-ung-chuong-trinh-tien-tien",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/phan-tich-kinh-doanh-chuong-trinh-tien-tien",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/quan-ly-cong-nghiep",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/quan-ly-giao-duc",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/quan-ly-nang-luong",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/quan-ly-tai-nguyen-va-moi-truong",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/quan-tri-kinh-doanh",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/tai-chinh-ngan-hang",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/tam-ly-hoc-cong-nghiep-va-to-chuc",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/tieng-anh-chuyen-nghiep-quoc-te",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/tieng-anh-khoa-hoc-ky-thuat-va-cong-nghe",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/tieng-han-khoa-hoc-va-cong-nghe",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/tieng-trung-khoa-hoc-va-cong-nghe",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/tin-hoc-cong-nghiep-va-tu-dong-hoa-chuong-trinh-viet-phap-pfiev",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/toan-tin",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/truyen-thong-so-va-ky-thuat-da-phuong-tien-chuong-trinh-tien-tien",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/vat-ly-ky-thuat",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
+  },
+  {
+    "school": "HUST",
+    "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/vat-ly-y-khoa",
+    "document_type": "program_overview_page",
+    "topic": "program_overview",
+    "fetch_strategy": "http",
+    "selector": "div.container:nth-child(2)",
+    "year": 2026,
+    "chunk_strategy": "by_section"
   }
 ]
