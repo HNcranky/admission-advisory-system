@@ -10,6 +10,7 @@ from services.inference.models import InferenceRequest
 from services.knowledge.taxonomy import (
     KNOWLEDGE_TOPICS,
     TOPIC_SYNONYMS,
+    normalize_school as _normalize_school,
     normalize_topic as _normalize_topic,
 )
 from services.profile_service import normalize_text
@@ -145,6 +146,27 @@ class IntentResult(BaseModel):
     def _coerce_topic(cls, v):
         # Unknown topic → None (keeps the route); known synonym → canonical.
         return _normalize_topic(v)
+
+    @field_validator("school", mode="before")
+    @classmethod
+    def _coerce_school(cls, v):
+        # The LLM is asked to emit a corpus code but sometimes returns the full
+        # name ("đại học bách khoa hà nội"); retrieval matches `school` exactly,
+        # so canonicalize here or the lookup finds zero chunks. Unknown → raw.
+        return _normalize_school(v)
+
+    @field_validator("schools", mode="before")
+    @classmethod
+    def _coerce_schools(cls, v):
+        if not v:
+            return []
+        seen, out = set(), []
+        for s in v:
+            canonical = _normalize_school(s)
+            if canonical and canonical not in seen:
+                seen.add(canonical)
+                out.append(canonical)
+        return out
 
     @field_validator("topics", mode="before")
     @classmethod
