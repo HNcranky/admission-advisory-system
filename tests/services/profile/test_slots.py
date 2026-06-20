@@ -58,8 +58,8 @@ def _state(**kwargs):
 def test_missing_critical_slots_empty_state_returns_current_critical_set():
     missing = missing_critical_slots(_state())
     assert missing == [
-        "admission_year", "total_score", "admission_method",
-        "preferred_majors", "subject_combination",
+        "admission_year", "admission_method", "preferred_majors",
+        "subject_combination", "total_score",
     ]
 
 
@@ -156,3 +156,15 @@ def test_ack_dedupes_major_variants_to_one_label():
         state,
     )
     assert ack == "Mình ghi nhận ngành quan tâm computer_science."
+
+
+def test_ack_unwraps_accumulation_op_no_dict_leak():
+    # delta phát op tích luỹ {"__add__": [...]} (apply_profile_delta) — không được
+    # str(dict) lọt vào câu xác nhận cho user.
+    state = ChatProfileState()
+    ack = build_slot_acknowledgement(
+        {"inferred_interest_tags": {"__add__": ["cyber_security", "computer_science"]}},
+        state,
+    )
+    assert ack == "Mình ghi nhận ngành quan tâm cyber_security, computer_science."
+    assert "__add__" not in ack

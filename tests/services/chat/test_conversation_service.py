@@ -88,7 +88,9 @@ def _make_service(intent_result=None, profile=None, flow=None, status=None, extr
 
 # ─── existing test (unchanged) ───────────────────────────────────────────────
 
-def test_handle_user_message_returns_follow_up_when_score_missing():
+def test_handle_user_message_returns_follow_up_when_method_missing():
+    # Năm + ngành đã có, phương thức là slot critical còn thiếu đầu tiên (hỏi
+    # phương thức trước tổ hợp/điểm).
     repo = FakeRepository()
     service = ConversationService(
         repository=repo,
@@ -103,7 +105,7 @@ def test_handle_user_message_returns_follow_up_when_score_missing():
 
     assert result.session_status == "collecting_profile"
     assert result.should_start_run is False
-    assert "bao nhiêu" in result.assistant_message.lower()
+    assert "phương thức" in result.assistant_message.lower()
 
 
 # ─── Task 2: injection test ───────────────────────────────────────────────────
@@ -671,7 +673,11 @@ def test_bare_number_reply_fills_pending_total_score_slot():
     # User typed just "29" in reply to the score question. Context-free
     # extraction yields nothing (no "diem" keyword), but the pending slot IS
     # total_score, so a lone number in range must be accepted as the score.
-    profile = ChatProfileState(admission_year=2026)
+    # total_score is the last critical slot — fill the earlier ones so it's pending.
+    profile = ChatProfileState(
+        admission_year=2026, admission_method="thpt_score",
+        preferred_majors=["computer_science"], subject_combination="A00",
+    )
     flow = FlowState(active_flow="ADVISORY_FLOW", pending_question="Tong diem cua ban la bao nhieu?")
     service, repo = _make_service(
         profile=profile,
@@ -808,18 +814,19 @@ def test_first_fill_during_collection_is_not_a_correction():
 
 # ─── Plan reasoning-integrity 1: admission_method slot (EC-13 thu thập) ───────
 
-def test_score_answer_then_system_asks_admission_method():
-    """EC-13: có điểm nhưng chưa biết phương thức → câu hỏi kế tiếp là phương thức."""
-    profile = ChatProfileState(admission_year=2026)
+def test_year_answer_then_system_asks_admission_method():
+    """EC-13: có năm nhưng chưa biết phương thức → câu hỏi kế tiếp là phương thức
+    (phương thức được hỏi trước tổ hợp và điểm)."""
+    profile = ChatProfileState()
     flow = FlowState(active_flow="ADVISORY_FLOW",
-                     pending_question="Tổng điểm hoặc mức điểm ước tính của bạn là bao nhiêu?")
+                     pending_question="Bạn đang xét tuyển cho năm nào?")
     service, repo = _make_service(
         profile=profile, flow=flow,
         extract=lambda text, known_state=None, active_slot=None: {},
     )
-    result = service.handle_user_message("tok", "27")
+    result = service.handle_user_message("tok", "2026")
 
-    assert repo.profile_state.total_score == 27.0
+    assert repo.profile_state.admission_year == 2026
     assert "phương thức" in result.assistant_message
     assert repo.flow_state.pending_question == (
         "Bạn dự định xét tuyển bằng phương thức nào nhỉ? Ví dụ: điểm thi tốt nghiệp THPT, "
@@ -957,7 +964,7 @@ def test_ec22_reset_applies_same_turn_delta_to_fresh_profile():
     assert repo.profile_state.total_score is None          # điểm cũ KHÔNG còn
     assert repo.profile_state.preferred_majors == []
     assert "hồ sơ tư vấn mới" in result.assistant_message
-    assert "bao nhiêu" in result.assistant_message         # hỏi tiếp slot điểm
+    assert "phương thức" in result.assistant_message       # hỏi tiếp slot phương thức
 
 
 def test_ec22_llm_routed_reset_uses_same_handler():

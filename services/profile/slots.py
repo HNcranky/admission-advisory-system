@@ -54,13 +54,13 @@ def _major_present(state) -> bool:
 # location_preference KHÔNG bắt buộc (spec mục 8) — chỉ dùng để xếp hạng/lọc.
 SLOTS: List[Slot] = [
     Slot("admission_year", True, 0, "Bạn đang xét tuyển cho năm nào?", parse_admission_year),
-    Slot("total_score", True, 1, "Tổng điểm hoặc mức điểm ước tính của bạn là bao nhiêu?", parse_score),
-    Slot("admission_method", True, 2,
+    Slot("admission_method", True, 1,
          "Bạn dự định xét tuyển bằng phương thức nào nhỉ? Ví dụ: điểm thi tốt nghiệp THPT, "
          "xét học bạ, đánh giá năng lực, hoặc xét tuyển kết hợp.",
          parse_admission_method),
-    Slot("preferred_majors", True, 3, "Bạn quan tâm nhất đến ngành nào?", None, present=_major_present),
-    Slot("subject_combination", True, 4, "Bạn xét theo tổ hợp nào, ví dụ A00, A01 hay D01?", parse_subject_combination),
+    Slot("preferred_majors", True, 2, "Bạn quan tâm nhất đến ngành nào?", None, present=_major_present),
+    Slot("subject_combination", True, 3, "Bạn xét theo tổ hợp nào, ví dụ A00, A01 hay D01?", parse_subject_combination),
+    Slot("total_score", True, 4, "Tổng điểm hoặc mức điểm ước tính của bạn là bao nhiêu?", parse_score),
     Slot("location_preference", False, 5, "Bạn muốn học ở khu vực hoặc thành phố nào?", None),
     Slot("tuition_budget", False, 6, "Mức học phí bạn mong muốn khoảng bao nhiêu?", None),
 ]
@@ -146,11 +146,20 @@ def _state_slot_value(state, name: str) -> str:
     return _fmt_slot_value(name, value)
 
 
+def _delta_value(value):
+    """Unwrap op tích luỹ {"__add__": [...]} về list giá trị thật (apply_profile_delta
+    phát op này cho list slot) — tránh str(dict) lọt vào câu xác nhận."""
+    if isinstance(value, dict) and "__add__" in value:
+        return value["__add__"]
+    return value
+
+
 def _captured_pairs(delta):
     """[(label, formatted_value)] cho các slot critical vừa được set, dedupe theo nhãn."""
     pairs = []
     seen = set()
-    for key, value in delta.items():
+    for key, raw in delta.items():
+        value = _delta_value(raw)
         label = _slot_label(key)
         if label is None or label in seen or _is_empty(value):
             continue

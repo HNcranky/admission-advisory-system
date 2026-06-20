@@ -147,7 +147,7 @@ def test_post_message_uses_fallback_extractor_when_gateway_is_unavailable(monkey
     # unavailable the DST extractor only yields the deterministic delta
     # (active-slot parse + tiered major resolver), so no school is captured.
     assert body["profile_state"]["preferred_schools"] == []
-    assert body["profile_state"]["missing_slots"] == ["total_score", "admission_method", "subject_combination"]
+    assert body["profile_state"]["missing_slots"] == ["admission_method", "subject_combination", "total_score"]
     
     
 def test_create_session_endpoint_returns_snapshot(monkeypatch):
