@@ -73,4 +73,45 @@ Each scenario is given as a precondition, a user action, and the required system
 \textit{User action:} the student requests recommendations.
 \textit{Required behavior:} the system states which criteria could not be satisfied and suggests which constraint to relax, rather than returning an empty or misleadingly confident result.
 
+\section*{A.5 Prompt template summaries}
+
+The templates below are academic summaries of the prompt contracts used by the system.
+They are not full production prompts; they show the role, task, required inputs, output format, and safety constraints needed to reproduce the behavior at design level.
+Placeholders use double braces to distinguish run-time values from fixed instructions.
+
+\textbf{Template A.5.1 --- Intent routing.}
+\textit{Role:} classify one student message for a Vietnamese university admission assistant.
+\textit{Task:} choose the next conversation route after deterministic profile updates have been applied.
+\textit{Required inputs:} \texttt{\{\{message\}\}}, \texttt{\{\{profile\_state\}\}}, \texttt{\{\{pending\_slot\}\}}, and \texttt{\{\{recent\_turns\}\}}.
+\textit{Output format:} strict \gls{JSON} with fields \texttt{route}, \texttt{confidence}, \texttt{school\_scope}, \texttt{knowledge\_topics}, \texttt{profile\_reset\_requested}, and \texttt{reason}.
+\textit{Safety constraints:} return only a supported route; prefer \texttt{knowledge} for factual school-policy questions; prefer \texttt{advisory} only when the user asks for recommendation or eligibility guidance; return \texttt{clarification} when the message is ambiguous; do not fabricate missing profile values.
+
+\textbf{Template A.5.2 --- Profile state update.}
+\textit{Role:} extract admission-profile changes from a student message.
+\textit{Task:} update only the fields supported by the profile schema and preserve prior values unless the message clearly corrects them.
+\textit{Required inputs:} \texttt{\{\{message\}\}}, \texttt{\{\{profile\_state\}\}}, \texttt{\{\{pending\_slot\}\}}, and \texttt{\{\{validation\_rules\}\}}.
+\textit{Output format:} strict \gls{JSON} with fields \texttt{updates}, \texttt{corrections}, \texttt{rejections}, \texttt{missing\_critical\_slots}, and \texttt{next\_question}.
+\textit{Safety constraints:} reject scores outside the valid range for the admission method; distinguish explicit preferred majors from inferred interests; never treat location or tuition as critical blocking slots; ask one missing critical slot at a time.
+
+\textbf{Template A.5.3 --- Knowledge question answering.}
+\textit{Role:} answer a student question using only retrieved official-source chunks.
+\textit{Task:} synthesize a concise answer grounded in the supplied passages and return the identifiers of the chunks actually used.
+\textit{Required inputs:} \texttt{\{\{question\}\}}, \texttt{\{\{school\_scope\}\}}, \texttt{\{\{topic\_scope\}\}}, and \texttt{\{\{retrieved\_chunks\}\}}.
+\textit{Output format:} strict \gls{JSON} with fields \texttt{has\_answer}, \texttt{answer}, \texttt{used\_source\_ids}, \texttt{missing\_information}, and \texttt{confidence}.
+\textit{Safety constraints:} do not use outside knowledge; set \texttt{has\_answer} to false when the chunks do not answer the question; include no citation identifier that is absent from \texttt{\{\{retrieved\_chunks\}\}}; state uncertainty when the passages conflict.
+
+\textbf{Template A.5.4 --- OCR transcription.}
+\textit{Role:} transcribe one page image from an official admission document.
+\textit{Task:} recover the visible Vietnamese and English text while preserving table row order as plain text.
+\textit{Required inputs:} \texttt{\{\{image\_page\}\}}, \texttt{\{\{document\_title\}\}}, \texttt{\{\{page\_number\}\}}, and \texttt{\{\{school\_scope\}\}}.
+\textit{Output format:} plain UTF-8 text with line breaks that reflect the page layout.
+\textit{Safety constraints:} transcribe only visible content; do not summarize; do not infer hidden table cells; mark unreadable spans as \texttt{[unreadable]}; stop rather than repeating a character or line indefinitely.
+
+\textbf{Template A.5.5 --- Hybrid synthesis and policy ambiguity.}
+\textit{Role:} synthesize advisory evidence and knowledge evidence when a student asks a comparison or policy-sensitive question.
+\textit{Task:} combine candidate-program evidence, cutoff or quota conflicts, and retrieved knowledge chunks into one answer.
+\textit{Required inputs:} \texttt{\{\{message\}\}}, \texttt{\{\{profile\_state\}\}}, \texttt{\{\{advisory\_evidence\}\}}, \texttt{\{\{retrieved\_chunks\}\}}, and \texttt{\{\{conflict\_summary\}\}}.
+\textit{Output format:} strict \gls{JSON} with fields \texttt{answer}, \texttt{comparison\_points}, \texttt{policy\_caveats}, \texttt{conflict\_disclosures}, \texttt{used\_source\_ids}, and \texttt{follow\_up\_question}.
+\textit{Safety constraints:} do not resolve policy ambiguity by guessing; disclose decision-changing conflicts; keep advisory recommendations separate from factual school descriptions; ask a follow-up question when a required profile value is missing.
+
 \end{document}
