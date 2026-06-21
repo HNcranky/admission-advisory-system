@@ -3,19 +3,34 @@
 
 % Target length: >= 5 pages.
 
-Chapter~\ref{chapter:Experiment} presented the system as a whole.
-This chapter isolates its three principal contributions and examines each in the form problem, solution, and result.
-The contributions are the conflict-aware consolidation of contradictory source data (Section~\ref{section:5.1}), the resilient inference gateway that keeps the assistant available under model failures (Section~\ref{section:5.2}), and the end-to-end ingestion of heterogeneous official sources including scanned documents (Section~\ref{section:5.3}).
-Each addresses a gap identified in Chapter~\ref{chapter:Related_works} that existing admission tools leave open.
+Chapter~\ref{chapter:Experiment} presented the implemented system as a whole.
+This chapter isolates the thesis contributions and frames each one around the problem it solves, the solution implemented in this repository, and the result observed in the system.
+
+\section{Problems addressed}
+\label{section:5.0}
+
+The first problem is contradictory official admission data.
+Admission proposals, school pages, and cutoff sources can disagree on the same program, year, method, or quota.
+An advisory assistant that silently overwrites one value with another would hide uncertainty from the student, so the system must preserve conflicting records and disclose decision-changing conflicts.
+
+The second problem is unreliable external \gls{LLM} behavior.
+The system depends on hosted models for routing, profile extraction, conflict tie-breaking, grounded generation, and \gls{OCR}; those calls can fail through network errors, quota limits, or malformed structured outputs.
+The contribution is not simply using a model, but designing the gateway and fallbacks so those failures do not collapse the consultation.
+
+The third problem is heterogeneous source material.
+Useful admission knowledge appears in configured \gls{HTML} pages, structured seeds, born-digital \gls{PDF}s, and scanned \gls{PDF}s.
+The system therefore needs an ingestion path that can collect, normalize, chunk, embed, and store material across formats without treating scanned documents as unusable.
+
+The following sections detail the three contributions that address these problems: conflict-aware data consolidation, a resilient inference gateway, and end-to-end ingestion of heterogeneous official sources.
 
 \section{Conflict-aware data consolidation}
 \label{section:5.1}
 
 \textbf{Problem.}
-Official admission data is not only fragmented but internally inconsistent: two authoritative publications for the same program can state different quotas, and two sources can record different historical cutoff scores for the same program and year.
-As established in Chapter~\ref{chapter:Related_works}, every existing channel resolves such disagreement silently --- it picks one value or shows none --- which hides exactly the uncertainty a student needs to know about before committing an application.
-Consolidating these sources therefore cannot mean overwriting one value with another; the disagreement must survive into the recommendation.
-The general problem of combining records that describe the same entity but disagree on attribute values is studied as \textit{data fusion}~\cite{bleiholder2009fusion}, which frames the available strategies as resolving, ignoring, or deferring a conflict; the design below applies the deferring strategy where a conflict cannot be settled objectively.
+Official admission data is fragmented and can be internally inconsistent.
+Two authoritative publications for the same program may state different quotas, and cutoff sources may disagree for the same program, year, and method.
+Because Chapter~\ref{chapter:Related_works} identified conflict disclosure as a missing capability in existing channels, the system must keep disagreement visible instead of collapsing it into one apparently certain value.
+The broader database problem is data fusion over records that describe the same entity but disagree on attributes~\cite{bleiholder2009fusion}; this thesis applies a conservative strategy that defers conflicts when the system cannot settle them objectively.
 
 \textbf{Solution.}
 Conflict awareness is built in three layers.
@@ -37,11 +52,10 @@ The conflict-handling edge cases (EC-16 and EC-17) are among the 17 satisfied ca
 \label{section:5.2}
 
 \textbf{Problem.}
-The assistant depends on a hosted \gls{LLM} reached over the network, and that dependency fails in two distinct ways.
-The first is a \textit{hard failure}: the \gls{API} is unreachable, unauthenticated, or rate-limited, which is common because the inference quota is finite and shared across every reasoning step.
-The second is a \textit{soft failure}: the call succeeds but the body cannot be used --- the model wraps its \gls{JSON} in prose, emits malformed syntax, or returns a value outside the expected set.
-A naive implementation that treats every \gls{LLM} call as reliable would let either failure crash a consultation, violating the graceful-degradation requirement NFR-01.
-The two failure kinds also call for opposite responses: retrying a rate-limited endpoint is pointless, whereas retrying a malformed structured response can succeed.
+Hosted \gls{LLM} calls fail in ways that ordinary service calls do not fully capture.
+A hard failure means the provider cannot return a response because of network, authentication, quota, or rate-limit conditions.
+A structure failure means the provider returned text, but the text cannot be parsed into the schema required by downstream code.
+Both failures are expected in a system that asks models for strict \gls{JSON}, and either one can break routing or answer generation unless the model boundary treats failure types explicitly.
 
 \textbf{Solution.}
 All model access is funneled through a single gateway (Section~\ref{section:4.1}) that makes the two failure modes first-class.
@@ -61,9 +75,9 @@ Concentrating this logic in one gateway means every reasoning step in the system
 \label{section:5.3}
 
 \textbf{Problem.}
-The data that makes the assistant useful lives in sources that share no common format: each university structures its admission pages differently, proposal documents are published as \gls{PDF}s, and some of those \gls{PDF}s are scanned images with no text layer at all.
-A pipeline that assumes uniform, machine-readable input cannot ingest this material, yet without it the canonical store and the knowledge corpus would be empty.
-Scanned documents are the hardest case, because recovering their text requires \gls{OCR}, and model-based \gls{OCR} introduces a failure mode of its own.
+The data that makes the assistant useful is spread across formats that require different handling.
+Structured school pages can be fetched and parsed, proposal documents may contain extractable text and tables, and scanned \gls{PDF}s provide only page images.
+Without a unified ingestion path across those formats, the canonical store would miss structured advisory facts and the knowledge corpus would miss the documents needed for grounded answers.
 
 \textbf{Solution.}
 Ingestion is a configurable, staged pipeline (Section~\ref{section:4.1}): per-source configuration selects the fetch strategy, the document router predicts each document's type, and a matching parser and extractor turn it into raw facts that are then normalized against per-school dictionaries into canonical records.
