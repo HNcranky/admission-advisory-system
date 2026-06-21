@@ -141,6 +141,30 @@ The \textit{knowledge corpus} area (\texttt{knowledge\_documents}, \texttt{knowl
 \section{Application building}
 \label{section:4.3}
 
+\subsection{Data preparation}
+
+The application data was prepared through two complementary paths: structured admission records for advisory reasoning and unstructured knowledge documents for grounded question answering.
+The structured path starts from the source registry seed at \texttt{ingestion/registry/seeds/initial\_sources.json}, which defines the configured university sources used by the ingestion \gls{CLI}.
+Historical cutoff data is loaded from the cutoff seed files under \texttt{ingestion/cutoff/seeds/}.
+Together, these sources populate the canonical admission and cutoff tables used by retrieval, conflict detection, and reasoning.
+
+The knowledge-corpus path starts from four registries.
+School-level knowledge sources are listed in \texttt{ingestion/knowledge/registry/seeds/knowledge\_sources.json}.
+National regulation sources are listed in \texttt{ingestion/knowledge/seeds/national\_sources.json}.
+Crawler targets are listed in \texttt{ingestion/knowledge/crawler/seeds/crawler\_targets.json}.
+The local document manifest is stored in \texttt{data/knowledge/manifest.json}, with born-digital \gls{PDF}s organized under \texttt{data/knowledge/pdf\_text} and scanned \gls{PDF}s organized under \texttt{data/knowledge/pdf\_scanned}.
+This separation lets the pipeline choose text-layer extraction for machine-readable files and multimodal \gls{OCR} for scanned documents.
+
+The processing sequence is the same across the corpus.
+First, discovery or manifest loading identifies candidate documents and their school, topic, and source metadata.
+Second, manifest filtering removes disabled or out-of-scope entries before expensive processing begins.
+Third, the pipeline extracts a text layer when available or renders scanned pages and transcribes them by \gls{OCR}.
+Fourth, the resulting text is split into chunks with stable source identifiers.
+Fifth, the chunks are embedded and inserted into the PostgreSQL knowledge tables, where pgvector indexes support later similarity search.
+
+The final numeric totals are reported only in the Achievement subsection below.
+Keeping the counts there avoids duplicating evaluation claims while this subsection explains how the data became usable.
+
 \subsection{Libraries and tools}
 
 Table~\ref{table:libraries} lists the principal libraries and their versions, taken from \texttt{requirements.txt}.
