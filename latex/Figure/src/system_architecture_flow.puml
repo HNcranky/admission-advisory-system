@@ -1,0 +1,78 @@
+@startuml system_architecture_flow
+!pragma layout smetana
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+
+actor Student as student
+rectangle "Chat Interface" as ui
+database "Anonymous\nChat Session" as session
+component "Conversation\nService" as conversation
+component "Intent Router" as router
+component "Profile State\nUpdate" as profile_state
+
+package "Advisory Branch" {
+  component "Profile" as profile
+  component "Retrieval" as retrieval
+  component "Conflict" as conflict
+  component "Reasoning" as reasoning
+  component "Policy" as policy
+  component "Explanation" as explanation
+}
+
+package "Knowledge Branch" {
+  component "Embedding" as embedding
+  database "PostgreSQL\npgvector" as vector_store
+  component "Grounded Answer\nGeneration" as answer
+  component "Citations" as citations
+}
+
+package "Ingestion Branch" {
+  component "Registered and\nLocal Sources" as sources
+  component "Fetch, Parse,\nOCR, Normalize" as ingestion
+  database "Canonical\nAdmission Records" as canonical
+  database "Knowledge\nChunks" as chunks
+}
+
+database "Trace\nPersistence" as trace
+component "Operator\nInspection" as operator
+
+student --> ui : student message
+ui --> session : append turn
+session --> conversation : load state
+conversation --> router : classify route
+conversation --> profile_state : update profile slots
+
+router --> profile : advisory route
+profile --> retrieval
+retrieval --> conflict
+conflict --> reasoning
+reasoning --> policy
+policy --> explanation
+explanation --> conversation : final advisory response
+
+router --> embedding : knowledge route
+embedding --> vector_store : query embedding
+vector_store --> answer : similar chunks
+answer --> citations
+citations --> conversation : grounded answer
+
+sources --> ingestion
+ingestion --> canonical
+ingestion --> chunks
+chunks --> vector_store
+canonical --> retrieval
+
+profile --> trace
+retrieval --> trace
+conflict --> trace
+reasoning --> trace
+policy --> trace
+explanation --> trace
+conversation --> trace
+trace --> operator
+
+conversation --> session : persist response
+session --> ui : poll result
+ui --> student : render answer
+@enduml
