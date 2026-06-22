@@ -157,6 +157,30 @@ An advisory-flow message proceeds only when all critical profile slots are fille
 Once the profile is sufficient, the run is dispatched to a background worker that drives the six-stage advisory pipeline --- profile, retrieve, conflict, reason, policy, explain --- and persists the final answer, while emitting a per-stage trace to the observability backend.
 The chat interface polls for the result and renders the recommendation.
 
+\subsection{Solution architecture overview}
+\label{subsection:2.2.4}
+
+Before the detailed requirements that follow, Figure~\ref{fig:system-architecture} summarizes how the system is designed and how it turns a student message into a grounded answer; the chosen technologies and their rationale are the subject of Chapter~\ref{chapter:Methodology}, and the package-level design of Chapter~\ref{chapter:Experiment}.
+
+The design separates an \textit{offline ingestion} path from an \textit{online runtime}, joined by one shared datastore.
+Ingestion fetches, routes, parses, extracts, and normalizes official sources --- school admission pages, proposal \gls{PDF}s, and \gls{MOET} regulations --- into a single PostgreSQL instance with the pgvector extension, which holds both the canonical store (admission and cutoff records, one row per source) and the knowledge corpus (document chunks and their embeddings).
+Scanned documents pass through a hybrid text-and-\gls{OCR} extractor so that image-only pages still reach the store.
+
+At runtime, every student message is first parsed for profile values and deterministic control actions, then classified by an intent router into one of the conversation routes.
+The route decides how the answer is generated.
+An \textit{advisory} message runs the six-stage pipeline, which retrieves candidate programs from the canonical store, checks source conflicts, ranks by eligibility, applies admission policy, and explains the result.
+A \textit{knowledge} question runs retrieval-augmented generation: the question is embedded, the most similar corpus chunks are retrieved, a confidence gate decides whether the evidence is sufficient, and an answer is generated strictly from the retrieved passages with citations.
+A \textit{hybrid} question combines both and synthesizes one comparison.
+Similarity in the knowledge path is measured as cosine similarity between the question embedding and the chunk embeddings, computed by pgvector over a \gls{HNSW} index, so the nearest passages are found without scanning the whole corpus.
+All model calls --- routing, reasoning, embedding, and \gls{OCR} --- pass through a single Gemini gateway, and every stage emits a span to the observability backend, so the same fixed flow that produces the answer also produces its trace.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth,keepaspectratio]{system_architecture.png}
+    \caption{Solution architecture: offline ingestion into a shared store, and the runtime flow from a student message through intent routing to the advisory, knowledge, and hybrid answer paths}
+    \label{fig:system-architecture}
+\end{figure}
+
 \section{Functional description}
 \label{section:2.3}
 

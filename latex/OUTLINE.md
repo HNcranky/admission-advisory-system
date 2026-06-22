@@ -32,22 +32,31 @@ Sources: `docs/happy-path.md`, `docs/edge-case.md`,
       data ingestion.
 - [~] 2.2.3 Business process: profile collection → retrieval → conflict
       check → reasoning → policy → explanation (mirrors `graph.py`).
+- [x] 2.2.4 Solution architecture overview: system-flow diagram
+      (`Figure/src/system_architecture.puml` → `system_architecture.png`) —
+      offline ingestion → shared pgvector store → message → intent router →
+      advisory / knowledge-RAG (cosine over pgvector+HNSW) / hybrid → answer.
+      Shows design, answer generation, and similarity measurement in one figure.
 - [~] 2.3 Functional description: 4-7 key use cases with flows and pre/post
       conditions (advisory consultation, free-form Q&A, profile update,
       school data refresh).
 - [~] 2.4 Non-functional: LLM-outage graceful degradation, data freshness,
       anonymous sessions, latency, test isolation.
 
-## Chapter 3 — Theoretical background and technologies (≤ 10 pages)
+## Chapter 3 — Theoretical background and technologies (8–10 pages)
 Rule: each technology must map to a Chapter 2 requirement + name alternatives.
+Condensed 2026-06-22 to a decision-driven form (need → alternatives → choice),
+~40% shorter than the earlier draft; all citations/labels preserved.
 - [~] 3.1 LLMs: Gemini family (cite), prompting, structured output.
 - [~] 3.2 RAG + vector search: embeddings, pgvector (cite); alternative:
       dedicated vector DBs; why Postgres-integrated.
 - [~] 3.3 Agentic pipelines: LangGraph (cite) state graphs; alternative:
       plain function-calling loop; why a fixed graph (determinism,
       traceability).
-- [~] 3.4 Document processing: PDF parsing, OCR for scanned proposals,
-      degenerate-OCR detection rationale.
+- [~] 3.4 Document processing + OCR model choice: PDF parsing; OCR framed as a
+      model-selection decision among multimodal LLMs (Table: gemini-2.5-flash-lite
+      chosen vs gemini-2.5-flash / GPT-4o-class / Claude-class, qualitative cost
+      tiers + single-gateway reuse). Degenerate-OCR mechanics deferred to §5.3.
 - [~] 3.5 Web stack: FastAPI (cite), Jinja2, durable run queue + background worker.
 - [~] 3.6 Observability and answer caching: LLM observability (Langfuse, cite) as
       span-tree tracing (OpenTelemetry convention, cite); alternative: bespoke
@@ -77,6 +86,12 @@ Rule: each technology must map to a Chapter 2 requirement + name alternatives.
       repository pattern with injectable `connection_factory` + `_cursor`.
 - [~] 4.3.1 Libraries/tools table: versions from `requirements.txt` /
       `pyproject.toml` (verify).
+- [x] 4.3.x Data preparation (NEW, before Achievement): crawled-source inventory
+      table (6 sources from `initial_sources.json`, 4 active + 2 inactive
+      aggregator cutoffs; 8 MOET seed PDFs from `national_sources.json`);
+      fetch→route→parse→extract→normalize prose; dictionaries (programs.json 25
+      shared + hust/neu/uet/vnu_uet/ftu, subjects 35, methods, combo rules);
+      canonical_admission_records / cutoff_records field list. Counts from FACTS.md.
 - [~] 4.3.2 Achievement: LOC, package/test counts, ingested schools
       HUST/NEU/UET + MOET documents — all measured values in `latex/FACTS.md`
       (2026-06-19: hust 136 programs, cutoffs 715 total, catalog 82,
@@ -91,6 +106,8 @@ Rule: each technology must map to a Chapter 2 requirement + name alternatives.
 ## Chapter 5 — Solution and contribution (≥ 5 pages)
 Each: problem → solution → results. Cross-referenced from Chapters 2/4.
 Three domain-gap contributions (5.1-5.3) + three engineering contributions (5.4-5.6).
+Opens with a consolidated "Problems addressed" table (problem → why it matters →
+solving section) before the per-problem sections (added 2026-06-22).
 - [~] 5.1 Conflict-aware data consolidation: contradictory quota/cutoff data
       across sources; `services/conflict/` deterministic detection + resolution;
       conflict surfacing in advisory answers.
@@ -120,6 +137,14 @@ Three domain-gap contributions (5.1-5.3) + three engineering contributions (5.4-
 
 ## Appendix A — Use case descriptions
 - [~] Full specifications overflowing from §2.3.
+
+## Appendix B — Prompts (`Chapter/Appendix_B.tex`, registered in `main.tex`)
+- [x] The 7 LLM system prompts reproduced verbatim (Vietnamese) in `promptstyle`
+      listings: intent router, knowledge QA, hybrid synthesis, profile delta
+      extractor, initial profile inference, follow-up reasoner, policy interpreter.
+      Intent/knowledge/synthesis resolve via Langfuse `PromptService` (local
+      fallback shown); conflict service is deterministic (no prompt). New
+      `promptstyle` in `lstlisting.tex` (utf8 + literate for → × —).
 
 ## Reference collection backlog
 - Academic: RAG (Lewis et al. 2020), LLM agents survey, conflict resolution /

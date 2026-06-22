@@ -289,6 +289,49 @@ Table~\ref{table:libraries} lists the principal libraries and their versions, ta
     \end{tabular}
 \end{table}
 
+\subsection{Data preparation}
+
+The system is only as useful as the official data behind it, so a deliberate data-preparation stage populates two stores before any consultation: the canonical store of structured admission records and the knowledge corpus of embedded document chunks.
+Both are filled by the ingestion pipeline of Section~\ref{section:4.1} from registered official sources rather than by manual entry.
+
+The structured data is crawled from the six sources seeded in \texttt{initial\_sources.json}, listed in Table~\ref{table:sources}.
+Each source carries a \textit{trust level} (1--5) and an \textit{active} flag: the two HUST cutoff sources from an aggregator are registered but inactive, kept as lower-trust fallbacks, so the active set is the four first-party university sources.
+The knowledge corpus draws on the same university pages plus a national scope seeded from eight official \gls{MOET} regulation documents in \texttt{national\_sources.json} (for example, Thông tư 08/2022/TT-BGDĐT, the national admission regulation), because ministry rules apply across every school.
+
+\begin{table}[H]
+    \centering
+    \caption{Registered ingestion sources (\texttt{ingestion/registry/seeds/initial\_sources.json})}
+    \label{table:sources}
+    {\footnotesize
+    \setlength{\tabcolsep}{5pt}
+    \begin{tabular}{|p{4.3cm}|c|p{3.2cm}|c|c|}
+        \hline
+        \textbf{Source} & \textbf{School} & \textbf{Type} & \textbf{Trust} & \textbf{Active} \\
+        \hline
+        Admission homepage & \gls{VNU-UET} & admission page & 4 & Yes \\
+        \hline
+        Proposal \gls{PDF} & \gls{VNU-UET} & proposal \gls{PDF} & 5 & Yes \\
+        \hline
+        Program listing & \gls{HUST} & program listing & 5 & Yes \\
+        \hline
+        Admission announcement & \gls{HUST} & news \gls{HTML} & 5 & Yes \\
+        \hline
+        Cutoff page (aggregator) & \gls{HUST} & cutoff \gls{HTML} & 3 & No \\
+        \hline
+        Cutoff \gls{API} (aggregator) & \gls{HUST} & cutoff \gls{API} & 3 & No \\
+        \hline
+    \end{tabular}}
+\end{table}
+
+Each source is fetched over \gls{HTTP}, routed to a document type (by content type, \gls{URL} extension, and file magic bytes, with a text-density test marking a low-text \gls{PDF} as scanned and routing it through \gls{OCR}), parsed by the parser named in its \texttt{parser\_profile}, and extracted into raw facts --- programs, admission methods, subject combinations, quotas, and historical cutoff scores.
+The raw facts are then normalized against four per-school dictionaries that map the messy surface forms of official documents onto canonical identifiers.
+\texttt{programs.json} holds 25 shared canonical programs plus per-school overrides for HUST, NEU, UET, VNU-UET, and FTU, each entry pairing a canonical name with a list of aliases and a field (for example, \texttt{computer\_science} $\rightarrow$ ``Khoa học Máy tính'' with seven aliases such as ``CNTT'' and ``Công nghệ thông tin'').
+\texttt{subjects.json} enumerates 35 subject-combination codes (A00 $\rightarrow$ Toán, Vật lý, Hóa học), \texttt{methods.json} maps admission-method phrasings onto canonical method codes, and \texttt{combo\_method\_rules.json} carries regular-expression rules that infer a method from a combination code (a K0x code $\rightarrow$ a competency test).
+
+Normalized records are written to the canonical store with both their raw and canonical forms and full provenance.
+A \texttt{canonical\_admission\_records} row keeps the school, admission year, canonical and raw program names, admission method, subject combinations, quota, deadline, and tuition, alongside the \texttt{source\_url}, \texttt{source\_trust\_level}, and \texttt{confidence\_score} that the conflict logic of Section~\ref{section:5.1} later weighs; a \texttt{cutoff\_records} row similarly keeps the program, cutoff year, method, score scale, and cutoff score with the same provenance fields.
+The resulting volumes --- 156 canonical admission records, 715 cutoff records, and a 93-document knowledge corpus --- are reported in the next subsection.
+
 \subsection{Achievement}
 
 The implemented system comprises 34{,}413 lines of Python across 414 tracked source files, of which 17{,}569 lines are tests.

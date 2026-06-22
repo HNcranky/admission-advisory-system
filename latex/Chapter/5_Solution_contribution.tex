@@ -5,8 +5,33 @@
 
 Chapter~\ref{chapter:Experiment} presented the system as a whole.
 This chapter isolates its principal contributions and examines each in the form problem, solution, and result.
-Three contributions address gaps that existing admission tools leave open, as identified in Chapter~\ref{chapter:Related_works}: the conflict-aware consolidation of contradictory source data (Section~\ref{section:5.1}), the resilient inference gateway that keeps the assistant available under model failures (Section~\ref{section:5.2}), and the end-to-end ingestion of heterogeneous official sources including scanned documents (Section~\ref{section:5.3}).
-Three further contributions concern the engineering of a maintainable and economical \gls{LLM} application: unified observability over every advisory run (Section~\ref{section:5.4}), the declarative orchestration of the conversation and knowledge flows as reusable graphs (Section~\ref{section:5.5}), and a version-gated semantic cache that reuses past answers (Section~\ref{section:5.6}).
+Six problems motivated the system's distinctive engineering, consolidated in Table~\ref{table:problems}: three are domain gaps that existing admission tools leave open, as identified in Chapter~\ref{chapter:Related_works}, and three concern building a maintainable and economical \gls{LLM} application around an external model.
+The remainder of the chapter addresses each problem in turn, one section per problem, so that the solution and its result can be read against the difficulty it answers.
+
+\begin{table}[H]
+    \centering
+    \caption{Problems addressed by the system's contributions}
+    \label{table:problems}
+    {\footnotesize
+    \setlength{\tabcolsep}{5pt}
+    \begin{tabular}{|p{4.5cm}|p{6.3cm}|c|}
+        \hline
+        \textbf{Problem} & \textbf{Why it matters} & \textbf{Addressed in} \\
+        \hline
+        Official sources contradict each other on quotas and cutoff scores & A tool that silently picks one value is frequently wrong without signalling it & Section~\ref{section:5.1} \\
+        \hline
+        The hosted \gls{LLM} fails as a hard outage or as an unusable (malformed) response & A naive caller crashes a consultation instead of degrading & Section~\ref{section:5.2} \\
+        \hline
+        Sources share no format and some \gls{PDF}s are scanned images & A uniform pipeline cannot ingest them, leaving the store empty & Section~\ref{section:5.3} \\
+        \hline
+        A multi-stage run is opaque & There is no single place to see why a run is slow, costly, or wrong & Section~\ref{section:5.4} \\
+        \hline
+        Orchestration outside the advisory graph was imperative and the knowledge flow was duplicated & Control flow drifts and cannot be traced uniformly & Section~\ref{section:5.5} \\
+        \hline
+        Repeated factual questions re-run the full retrieval and generation & Inference quota and latency are spent re-answering settled questions, and a naive cache serves stale answers & Section~\ref{section:5.6} \\
+        \hline
+    \end{tabular}}
+\end{table}
 
 \section{Conflict-aware data consolidation}
 \label{section:5.1}

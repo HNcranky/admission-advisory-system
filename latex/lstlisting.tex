@@ -12,3 +12,24 @@
   language=Python
 }
 \renewcommand{\lstlistingname}{Listing}
+
+% Style for reproducing the system's runtime prompts verbatim (Appendix B).
+% The prompts are Vietnamese with a few non-ASCII symbols; extendedchars+utf8
+% reuse the document's existing Vietnamese input setup, and the literate map
+% covers the symbols (-> x --) that inputenc would otherwise not have set up.
+\lstdefinestyle{promptstyle}{
+  language={},
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  breakatwhitespace=false,
+  columns=fullflexible,
+  keepspaces=true,
+  frame=single,
+  numbers=none,
+  showstringspaces=false,
+  extendedchars=true,
+  inputencoding=utf8,
+  upquote=true,
+  captionpos=b,
+  literate={→}{{$\rightarrow$}}1 {×}{{$\times$}}1 {—}{{\textemdash}}1
+}

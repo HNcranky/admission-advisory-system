@@ -1,0 +1,74 @@
+@startuml system_architecture
+!pragma layout smetana
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam ranksep 45
+skinparam nodesep 28
+skinparam roundcorner 6
+skinparam ArrowColor #555555
+skinparam rectangle {
+  BorderColor #333333
+  BackgroundColor #FAFAFA
+}
+skinparam database {
+  BorderColor #333333
+  BackgroundColor #F0F4FF
+}
+skinparam cloud {
+  BorderColor #333333
+  BackgroundColor #FFF7EC
+}
+
+actor "Student" as student
+actor "Operator" as operator
+
+package "Offline ingestion" as ing {
+  rectangle "Official sources\nschool pages, proposal PDFs,\nMOET regulations" as src
+  rectangle "Ingestion pipeline\nfetch -> route -> parse ->\nextract -> normalize" as pipe
+  rectangle "Hybrid text +\nmultimodal-LLM OCR" as ocr
+}
+
+database "PostgreSQL 16 + pgvector" as db {
+  rectangle "Canonical store\nadmission + cutoff records\n(one row per source)" as canon
+  rectangle "Knowledge corpus\nchunks + 768-dim embeddings\n(HNSW index)" as corpus
+}
+
+cloud "Gemini gateway\nLLM . embeddings . OCR" as gw
+
+package "Runtime: one student message" as rt {
+  rectangle "Profile extraction\n+ deterministic guards" as prof
+  rectangle "Intent router\n(LLM, keyword fallback)" as router
+  rectangle "Advisory pipeline\nprofile -> retrieve -> conflict ->\nreason -> policy -> explain" as adv
+  rectangle "Knowledge RAG\nembed query -> vector search\n-> confidence gate -> generate" as rag
+  rectangle "Hybrid synthesis" as syn
+  rectangle "Response\nranked programs, grounded answer,\ncitations, conflict notes" as resp
+}
+
+rectangle "Langfuse\nobservability" as lf
+
+operator -down-> src
+src -down-> pipe
+pipe -right-> ocr
+pipe -down-> canon
+pipe -down-> corpus
+
+student -down-> prof : message
+prof -down-> router
+router -down-> adv : advisory
+router -down-> rag : knowledge
+router -down-> syn : hybrid
+adv -left-> canon : eligibility\n+ conflicts
+rag -left-> corpus : cosine similarity\n(pgvector / HNSW)
+syn ..> adv
+syn ..> rag
+adv -down-> resp
+rag -down-> resp
+syn -down-> resp
+resp -up-> student : answer
+
+router ..> gw
+adv ..> gw
+rag ..> gw
+ocr ..> gw
+rt ..> lf : spans + generations
+@enduml
