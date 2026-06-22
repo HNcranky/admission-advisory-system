@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import List, Dict
 from bs4 import BeautifulSoup, NavigableString, Tag
 
@@ -70,17 +71,17 @@ def parse_html(content: bytes, url: str = "", selector: str | None = None) -> Pa
                                                                   
     images = _extract_images(content_tag)
 
-    # Replace each <table> with its markdown equivalent so the text field
-    # preserves tabular structure for RAG (same intent as PDF OCR's "Bảng → bảng markdown").
-    for table in content_tag.find_all("table"):
-        md = _table_to_markdown(table)
-        table.replace_with(NavigableString(f"\n\n{md}\n\n") if md else "")
+    # Render the content tree to structured markdown so the text field keeps the
+    # source's heading/section/list/table shape (instead of a flat newline dump).
+    # Blank lines between blocks double as chunk boundaries for the RAG chunker.
+    text = _to_markdown(content_tag)
 
-    text = content_tag.get_text(separator="\n", strip=True)
+    content_label = _extract_content_label(soup, title, url)
 
     parsed = ParsedContent(
         text=text,
         title=title,
+        content_label=content_label,
         headings=headings,
         tables=tables,
         links=links,
@@ -141,6 +142,95 @@ def _table_to_markdown(table: Tag) -> str:
     for row in rows[1:]:
         lines.append("| " + " | ".join(row) + " |")
     return "\n".join(lines)
+
+
+_HEADINGS = {"h1", "h2", "h3", "h4", "h5", "h6"}
+# Tags whose text is layout noise, not content.
+_SKIP_BLOCKS = {"br", "hr", "img", "figure", "svg", "button", "input", "nav"}
+_WS = re.compile(r"\s+")
+
+
+def _inline_md(tag: Tag) -> str:
+    """Render an element's inline content to markdown (bold/italic preserved).
+
+    Whitespace is collapsed to single spaces. Nested block tags are flattened
+    into the line — callers only pass leaf blocks (headings, p, li)."""
+    parts: list[str] = []
+    for node in tag.children:
+        if isinstance(node, NavigableString):
+            parts.append(str(node))
+            continue
+        name = node.name
+        inner = _inline_md(node)
+        if not inner.strip():
+            continue
+        if name in ("strong", "b"):
+            parts.append(f"**{inner.strip()}**")
+        elif name in ("em", "i"):
+            parts.append(f"*{inner.strip()}*")
+        else:  # a, span, and anything else: keep the text inline
+            parts.append(inner)
+    return _WS.sub(" ", "".join(parts)).strip()
+
+
+def _render_blocks(tag: Tag) -> list[str]:
+    """Walk a content tree depth-first, emitting one markdown block per element."""
+    blocks: list[str] = []
+    for child in tag.children:
+        if isinstance(child, NavigableString):
+            text = _WS.sub(" ", str(child)).strip()
+            if text:
+                blocks.append(text)
+            continue
+
+        name = child.name
+        if name in _SKIP_BLOCKS:
+            continue
+        if name in _HEADINGS:
+            text = _inline_md(child)
+            if text:
+                blocks.append("#" * int(name[1]) + " " + text)
+        elif name == "p":
+            text = _inline_md(child)
+            if text:
+                blocks.append(text)
+        elif name in ("ul", "ol"):
+            items = [
+                "- " + _inline_md(li)
+                for li in child.find_all("li", recursive=False)
+                if _inline_md(li)
+            ]
+            if items:
+                blocks.append("\n".join(items))
+        elif name == "table":
+            md = _table_to_markdown(child)
+            if md:
+                blocks.append(md)
+        else:  # container (div, section, article, ...): recurse
+            blocks.extend(_render_blocks(child))
+    return blocks
+
+
+def _to_markdown(tag: Tag) -> str:
+    """Structured-markdown text for a content region; blank-line separated blocks."""
+    return "\n\n".join(b for b in _render_blocks(tag) if b.strip())
+
+
+def _extract_content_label(
+    soup: BeautifulSoup, title: str | None, url: str
+) -> str | None:
+    """Clean page label: breadcrumb-active → <title> → de-slugified URL tail."""
+    active = soup.select_one("li.breadcrumb-item.active")
+    if active:
+        text = active.get_text(" ", strip=True)
+        if text:
+            return text
+    if title:
+        return title
+    slug = url.rstrip("/").rsplit("/", 1)[-1]
+    if slug:
+        return slug.replace("-", " ").strip() or None
+    return None
 
 
 def _extract_headings(tag: Tag) -> List[str]:

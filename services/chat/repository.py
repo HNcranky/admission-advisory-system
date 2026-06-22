@@ -1,38 +1,18 @@
-from contextlib import contextmanager
-
 from fastapi.encoders import jsonable_encoder
 from psycopg2.extras import Json
 
 from services.chat.db import get_db_connection
 from services.chat.models import ChatSessionRecord, ChatMessageRecord, ChatProfileState, FlowState
+from services.db import cursor
 
 
 class ChatSessionRepository:
     def __init__(self, connection_factory=get_db_connection):
         self.connection_factory = connection_factory
 
-    @contextmanager
     def _cursor(self, commit: bool = False):
-        """Yield a cursor, guaranteeing commit/rollback and connection cleanup.
-
-        Without this, any exception between connect and close() leaked the
-        connection and left an uncommitted transaction open. These repository
-        methods run inside background advisory threads, so leaks accumulate.
-        """
-        conn = self.connection_factory()
-        try:
-            cur = conn.cursor()
-            try:
-                yield cur
-                if commit:
-                    conn.commit()
-            except Exception:
-                conn.rollback()
-                raise
-            finally:
-                cur.close()
-        finally:
-            conn.close()
+        # Delegate sang helper dùng chung (services/db). Hành vi không đổi.
+        return cursor(self.connection_factory, commit=commit)
 
     def _jsonb(self, value):
         return Json(jsonable_encoder(value))
@@ -238,3 +218,82 @@ class ChatSessionRepository:
                 """,
                 (status, session_token),
             )
+
+    def enqueue_run(self, session_token: str, profile_state, dispatch_args: dict) -> int:
+        """Insert a run in 'queued' status with dispatch_args for the durable poller."""
+        with self._cursor(commit=True) as cur:
+            cur.execute(
+                """
+                INSERT INTO chat_advisory_runs
+                    (session_id, profile_snapshot_json, dispatch_args_json)
+                SELECT id, %s, %s
+                FROM chat_sessions
+                WHERE session_token = %s
+                RETURNING id
+                """,
+                (self._jsonb(profile_state), self._jsonb(dispatch_args), session_token),
+            )
+            run_id = cur.fetchone()[0]
+            cur.execute(
+                """
+                UPDATE chat_sessions
+                SET latest_run_id = %s, status = 'running', updated_at = NOW()
+                WHERE session_token = %s
+                """,
+                (run_id, session_token),
+            )
+        return run_id
+
+    def claim_next_queued_run(self, worker_id: str):
+        """Atomically claim the oldest queued run → 'running'. Returns dict or None."""
+        with self._cursor(commit=True) as cur:
+            cur.execute(
+                """
+                UPDATE chat_advisory_runs r
+                SET status = 'running', started_at = NOW(),
+                    claimed_at = NOW(), worker_id = %s
+                WHERE r.id = (
+                    SELECT id FROM chat_advisory_runs
+                    WHERE status = 'queued'
+                    ORDER BY created_at
+                    FOR UPDATE SKIP LOCKED
+                    LIMIT 1
+                )
+                RETURNING r.id, r.session_id, r.dispatch_args_json
+                """,
+                (worker_id,),
+            )
+            row = cur.fetchone()
+            if row is None:
+                return None
+            run_id, session_id, dispatch_args = row[0], row[1], row[2]
+            cur.execute(
+                "SELECT session_token FROM chat_sessions WHERE id = %s",
+                (session_id,),
+            )
+            token = cur.fetchone()[0]
+        return {
+            "run_id": run_id,
+            "session_token": token,
+            "dispatch_args": dispatch_args or {},
+        }
+
+    def reap_stale_runs(self):
+        """Mark runs stuck in 'queued'/'running' (orphaned after restart) as 'failed'.
+
+        Returns [(run_id, session_token)] for each reaped run so the caller can
+        post an error message to the session. Idempotent — safe to call multiple times."""
+        with self._cursor(commit=True) as cur:
+            cur.execute(
+                """
+                UPDATE chat_advisory_runs r
+                SET status = 'failed',
+                    error_text = COALESCE(error_text, 'reaped on startup'),
+                    completed_at = NOW()
+                FROM chat_sessions s
+                WHERE r.session_id = s.id
+                  AND r.status IN ('queued', 'running')
+                RETURNING r.id, s.session_token
+                """
+            )
+            return [(row[0], row[1]) for row in cur.fetchall()]

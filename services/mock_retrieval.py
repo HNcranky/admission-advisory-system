@@ -1,7 +1,7 @@
 import os
 from typing import Any, Dict, List
 
-from agents.models import CandidateProgram, Evidence
+from domain.models import CandidateProgram, Evidence
 
 MOCK_SCHOOL_ID = "vnu_uet"
 MOCK_PROGRAM_ID = "cntt"

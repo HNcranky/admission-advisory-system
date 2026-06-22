@@ -1,7 +1,7 @@
 \documentclass[../main.tex]{subfiles}
 \begin{document}
 
-% Target length: 9-11 pages.
+% Target length: 12-14 pages.
 
 Chapter~\ref{chapter:Introduction} introduced the fragmented state of Vietnamese university admission information and outlined the goal of building a conflict-aware advisory assistant.
 This chapter grounds that goal in concrete requirements.
@@ -35,10 +35,17 @@ However, they are institution-centric: each deployment serves one university's o
 
 Table~\ref{table:channel-comparison} summarizes the comparison.
 
+These channels can be situated against two strands of prior work.
+Research on \gls{LLM} reliability documents that models without access to current, authoritative context hallucinate factual details, producing fluent but unfaithful text~\cite{ji2023hallucination}; this is the failure mode that makes a general-purpose chatbot unsafe for quoting a specific quota or cutoff.
+It is also why the commercial education platforms cited above --- Element451~\cite{element451} and Mainstay~\cite{mainstay}, built on dialogue frameworks such as Rasa's \gls{CALM} architecture~\cite{rasa_calm} and Google Dialogflow CX~\cite{dialogflow} --- pair conversation with a grounding knowledge base rather than relying on a model's parametric memory.
+What none of this prior work targets is a setting in which the grounding sources are themselves mutually inconsistent: those systems assume one institution curates one trusted corpus, whereas a Vietnamese applicant must reconcile several independent official publications that openly disagree.
+
 \begin{table}[H]
     \centering
     \caption{Comparison of existing admission-information channels}
     \label{table:channel-comparison}
+    {\footnotesize
+    \setlength{\tabcolsep}{4pt}
     \begin{tabular}{|p{3.4cm}|c|c|c|c|}
         \hline
         \textbf{Channel} & \textbf{Freshness} & \textbf{Personalized} & \textbf{Conflict-aware} & \textbf{Always available} \\
@@ -53,13 +60,16 @@ Table~\ref{table:channel-comparison} summarizes the comparison.
         \hline
         Institutional platforms & High & Yes & No & Yes \\
         \hline
-    \end{tabular}
+    \end{tabular}}
 \end{table}
 
 Three gaps recur across every channel.
 First, no channel reconciles contradictory data: even authoritative sources disagree with each other, and every existing tool silently picks one value or presents none.
+In the Vietnamese context this is not an edge case --- quotas, cutoff scores, and admission methods are revised repeatedly within a single season --- so a tool that commits to one value is frequently wrong without signalling it.
 Second, no channel combines personalization with grounding: human counselors personalize but do not scale, while portals scale but treat every student identically.
+Aggregators and generic chatbots reach any applicant, but neither weighs an individual's score, subject combination, and budget against a specific program's published requirements.
 Third, no conversational tool collects a student profile incrementally and gates its recommendations on having sufficient data, the way a careful human counselor does.
+A student who states only a vague interest such as ``thích lập trình'' cannot be served a reliable recommendation until enough of a profile exists to constrain retrieval to admissible programs.
 The system described in this thesis is designed to close these three gaps for the Vietnamese admission context.
 
 \section{Functional overview}
@@ -70,7 +80,7 @@ The system described in this thesis is designed to close these three gaps for th
 
 The system serves two actors.
 The \textit{student} interacts anonymously with the chat interface: no account or personal identifier is required, and a session is addressed only by a random token.
-The \textit{operator} maintains the system: they run the data-ingestion \gls{CLI} against configured sources and inspect the per-stage trace panel when diagnosing an advisory run.
+The \textit{operator} maintains the system: they run the data-ingestion \gls{CLI} against configured sources and inspect the per-stage and per-call trace of an advisory run in the external observability backend when diagnosing it.
 Figure~\ref{fig:usecase-general} shows the general use case diagram.
 
 \begin{figure}[H]
@@ -81,7 +91,7 @@ Figure~\ref{fig:usecase-general} shows the general use case diagram.
 \end{figure}
 
 The student's use cases correspond to the conversation routes the system distinguishes: a full advisory consultation, a factual knowledge question, a hybrid comparison that needs both, and profile control actions such as resetting the collected profile.
-The operator's use cases cover the ingestion lifecycle (running ingestion per school, per source, or for an ad-hoc \gls{URL}) and observability (inspecting the stage-by-stage trace of an advisory run).
+The operator's use cases cover the ingestion lifecycle (running ingestion per school, per source, or for an ad-hoc \gls{URL}) and observability (inspecting the stage-by-stage and call-by-call trace of an advisory run in the observability backend).
 
 \subsection{Detailed use case diagrams}
 \label{subsection:2.2.2}
@@ -94,7 +104,7 @@ The consultation ends with ranked program recommendations that include explicit 
 
 \begin{figure}[H]
     \centering
-    \includegraphics[height=8cm]{usecase_advisory.png}
+    \includegraphics[width=\textwidth,keepaspectratio]{usecase_advisory.png}
     \caption{Detailed use case diagram of the advisory consultation}
     \label{fig:usecase-advisory}
 \end{figure}
@@ -108,7 +118,7 @@ A hybrid comparison combines this factual lookup with advisory data, for example
 
 \begin{figure}[H]
     \centering
-    \includegraphics[height=7.5cm]{usecase_knowledge.png}
+    \includegraphics[width=\textwidth,keepaspectratio]{usecase_knowledge.png}
     \caption{Detailed use case diagram of knowledge Q\&A and hybrid comparison}
     \label{fig:usecase-knowledge}
 \end{figure}
@@ -121,7 +131,7 @@ A separate ingestion path loads unstructured documents (tuition pages, curriculu
 
 \begin{figure}[H]
     \centering
-    \includegraphics[height=8cm]{usecase_ingestion.png}
+    \includegraphics[width=\textwidth,keepaspectratio]{usecase_ingestion.png}
     \caption{Detailed use case diagram of data ingestion}
     \label{fig:usecase-ingestion}
 \end{figure}
@@ -133,7 +143,7 @@ Figure~\ref{fig:activity-advisory} shows the end-to-end business process trigger
 
 \begin{figure}[H]
     \centering
-    \includegraphics[height=19cm]{activity_advisory_process.png}
+    \includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{activity_advisory_process.png}
     \caption{Business process for handling a student message}
     \label{fig:activity-advisory}
 \end{figure}
@@ -144,13 +154,13 @@ Explicit control actions (resetting the profile, rejecting a suggested value) an
 Only when none of these shortcuts apply is the message classified by the intent router into one of seven routes: advisory flow, knowledge question, hybrid comparison, conversational small talk, clarification, out-of-scope, or profile reset.
 
 An advisory-flow message proceeds only when all critical profile slots are filled; otherwise the system asks the next missing question.
-Once the profile is sufficient, the run is dispatched to a background executor that drives the six-stage advisory pipeline --- profile, retrieve, conflict, reason, policy, explain --- and persists the final answer together with a per-stage trace.
-The chat interface polls for the result and renders both the recommendation and, for the operator, the stage trace.
+Once the profile is sufficient, the run is dispatched to a background worker that drives the six-stage advisory pipeline --- profile, retrieve, conflict, reason, policy, explain --- and persists the final answer, while emitting a per-stage trace to the observability backend.
+The chat interface polls for the result and renders the recommendation.
 
 \section{Functional description}
 \label{section:2.3}
 
-This section specifies the four central use cases.
+This section specifies the system's five central use cases: advisory consultation (Table~\ref{table:uc01}), knowledge question answering (Table~\ref{table:uc02}), hybrid comparison (Table~\ref{table:uc03}), profile reset and correction (Table~\ref{table:uc04}), and the operator-driven data ingestion run (Table~\ref{table:uc05}).
 Extended specifications, including the full slot-by-slot dialogue obligations derived from the system's acceptance scenarios, are collected in Appendix~A.
 
 \subsection{UC-01: Advisory consultation}
@@ -220,6 +230,8 @@ The optional slots --- location preference and tuition budget --- are collected 
     \end{tabular}
 \end{table}
 
+The honesty obligation in A1 is enforced mechanically rather than left to the model: an answer is withheld whenever retrieval confidence falls below the \texttt{KNOWLEDGE\_QA\_MIN\_SCORE} threshold, and national-regulation passages are retrieved under their own \texttt{KNOWLEDGE\_QA\_NATIONAL\_TOP\_K} budget so ministry rules surface even for a school-scoped question.
+
 \subsection{UC-03: Hybrid comparison}
 
 \begin{table}[H]
@@ -248,6 +260,8 @@ The optional slots --- location preference and tuition budget --- are collected 
     \end{tabular}
 \end{table}
 
+Skipping the advisory path when only factual topics are requested (A1) keeps a purely informational comparison off the slower multi-stage advisory pipeline, which is invoked only when the question touches admission chances.
+
 \subsection{UC-04: Profile reset and correction}
 
 \begin{table}[H]
@@ -274,6 +288,8 @@ The optional slots --- location preference and tuition budget --- are collected 
         \hline
     \end{tabular}
 \end{table}
+
+Re-running the full pipeline after a correction, rather than patching the previous answer, is what upholds the post-condition that stale recommendations are never presented as still valid.
 
 \subsection{UC-05: Data ingestion run}
 
@@ -305,6 +321,8 @@ The optional slots --- location preference and tuition budget --- are collected 
     \end{tabular}
 \end{table}
 
+Writing one row per source in step~5, instead of overwriting a shared key, is the precondition for conflict detection: only because two publications persist as distinct rows can the downstream pipeline compare their quotas rather than silently keep the last one written.
+
 \section{Non-functional requirement}
 \label{section:2.4}
 
@@ -314,29 +332,35 @@ The functional behavior above is constrained by six non-functional requirements.
 Every \gls{LLM}-backed step must have a deterministic fallback, because the assistant depends on an external inference service with quotas and transient failures.
 Intent classification falls back to keyword rules, knowledge answering degrades to an honest ``no data'' reply, and structured-output failures are retried or routed to fallback models rather than surfaced as crashes.
 An advisory consultation must never silently stall because one classification call failed.
+Concretely, every model call routes through a single inference gateway, and when that gateway is unavailable intent classification falls back to a deterministic keyword router.
 
 \textbf{NFR-02 --- Conflict tolerance and data freshness.}
 The store must preserve disagreeing values rather than overwrite them: canonical records are unique per source, so two official publications quoting different quotas coexist as two rows with provenance.
 Recommendations built on conflicting data must disclose the conflict and recommend checking the latest official announcement.
 Ingestion must be re-runnable at any time, with idempotent migrations and upsert semantics, so the operator can refresh a school during the admission season.
+Per-source coexistence is enforced by a \texttt{UNIQUE (school\_id, admission\_year, program\_id, admission\_method, source\_url)} constraint introduced in the per-source canonical-records migration, and every migration script is numbered and idempotent so it can be replayed without error.
 
 \textbf{NFR-03 --- Anonymity.}
 Students must be able to use the assistant without registering: sessions are identified only by a random token, and the collected profile contains academic attributes (scores, preferred majors) rather than personal identifiers.
+The token is minted as a random URL-safe string by the chat session service, so no email, name, or device identifier is ever requested.
 
 \textbf{NFR-04 --- Responsiveness.}
 A full advisory run involves several \gls{LLM} calls and database queries and may take tens of seconds.
 The message endpoint must therefore acknowledge immediately and execute the run on a background executor, while the interface polls for completion and shows per-stage progress instead of a frozen screen.
+In practice the endpoint persists a queued row in \texttt{chat\_advisory\_runs} and returns at once, and a background \texttt{RunQueueWorker} claims pending runs with \texttt{SKIP LOCKED} before driving the pipeline, so multiple workers never execute the same run.
 
 \textbf{NFR-05 --- Testability.}
 The test suite must run against an isolated database that is created automatically and never touches development data, so that integration tests can exercise real \gls{SQL} paths safely.
+This isolation is provided by an autouse fixture in the test configuration, which redirects the shared database name to \texttt{admission\_test} before any test opens a connection.
 Repositories must accept injectable connection factories so tests can substitute fixtures.
 
 \textbf{NFR-06 --- Crawling resilience.}
 Several official Vietnamese sources, including government domains, serve broken \gls{TLS} certificate chains.
 The fetcher must be able to proceed with verification disabled by explicit configuration, and every such fetch must be logged so the relaxation is visible rather than silent.
+This is the \texttt{ADVISORY\_FETCH\_VERIFY\_SSL} flag honored by the HTTP fetcher, which emits a warning on every request made with certificate verification turned off.
 
-This chapter derived the system's requirements from a survey of existing admission-information channels.
-The survey showed that no current channel reconciles contradictory official data, and none combines grounded answers with incremental, profile-aware personalization.
+This chapter derived the system's requirements from a survey of existing admission-information channels, read against prior work on grounded conversational agents and \gls{LLM} reliability.
+That comparison showed that commercial education platforms and the research literature alike establish grounding as a precondition for trustworthy answers, yet none of them addresses the reconciliation of mutually inconsistent official sources; concretely, no current channel reconciles contradictory data, and none combines grounded answers with incremental, profile-aware personalization.
 The resulting requirements were specified as a use-case model centered on an anonymous multi-turn advisory consultation, grounded knowledge answering, and operator-driven ingestion, constrained by graceful degradation, conflict tolerance, anonymity, responsiveness, testability, and crawling resilience.
 Chapter~\ref{chapter:Methodology} reviews the theoretical background and the technologies selected to satisfy these requirements.
 

@@ -1,14 +1,8 @@
 from pydantic import BaseModel, field_validator
 
-KNOWLEDGE_TOPICS = {
-    "tuition",
-    "curriculum",
-    "scholarship",
-    "dormitory",
-    "career",
-    "admission_policy",
-    "program_overview",
-}
+# Single source of truth shared with the chat intent router. Seeds must use a
+# canonical topic (synonyms like "career" are a query-side concern only).
+from services.knowledge.taxonomy import KNOWLEDGE_TOPICS
 
 KNOWLEDGE_DOCUMENT_TYPES = {
     "tuition_page",
@@ -29,6 +23,7 @@ class KnowledgeSource(BaseModel):
     document_type: str
     topic: str
     fetch_strategy: str = "http"
+    chunk_strategy: str = "size"  # "size" (default) | "whole_page"
     program: str | None = None
     year: int | None = None
     active: bool = True

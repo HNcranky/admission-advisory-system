@@ -1,5 +1,6 @@
 import logging
 
+from observability.prompts import get_prompt_service
 from services import build_default_gateway
 from services.chat.hybrid_models import AdvisoryBlock, KnowledgeBlock
 from services.inference.models import InferenceRequest
@@ -43,11 +44,13 @@ class SynthesisAgent:
     def _llm_synthesize(self, advisory, knowledge, question) -> str:
         if hasattr(self._gateway, "is_available") and not self._gateway.is_available():
             raise RuntimeError("gateway unavailable")
+        cp = get_prompt_service().get("synthesis", fallback=SYNTHESIS_SYSTEM_PROMPT)
         result = self._gateway.run(
             InferenceRequest(
                 agent_name="synthesis_agent",
                 task_type="hybrid_synthesis",
-                system_prompt=SYNTHESIS_SYSTEM_PROMPT,
+                system_prompt=cp.text,
+                prompt=cp.handle,
                 user_prompt=self._build_user_prompt(advisory, knowledge, question),
                 output_mode="free_text",
                 temperature=0.0,

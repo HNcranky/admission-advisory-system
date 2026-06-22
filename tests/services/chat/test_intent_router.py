@@ -1,6 +1,6 @@
 import pytest
 
-from services.chat.intent_router import IntentResult
+from services.chat.intent_router import IntentResult, IntentRouter
 
 
 def test_intent_result_defaults():
@@ -40,6 +40,22 @@ def test_intent_result_normalizes_admission_methods_to_policy():
     map it to the canonical admission_policy topic instead of dropping it."""
     assert IntentResult(route="KNOWLEDGE_QA", topic="admission_methods").topic == "admission_policy"
     assert IntentResult(route="KNOWLEDGE_QA", topic="admission_method").topic == "admission_policy"
+
+
+def test_intent_result_normalizes_career_to_program_overview():
+    """Career/job questions are answered from the 'Cơ hội việc làm' section of
+    program-overview pages — there is no standalone career corpus — so 'career'
+    must normalize to program_overview, not a dead topic that retrieves nothing."""
+    assert IntentResult(route="KNOWLEDGE_QA", topic="career").topic == "program_overview"
+    assert IntentResult(route="KNOWLEDGE_QA", topics=["career"]).topics == ["program_overview"]
+
+
+def test_fallback_classify_career_question_routes_to_program_overview():
+    """Regression: 'cơ hội việc làm ngành X' must reach the program_overview
+    corpus where the career section lives (was routed to empty 'career')."""
+    res = IntentRouter._fallback_classify("cơ hội việc làm của ngành kỹ thuật ô tô")
+    assert res.route == "KNOWLEDGE_QA"
+    assert res.topic == "program_overview"
 
 
 def test_intent_result_model_validate_from_dict():
@@ -281,6 +297,40 @@ def test_fallback_greeting_routes_conversational():
     result = _router(parsed_data=None).classify("chào bạn", ChatProfileState())
     assert result.route == "CONVERSATIONAL"
     assert result.subtype == "GREETING"
+
+
+# --- school canonicalization (LLM emits free-form names, corpus stores codes) ---
+# Without this the LLM returning "đại học bách khoa hà nội" reaches retrieval as
+# WHERE school = 'đại học bách khoa hà nội' → zero chunks → KnowledgeQA no-data.
+
+def test_intent_result_canonicalizes_full_school_name_to_corpus_code():
+    result = IntentResult.model_validate(
+        {"route": "KNOWLEDGE_QA", "topic": "admission_policy",
+         "school": "đại học bách khoa hà nội"}
+    )
+    assert result.school == "HUST"
+
+
+def test_classify_canonicalizes_school_from_llm_output():
+    r = _router(parsed_data={"route": "KNOWLEDGE_QA", "topic": "admission_policy",
+                             "school": "Đại học Bách khoa Hà Nội"})
+    result = r.classify("bách khoa có mấy phương thức xét tuyển", ChatProfileState())
+    assert result.school == "HUST"
+
+
+def test_intent_result_canonicalizes_hybrid_schools_list():
+    result = IntentResult.model_validate(
+        {"route": "HYBRID", "schools": ["đại học công nghệ", "HUST"],
+         "topics": ["tuition"]}
+    )
+    assert result.schools == ["VNU-UET", "HUST"]
+
+
+def test_intent_result_unknown_school_passes_through():
+    result = IntentResult.model_validate(
+        {"route": "KNOWLEDGE_QA", "school": "Đại học FPT"}
+    )
+    assert result.school == "Đại học FPT"
 
 
 def test_fallback_thanks_routes_conversational():

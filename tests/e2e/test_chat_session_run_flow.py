@@ -31,20 +31,24 @@ def test_student_can_complete_follow_up_and_receive_final_result(monkeypatch):
         def get_session_snapshot(self, session_token):
             return ChatSessionSnapshot(session=session, messages=list(messages))
 
-    class FakeRepository:
-        def create_run(self, session_token, profile_state):
-            session["status"] = "running"
-            session["latest_run_id"] = 7
-            session["profile_state_json"] = profile_state.model_dump(mode="json")
-            return 7
-
-        def count_runs(self, session_token):
-            return 1
-
     class FakeConversationService:
         def __init__(self):
-            self.repository = FakeRepository()
             self.turn_count = 0
+
+        def start_run(self, session_token, content, result):
+            if not result.should_start_run:
+                return
+            # Simulate synchronous run completion (durable queue does this async).
+            session["status"] = "completed"
+            messages.append(
+                ChatMessageRecord(
+                    id=len(messages) + 1,
+                    session_token=session_token,
+                    role="assistant",
+                    kind="assistant_result",
+                    content="De xuat: CNTT Bach Khoa Ha Noi la mot lua chon phu hop.",
+                )
+            )
 
         def handle_user_message(self, session_token, content):
             self.turn_count += 1
@@ -111,25 +115,11 @@ def test_student_can_complete_follow_up_and_receive_final_result(monkeypatch):
                 profile_state=ready_state,
             )
 
-    class FakeDispatcher:
-        def submit(self, session_token, run_id, latest_user_message, profile_state, correction_note=None, closing_seed=0):
-            session["status"] = "completed"
-            messages.append(
-                ChatMessageRecord(
-                    id=len(messages) + 1,
-                    session_token=session_token,
-                    role="assistant",
-                    kind="assistant_result",
-                    content="De xuat: CNTT Bach Khoa Ha Noi la mot lua chon phu hop.",
-                )
-            )
-
     fake_session_service = FakeSessionService()
     fake_conversation_service = FakeConversationService()
 
     monkeypatch.setattr("web.routes.chat_api.get_session_service", lambda: fake_session_service)
     monkeypatch.setattr("web.routes.chat_api.get_conversation_service", lambda: fake_conversation_service)
-    monkeypatch.setattr("web.routes.chat_api.get_run_dispatcher", lambda: FakeDispatcher())
 
     created = client.post("/api/sessions")
     assert created.status_code == 201

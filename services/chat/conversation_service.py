@@ -1,6 +1,7 @@
 import logging
 
 from services import build_default_gateway
+from services.inference.models import InferenceRequest
 from services.chat.intent_router import IntentRouter
 from services.chat.models import ChatProfileState, ConversationTurnResult
 from services.chat.history import build_history_context
@@ -15,6 +16,7 @@ from services.profile.slots import (
 from services.profile.extractor import apply_profile_delta, extract_profile_update
 from services.profile.validation import validate_profile_delta
 from services.profile_service import normalize_text
+from observability.run_trace import turn_trace
 
 logger = logging.getLogger(__name__)
 
@@ -46,11 +48,38 @@ def _is_reset_request(content: str) -> bool:
 
 
 class ConversationService:
-    def __init__(self, repository=None, extract_profile=None, intent_router=None, knowledge_qa=None):
+    def __init__(self, repository=None, extract_profile=None, intent_router=None,
+                 knowledge_qa=None):
         self.repository = repository or ChatSessionRepository()
         self.extract_profile = extract_profile or self._extract_profile
         self.intent_router = intent_router or IntentRouter()
         self.knowledge_qa = knowledge_qa or KnowledgeQAService()
+        from services.chat.turn_graph import build_turn_graph
+        self._turn_graph = build_turn_graph(self)
+
+    def start_run(self, session_token: str, content: str, result: ConversationTurnResult) -> None:
+        """Enqueue the run into chat_advisory_runs for the durable poller."""
+        if not result.should_start_run:
+            return
+        dispatch_args = self._build_dispatch_args(session_token, content, result)
+        self.repository.enqueue_run(session_token, result.profile_state, dispatch_args)
+
+    def _build_dispatch_args(self, session_token: str, content: str, result: ConversationTurnResult) -> dict:
+        if result.run_kind == "hybrid":
+            return {
+                "run_kind": "hybrid",
+                "content": content,
+                "profile_state": result.profile_state,
+                "intent": result.hybrid_intent or {"route": "HYBRID"},
+            }
+        closing_seed = max(0, self.repository.count_runs(session_token) - 1)
+        return {
+            "run_kind": "advisory",
+            "latest_user_message": content,
+            "profile_state": result.profile_state,
+            "correction_note": result.correction_note,
+            "closing_seed": closing_seed,
+        }
 
     def _extract_profile(self, text: str, known_state=None, active_slot=None):
         gateway = build_default_gateway()
@@ -68,10 +97,16 @@ class ConversationService:
     }
 
     def handle_user_message(self, session_token: str, content: str) -> ConversationTurnResult:
-        # Build history from turns BEFORE this one — fetch prior to appending so
-        # the message being processed is excluded. The last user turn in that
-        # history is the referent for an elided follow-up (used by retrieval).
         prior_messages = self.repository.list_message(session_token)
+        turn_id = f"{session_token}:{len(prior_messages) + 1}"
+        with turn_trace(turn_id, session_token, content):
+            return self._handle_user_message_inner(session_token, content, prior_messages)
+
+    def _handle_user_message_inner(self, session_token: str, content: str, prior_messages) -> ConversationTurnResult:
+        # Build history from turns BEFORE this one — prior_messages was fetched
+        # before appending so the message being processed is excluded. The last
+        # user turn in that history is the referent for an elided follow-up
+        # (used by retrieval).
         history_ctx = build_history_context(prior_messages)
         prev_user = next(
             (m.content for m in reversed(prior_messages) if m.role == "user"), ""
@@ -86,53 +121,27 @@ class ConversationService:
         delta = self.extract_profile(content, profile_state, active_slot)
         delta = self._deterministic_safety_net(delta, content, active_slot)
 
-        # EC-22: reset tường minh phải thắng mọi nhánh khác — kể cả
-        # _maybe_continue_advisory (tránh "xoá hết..., năm 2026" bị nuốt vào hồ sơ cũ).
-        if _is_reset_request(content):
-            return self._handle_reset(session_token, delta, flow_state)
-
-        delta, rejections = validate_profile_delta(delta, profile_state)
-        if rejections:
-            return self._handle_rejection(
-                session_token, profile_state, flow_state, delta, rejections
-            )
-
-        # A reply to a pending advisory follow-up is an *answer*, not a fresh
-        # intent. Route it back into the advisory flow when it actually fills the
-        # slot we just asked about — the stateless intent classifier otherwise
-        # misreads a bare answer like "năm 2026" as small talk and silently drops
-        # the value. See docs/admission-advisory-conversational-architecture.md §4, §9.
-        continued = self._maybe_continue_advisory(session_token, content, profile_state, flow_state, delta)
-        if continued is not None:
-            return continued
-
-        # A value-changing correction after a run already produced recommendations
-        # must deterministically re-rank (the stateless router would mis-handle a
-        # phrasing like "à em tính lại 25.75, không phải 27"). See AC7.
-        corrected = self._maybe_correction_rerun(session_token, profile_state, flow_state, delta, session)
-        if corrected is not None:
-            return corrected
-
-        intent = self.intent_router.classify(content, profile_state, history=history_ctx)
+        # The pre-intent guards (reset / rejection / continue-advisory /
+        # correction-rerun) and the intent routing now run inside the turn graph
+        # as conditional-edge nodes — see services/chat/turn_graph.py. Each guard
+        # either short-circuits the turn (setting result) or passes through to
+        # classify, mirroring the former imperative if/return chain (EC-22 reset
+        # wins, EC-04 rejection, continue-advisory slot fill, AC7 correction).
+        from services.chat.turn_graph import TurnState
         session_status = session.status if session else "collecting_profile"
-
-        if intent.route == "ADVISORY_FLOW":
-            return self._handle_advisory(session_token, profile_state, flow_state, delta)
-        if intent.route == "KNOWLEDGE_QA":
-            return self._handle_knowledge_qa(session_token, content, intent, profile_state, flow_state, session_status, history_ctx, prev_user)
-        if intent.route == "HYBRID":
-            return self._handle_hybrid(session_token, content, intent, profile_state, flow_state, session_status, history_ctx, prev_user)
-        if intent.route == "OUT_OF_SCOPE":
-            return self._handle_out_of_scope(session_token, profile_state, flow_state, session_status)
-        if intent.route == "CONVERSATIONAL":
-            return self._handle_conversational(
-                session_token, content, intent, profile_state, flow_state, session_status
-            )
-        if intent.route == "RESET_PROFILE":
-            return self._handle_reset(session_token, delta, flow_state)
-        return self._handle_clarification(
-            session_token, intent, profile_state, flow_state, session_status
+        state = TurnState(
+            session_token=session_token,
+            content=content,
+            history_ctx=history_ctx,
+            prev_user=prev_user,
+            profile_state=profile_state,
+            flow_state=flow_state,
+            delta=delta,
+            session_status=session_status,
+            session=session,
         )
+        final = self._turn_graph.invoke(state)
+        return final["result"] if isinstance(final, dict) else final.result
 
     @staticmethod
     def _deterministic_safety_net(delta: dict, content: str, active_slot) -> dict:
@@ -361,6 +370,76 @@ class ConversationService:
             profile_state=profile_state,
             citations=citations,
         )
+
+    _FOLLOWUP_SYSTEM_PROMPT = (
+        "Bạn là trợ lý tư vấn tuyển sinh đại học Việt Nam. Đây là một câu hỏi NỐI "
+        "TIẾP: hãy trả lời CHỈ bằng cách suy luận / tính toán / làm rõ dựa trên LỊCH "
+        "SỬ HỘI THOẠI được cung cấp. Tuyệt đối không bịa thêm số liệu mới.\n"
+        "Quy tắc:\n"
+        "- Nếu lịch sử đã đủ dữ kiện để trả lời, trả lời ngắn gọn bằng tiếng Việt; "
+        "nêu rõ phép tính nếu có (ví dụ: 1.850.000đ/tháng × 10 tháng = 18.500.000đ/năm).\n"
+        "- Nếu lịch sử KHÔNG đủ dữ kiện cần thiết, để \"sufficient\": false và "
+        "\"answer\": \"\".\n"
+        'Trả về JSON hợp lệ: {"answer": "<câu trả lời hoặc rỗng>", "sufficient": <true|false>}'
+    )
+
+    def _handle_followup(self, session_token, content, intent, profile_state, flow_state,
+                         session_status, history_ctx="", prev_user=""):
+        """Answer a follow-up that is derivable from the conversation so far — no
+        retrieval. Avoids diluting an already-long, history-bearing prompt with
+        irrelevant RAG chunks. Falls back to the retrieval-backed KNOWLEDGE_QA path
+        when the history turns out to lack the facts needed (router's call isn't
+        infallible, and the default history window can truncate a figure)."""
+        # Rebuild a richer history than the routing window: the prior assistant
+        # answer (e.g. a long tuition breakdown) is exactly what we reason over,
+        # so the 3×500 truncation that suits intent routing can cut the figure.
+        prior = self.repository.list_message(session_token)
+        if prior and prior[-1].role == "user":
+            prior = prior[:-1]  # drop the just-appended current turn
+        rich_history = build_history_context(prior, max_pairs=4, max_chars=1500)
+
+        answer = self._answer_from_context(content, rich_history)
+        if not answer:
+            # History insufficient (or LLM failure) → safe fallback to retrieval.
+            return self._handle_knowledge_qa(
+                session_token, content, intent, profile_state, flow_state,
+                session_status, history_ctx, prev_user)
+
+        response = self._maybe_offer_resume(answer, flow_state)
+        self.repository.append_message(session_token, "assistant", response, "assistant_result")
+        return ConversationTurnResult(
+            session_status=session_status,
+            assistant_message=response,
+            should_start_run=False,
+            profile_state=profile_state,
+        )
+
+    def _answer_from_context(self, content, history):
+        """Single LLM call grounded only on conversation history. Returns the
+        answer text, or None when the model reports the history is insufficient
+        (or the call fails) so the caller can fall back to retrieval."""
+        if not history:
+            return None
+        gateway = build_default_gateway()
+        user_prompt = f"Lịch sử hội thoại:\n{history}\n\nCâu hỏi nối tiếp: {content}"
+        try:
+            result = gateway.run(
+                InferenceRequest(
+                    agent_name="followup_reasoner",
+                    task_type="followup_reasoning",
+                    system_prompt=self._FOLLOWUP_SYSTEM_PROMPT,
+                    user_prompt=user_prompt,
+                    output_mode="json",
+                    temperature=0.0,
+                )
+            )
+        except Exception as exc:
+            logger.warning("followup reasoning failed, falling back to retrieval: %r", exc)
+            return None
+        data = result.parsed_data or {}
+        if not data.get("sufficient"):
+            return None
+        return str(data.get("answer") or "").strip() or None
 
     def _handle_hybrid(self, session_token, content, intent, profile_state, flow_state, session_status, history_ctx="", prev_user=""):
         missing = missing_critical_slots(profile_state)

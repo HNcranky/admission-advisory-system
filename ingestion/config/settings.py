@@ -50,6 +50,10 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 # 429 retryDelay if larger) before the rotator will try it again.
 GEMINI_KEY_COOLDOWN_SECONDS = float(os.getenv("GEMINI_KEY_COOLDOWN_SECONDS", 60))
 
+# Hard timeout (giây) cho mỗi lời gọi Gemini generate/embed. Không có timeout
+# thì connection treo sẽ giữ worker vô hạn và rotation key không bao giờ kích hoạt.
+GEMINI_REQUEST_TIMEOUT_SECONDS = float(os.getenv("GEMINI_REQUEST_TIMEOUT_SECONDS", 60))
+
 
 GEMINI_EXTRACTION_MODEL = os.getenv(
     "GEMINI_EXTRACTION_MODEL", "gemini-2.5-flash"
@@ -75,17 +79,57 @@ EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM", 768))
 # QA service returns "no data" WITHOUT calling the LLM (zero-hallucination gate).
 KNOWLEDGE_QA_TOP_K = int(os.getenv("KNOWLEDGE_QA_TOP_K", 5))
 KNOWLEDGE_QA_MIN_SCORE = float(os.getenv("KNOWLEDGE_QA_MIN_SCORE", 0.5))
+# Query-side program resolution (services/knowledge): the minimum
+# word_similarity between a program label and the user's question for the
+# program scalar filter to apply. Below it, retrieval stays vector-only so a
+# weak/absent match never zeroes results. Tuned to 0.5 against the live NEU/UET
+# corpus: a named program scores ~1.0 (best window == the label), while policy/
+# tuition questions that merely share a common word (e.g. "trường" vs the
+# program "Quản lý thị trường") top out ~0.44 — so 0.5 cleanly rejects them.
+KNOWLEDGE_PROGRAM_MATCH_THRESHOLD = float(
+    os.getenv("KNOWLEDGE_PROGRAM_MATCH_THRESHOLD", 0.5)
+)
 # Separate, smaller budget for the national-scope (Bộ GD&ĐT) pass appended to
 # every school-scoped knowledge query, so national regs never crowd out the
 # school's own chunks.
 KNOWLEDGE_QA_NATIONAL_TOP_K = int(os.getenv("KNOWLEDGE_QA_NATIONAL_TOP_K", 3))
+
+# --- Knowledge QA semantic cache -----------------------------------------
+# Cache repeated/paraphrased knowledge answers to cut Gemini generation calls.
+# A HIT requires cosine >= THRESHOLD AND all dependency-scope versions current
+# (see services/knowledge/qa_cache.py + docs spec 2026-06-18). TTL is a
+# backstop only — correctness rests on version stamping. Any cache fault
+# degrades to normal generation.
+KNOWLEDGE_QA_CACHE_ENABLED = os.getenv(
+    "KNOWLEDGE_QA_CACHE_ENABLED", "true"
+).strip().lower() in ("1", "true", "yes")
+KNOWLEDGE_QA_CACHE_THRESHOLD = float(os.getenv("KNOWLEDGE_QA_CACHE_THRESHOLD", 0.95))
+KNOWLEDGE_QA_CACHE_TTL_DAYS = int(os.getenv("KNOWLEDGE_QA_CACHE_TTL_DAYS", 30))
 
 # --- Knowledge chunking (Phase 3) ----------------------------------------
 # Structure-aware char window. ~1800 chars ≈ 512 tokens for Vietnamese.
 # Spans are character offsets → deterministic → stable idempotency key.
 CHUNK_SIZE = int(os.getenv("KNOWLEDGE_CHUNK_SIZE", 1800))
 CHUNK_OVERLAP = int(os.getenv("KNOWLEDGE_CHUNK_OVERLAP", 256))
+# "whole_page" chunk strategy: emit the full page as ONE chunk, up to this many
+# chars. Longer pages fall back to size-based splitting so a single embed call
+# never exceeds the model's input limit (~2048 tokens ≈ 8000 Vietnamese chars).
+WHOLE_PAGE_MAX_CHARS = int(os.getenv("KNOWLEDGE_WHOLE_PAGE_MAX_CHARS", 8000))
 
+
+EMBED_CACHE_SIZE = int(os.getenv("EMBED_CACHE_SIZE", 512))
+
+ADVISORY_RUN_WORKERS = int(os.getenv("ADVISORY_RUN_WORKERS", 2))
+ADVISORY_RUN_QUEUE_MAX = int(os.getenv("ADVISORY_RUN_QUEUE_MAX", 32))
+
+WEB_THREADPOOL_SIZE = int(os.getenv("WEB_THREADPOOL_SIZE", 40))
+
+DB_POOL_ENABLED = os.getenv("DB_POOL_ENABLED", "true").lower() == "true"
+DB_POOL_MIN = int(os.getenv("DB_POOL_MIN", 1))
+DB_POOL_MAX = int(os.getenv("DB_POOL_MAX", 10))
+
+ADVISORY_DURABLE_QUEUE = os.getenv("ADVISORY_DURABLE_QUEUE", "true").lower() == "true"
+ADVISORY_QUEUE_POLL_SECONDS = float(os.getenv("ADVISORY_QUEUE_POLL_SECONDS", 1.0))
 
 FETCH_TIMEOUT = int(os.getenv("FETCH_TIMEOUT", 30))
 FETCH_MAX_RETRIES = int(os.getenv("FETCH_MAX_RETRIES", 3))

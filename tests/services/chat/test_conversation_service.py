@@ -88,7 +88,9 @@ def _make_service(intent_result=None, profile=None, flow=None, status=None, extr
 
 # ─── existing test (unchanged) ───────────────────────────────────────────────
 
-def test_handle_user_message_returns_follow_up_when_score_missing():
+def test_handle_user_message_returns_follow_up_when_method_missing():
+    # Năm + ngành đã có, phương thức là slot critical còn thiếu đầu tiên (hỏi
+    # phương thức trước tổ hợp/điểm).
     repo = FakeRepository()
     service = ConversationService(
         repository=repo,
@@ -103,7 +105,7 @@ def test_handle_user_message_returns_follow_up_when_score_missing():
 
     assert result.session_status == "collecting_profile"
     assert result.should_start_run is False
-    assert "bao nhiêu" in result.assistant_message.lower()
+    assert "phương thức" in result.assistant_message.lower()
 
 
 # ─── Task 2: injection test ───────────────────────────────────────────────────
@@ -671,7 +673,11 @@ def test_bare_number_reply_fills_pending_total_score_slot():
     # User typed just "29" in reply to the score question. Context-free
     # extraction yields nothing (no "diem" keyword), but the pending slot IS
     # total_score, so a lone number in range must be accepted as the score.
-    profile = ChatProfileState(admission_year=2026)
+    # total_score is the last critical slot — fill the earlier ones so it's pending.
+    profile = ChatProfileState(
+        admission_year=2026, admission_method="thpt_score",
+        preferred_majors=["computer_science"], subject_combination="A00",
+    )
     flow = FlowState(active_flow="ADVISORY_FLOW", pending_question="Tong diem cua ban la bao nhieu?")
     service, repo = _make_service(
         profile=profile,
@@ -808,18 +814,19 @@ def test_first_fill_during_collection_is_not_a_correction():
 
 # ─── Plan reasoning-integrity 1: admission_method slot (EC-13 thu thập) ───────
 
-def test_score_answer_then_system_asks_admission_method():
-    """EC-13: có điểm nhưng chưa biết phương thức → câu hỏi kế tiếp là phương thức."""
-    profile = ChatProfileState(admission_year=2026)
+def test_year_answer_then_system_asks_admission_method():
+    """EC-13: có năm nhưng chưa biết phương thức → câu hỏi kế tiếp là phương thức
+    (phương thức được hỏi trước tổ hợp và điểm)."""
+    profile = ChatProfileState()
     flow = FlowState(active_flow="ADVISORY_FLOW",
-                     pending_question="Tổng điểm hoặc mức điểm ước tính của bạn là bao nhiêu?")
+                     pending_question="Bạn đang xét tuyển cho năm nào?")
     service, repo = _make_service(
         profile=profile, flow=flow,
         extract=lambda text, known_state=None, active_slot=None: {},
     )
-    result = service.handle_user_message("tok", "27")
+    result = service.handle_user_message("tok", "2026")
 
-    assert repo.profile_state.total_score == 27.0
+    assert repo.profile_state.admission_year == 2026
     assert "phương thức" in result.assistant_message
     assert repo.flow_state.pending_question == (
         "Bạn dự định xét tuyển bằng phương thức nào nhỉ? Ví dụ: điểm thi tốt nghiệp THPT, "
@@ -957,7 +964,7 @@ def test_ec22_reset_applies_same_turn_delta_to_fresh_profile():
     assert repo.profile_state.total_score is None          # điểm cũ KHÔNG còn
     assert repo.profile_state.preferred_majors == []
     assert "hồ sơ tư vấn mới" in result.assistant_message
-    assert "bao nhiêu" in result.assistant_message         # hỏi tiếp slot điểm
+    assert "phương thức" in result.assistant_message       # hỏi tiếp slot phương thức
 
 
 def test_ec22_llm_routed_reset_uses_same_handler():
@@ -1006,3 +1013,63 @@ def test_advisory_recaps_when_two_or_more_slots_filled():
     result = service.handle_user_message("tok", "Xét điểm thi THPT")
     assert "Mình đã nắm:" in result.assistant_message
     assert "Còn thiếu:" in result.assistant_message
+
+
+# ─── FOLLOWUP route: answer from conversation context, no RAG ──────────────────
+
+class _FakeGateway:
+    """Stand-in for build_default_gateway(): .run() returns canned parsed_data
+    and records the agent_name + user_prompt it was called with."""
+
+    def __init__(self, parsed_data):
+        self._parsed = parsed_data
+        self.calls = []
+
+    def run(self, request):
+        self.calls.append(request)
+        return SimpleNamespace(parsed_data=self._parsed, content="")
+
+
+def _seed_prior_tuition_turn(repo):
+    # A prior assistant answer the follow-up reasons over (monthly tuition).
+    repo.messages.append(("user", "user_message", "Học phí ngành CNTT của UET?"))
+    repo.messages.append(("assistant", "assistant_result",
+                          "Học phí ngành CNTT của UET là 1.850.000 đồng/tháng."))
+
+
+def test_followup_answers_from_context_without_retrieval(monkeypatch):
+    import services.chat.conversation_service as cs
+    gateway = _FakeGateway({"answer": "Một năm (10 tháng) là 18.500.000 đồng.", "sufficient": True})
+    monkeypatch.setattr(cs, "build_default_gateway", lambda: gateway)
+
+    fake_qa = FakeKnowledgeQA()
+    service, repo = _make_service(
+        intent_result=IntentResult(route="FOLLOWUP"), knowledge_qa=fake_qa)
+    _seed_prior_tuition_turn(repo)
+
+    result = service.handle_user_message("tok", "vậy một năm đóng bao nhiêu?")
+
+    assert "18.500.000" in result.assistant_message
+    assert fake_qa.calls == []                      # RAG path was NOT touched
+    assert gateway.calls[0].agent_name == "followup_reasoner"
+    # the reasoner saw the prior tuition figure in its prompt
+    assert "1.850.000" in gateway.calls[0].user_prompt
+
+
+def test_followup_falls_back_to_retrieval_when_context_insufficient(monkeypatch):
+    import services.chat.conversation_service as cs
+    gateway = _FakeGateway({"answer": "", "sufficient": False})
+    monkeypatch.setattr(cs, "build_default_gateway", lambda: gateway)
+
+    fake_qa = FakeKnowledgeQA(
+        result=KnowledgeQAResult(has_data=True, answer="Theo tài liệu: 18,5 triệu/năm.",
+                                 citations=[], confidence=0.8))
+    service, repo = _make_service(
+        intent_result=IntentResult(route="FOLLOWUP", topic="tuition", school="VNU-UET"),
+        knowledge_qa=fake_qa)
+    _seed_prior_tuition_turn(repo)
+
+    result = service.handle_user_message("tok", "vậy một năm đóng bao nhiêu?")
+
+    assert len(fake_qa.calls) == 1                   # fell back to retrieval
+    assert "18,5 triệu" in result.assistant_message

@@ -1,4 +1,4 @@
-from agents.models import CutoffEntry
+from domain.models import CutoffEntry
 from services.cutoff.assessment import assess_cutoff, classify_margin
 
 

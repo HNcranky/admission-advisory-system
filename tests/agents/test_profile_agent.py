@@ -1,5 +1,5 @@
 import agents.profile_agent as profile_agent_module
-from agents.models import StudentProfile
+from domain.models import StudentProfile
 from services.inference.models import InferenceResult
 from state import AgentState
 

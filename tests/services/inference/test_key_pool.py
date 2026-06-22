@@ -245,3 +245,27 @@ def test_concurrent_acquire_only_returns_valid_keys():
 
     assert set(results) <= {"a", "b", "c"}
     assert len(results) == 8 * 50
+
+
+# --- injectable CooldownStore (PR5) ------------------------------------------
+
+class SpyStore:
+    def __init__(self):
+        self.penalized = []
+        self.cooling = set()
+
+    def is_cooling(self, key_id, now):
+        return key_id in self.cooling
+
+    def penalize(self, key_id, until):
+        self.penalized.append(key_id)
+
+
+def test_pool_uses_injected_cooldown_store():
+    store = SpyStore()
+    pool = GeminiKeyPool(["k1", "k2"], cooldown_store=store, now=lambda: 0.0)
+    pool.penalize("k1")
+    assert store.penalized == ["k1"]
+    store.cooling.add("k1")
+    h = pool.acquire()
+    assert h.key_id == "k2"  # k1 is cooling per the injected store

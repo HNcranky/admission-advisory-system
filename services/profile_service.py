@@ -1,11 +1,11 @@
 import json
 import re
-import unicodedata
 from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Set
 
-from agents.models import StudentProfile
+from domain.models import StudentProfile
+from services.text_utils import vietnamese_fold
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DICTIONARIES_DIR = PROJECT_ROOT / "ingestion" / "normalization" / "dictionaries"
@@ -39,12 +39,7 @@ SCHOOL_ALIASES = {
 
 
 def normalize_text(text: str) -> str:
-    # "đ"/"Đ" (U+0111/U+0110) have no NFKD decomposition, so an ascii-strip would
-    # drop them entirely ("điểm" -> "iem"). Map them to plain d/D first.
-    text = text.replace("đ", "d").replace("Đ", "D")
-    normalized = unicodedata.normalize("NFKD", text)
-    ascii_text = normalized.encode("ascii", "ignore").decode("ascii")
-    return " ".join(ascii_text.lower().split())
+    return vietnamese_fold(text)
 
 
 @lru_cache(maxsize=1)

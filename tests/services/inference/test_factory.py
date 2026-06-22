@@ -39,6 +39,15 @@ def test_knowledge_qa_agent_disables_thinking():
     assert gateway.registry.resolve("knowledge_qa_agent").thinking_budget == 0
 
 
+def test_knowledge_qa_agent_token_budget_fits_grounded_answer():
+    # Regression: max_tokens=800 truncated real grounded answers (~1.9k output
+    # tokens on ~10k chars of retrieved chunks) mid-JSON → MAX_TOKENS finish →
+    # json.loads "Unterminated string" → STRUCTURE_FAILURE on every retry →
+    # has_data=False ("Mình hiện chưa có dữ liệu") despite a correct answer.
+    policy = build_default_gateway().registry.resolve("knowledge_qa_agent")
+    assert policy.max_tokens >= 2048
+
+
 def test_synthesis_agent_keeps_default_thinking():
     gateway = build_default_gateway()
     # Deferred to Slice 4 eval — must remain unset (default dynamic thinking).

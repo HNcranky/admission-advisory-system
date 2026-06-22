@@ -3,35 +3,21 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-# Canonical knowledge topics. Synonyms the LLM commonly emits are normalized to
-# these; anything unrecognized degrades to None rather than failing the whole
-# classification (a secondary field must never invalidate the route).
-KNOWLEDGE_TOPICS = frozenset({
-    "tuition", "curriculum", "scholarship", "dormitory",
-    "career", "admission_policy", "program_overview",
-})
-_TOPIC_SYNONYMS = {
-    "admission_method": "admission_policy",
-    "admission_methods": "admission_policy",
-    "admission": "admission_policy",
-    "admissions": "admission_policy",
-    "admission_regulation": "admission_policy",
-    "quota": "admission_policy",
-}
-
-
-def _normalize_topic(value):
-    if value is None:
-        return None
-    key = str(value).strip().lower()
-    if key in KNOWLEDGE_TOPICS:
-        return key
-    return _TOPIC_SYNONYMS.get(key)  # None if unrecognized
-
+from observability.prompts import get_prompt_service
 from services import build_default_gateway
 from services.chat.models import ChatProfileState
 from services.inference.models import InferenceRequest
+from services.knowledge.taxonomy import (
+    KNOWLEDGE_TOPICS,
+    TOPIC_SYNONYMS,
+    normalize_school as _normalize_school,
+    normalize_topic as _normalize_topic,
+)
 from services.profile_service import normalize_text
+
+# Canonical topics + synonym normalization live in services.knowledge.taxonomy
+# (single source of truth shared with ingestion seed validation). Re-exported
+# names above keep this module's public surface unchanged.
 
 logger = logging.getLogger(__name__)
 
@@ -57,14 +43,22 @@ ADVISORY_FLOW — câu hỏi tư vấn chọn ngành/trường dựa trên đi�
 KNOWLEDGE_QA — câu hỏi thực tế về thông tin cụ thể của trường/ngành
   Ví dụ: "học phí UET bao nhiêu", "chương trình CNTT gồm gì", "có học bổng không", "ký túc xá thế nào"
   Trường "topic" CHỈ được nhận đúng 1 trong các giá trị:
-    tuition | curriculum | scholarship | dormitory | career | admission_policy | program_overview
+    tuition | curriculum | scholarship | dormitory | admission_policy | program_overview
   Ánh xạ chủ đề về đúng giá trị trên, KHÔNG tự bịa giá trị mới:
     - phương thức xét tuyển / quy chế tuyển sinh / chỉ tiêu / điều kiện xét tuyển → admission_policy
     - học phí → tuition; học bổng → scholarship; chương trình/môn học → curriculum
-    - ký túc xá → dormitory; việc làm/ra trường → career; giới thiệu ngành → program_overview
+    - ký túc xá → dormitory; việc làm/ra trường/cơ hội nghề nghiệp/giới thiệu ngành → program_overview
   Nếu không khớp chủ đề nào ở trên, để topic là null (vẫn giữ route KNOWLEDGE_QA).
   Ví dụ: "có bao nhiêu phương thức xét tuyển của HUST"
        → {"route":"KNOWLEDGE_QA","topic":"admission_policy","school":"HUST"}
+
+FOLLOWUP — câu hỏi nối tiếp chỉ cần SUY LUẬN / TÍNH TOÁN / LÀM RÕ dựa trên
+  thông tin ĐÃ có trong lịch sử hội thoại, KHÔNG cần tra cứu dữ liệu/tài liệu mới.
+  Chỉ dùng khi câu trả lời nằm ngay trong lịch sử hội thoại ở trên; nếu cần dữ
+  kiện mới (mà lịch sử chưa nêu) → KNOWLEDGE_QA.
+  Ví dụ (sau khi trợ lý vừa trả lời học phí theo tháng):
+    "vậy một năm đóng bao nhiêu?", "thế tổng 4 năm là bao nhiêu?",
+    "ý bạn là mỗi kỳ đúng không?", "quy ra mỗi tháng thì sao?"
 
 CLARIFICATION — câu quá mơ hồ, thiếu context để phân loại chính xác
   Ví dụ: "thế còn cái đó thì sao" (không rõ đối tượng), "ý bạn là gì"
@@ -123,6 +117,7 @@ class IntentResult(BaseModel):
         "ADVISORY_FLOW",
         "KNOWLEDGE_QA",
         "HYBRID",
+        "FOLLOWUP",
         "CLARIFICATION",
         "OUT_OF_SCOPE",
         "CONVERSATIONAL",
@@ -151,6 +146,27 @@ class IntentResult(BaseModel):
     def _coerce_topic(cls, v):
         # Unknown topic → None (keeps the route); known synonym → canonical.
         return _normalize_topic(v)
+
+    @field_validator("school", mode="before")
+    @classmethod
+    def _coerce_school(cls, v):
+        # The LLM is asked to emit a corpus code but sometimes returns the full
+        # name ("đại học bách khoa hà nội"); retrieval matches `school` exactly,
+        # so canonicalize here or the lookup finds zero chunks. Unknown → raw.
+        return _normalize_school(v)
+
+    @field_validator("schools", mode="before")
+    @classmethod
+    def _coerce_schools(cls, v):
+        if not v:
+            return []
+        seen, out = set(), []
+        for s in v:
+            canonical = _normalize_school(s)
+            if canonical and canonical not in seen:
+                seen.add(canonical)
+                out.append(canonical)
+        return out
 
     @field_validator("topics", mode="before")
     @classmethod
@@ -182,8 +198,9 @@ _FALLBACK_KNOWLEDGE_TOPICS = (
     ("chi tieu", "admission_policy"),
     ("chuong trinh hoc", "curriculum"),
     ("mon hoc", "curriculum"),
-    ("viec lam", "career"),
-    ("ra truong lam", "career"),
+    ("viec lam", "program_overview"),
+    ("ra truong lam", "program_overview"),
+    ("co hoi nghe nghiep", "program_overview"),
 )
 _FALLBACK_ADVISORY_PHRASES = (
     "tu van", "nen chon", "nen hoc", "nen nop",
@@ -207,11 +224,13 @@ class IntentRouter:
         try:
             if hasattr(self._gateway, "is_available") and not self._gateway.is_available():
                 return self._fallback_classify(message)
+            cp = get_prompt_service().get("intent-router", fallback=INTENT_SYSTEM_PROMPT)
             result = self._gateway.run(
                 InferenceRequest(
                     agent_name="intent_router",
                     task_type="intent_classification",
-                    system_prompt=INTENT_SYSTEM_PROMPT,
+                    system_prompt=cp.text,
+                    prompt=cp.handle,
                     user_prompt=self._build_user_prompt(message, profile_state, history),
                     output_mode="json",
                     response_schema=IntentResult,

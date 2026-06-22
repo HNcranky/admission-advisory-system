@@ -1,4 +1,4 @@
-from agents.models import (
+from domain.models import (
     CandidateProgram,
     EligibilityCheck,
     Evidence,

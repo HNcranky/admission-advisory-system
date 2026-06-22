@@ -93,7 +93,8 @@ def extract_profile_update(message: str, *, known_state, active_slot: Optional[s
 
     # Ngành: resolver tiered trả list phẳng; phân loại explicit/inferred theo ngữ cảnh.
     try:
-        majors = resolver(message, known_state=known_state, gateway=gateway, cheap_only=cheap_only)
+        majors = resolver(message, known_state=known_state, gateway=gateway,
+                          cheap_only=cheap_only, active_slot=active_slot)
     except Exception as exc:
         logger.warning("resolve_majors failed in extractor: %r", exc)
         majors = []

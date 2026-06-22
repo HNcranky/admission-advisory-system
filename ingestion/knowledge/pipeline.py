@@ -12,8 +12,9 @@ from ingestion.knowledge.local_metadata import (
 )
 from ingestion.knowledge.pdf_ocr import build_gateway_ocr, extract_pages_hybrid
 from ingestion.knowledge.pdf_pages import extract_pages, pages_to_marked_text
-from ingestion.knowledge.chunker import split_into_chunks
-from ingestion.knowledge.embedder import GeminiEmbedder
+from ingestion.knowledge.chunker import chunk_text
+from ingestion.knowledge.neu_api import curriculum_text_from_json
+from services.inference.embedder import GeminiEmbedder
 from ingestion.knowledge.registry.knowledge_registry import KnowledgeRegistry
 from services.knowledge.models import KnowledgeChunk, KnowledgeDocument
 from services.knowledge.repository import (
@@ -21,6 +22,7 @@ from services.knowledge.repository import (
     KnowledgeDocumentRepository,
     chunk_content_hash,
 )
+from services.knowledge.qa_cache import QACacheRepository, scope_key_for
 
 logger = logging.getLogger(__name__)
 
@@ -65,28 +67,51 @@ class KnowledgeIngestResult:
 
 class KnowledgePipeline:
     def __init__(self, registry=None, embedder=None, doc_repo=None,
-                 chunk_repo=None, fetch=None):
+                 chunk_repo=None, fetch=None, cache_repo=None):
         self.registry = registry if registry is not None else KnowledgeRegistry()
         self.embedder = embedder if embedder is not None else GeminiEmbedder()
         self.doc_repo = doc_repo if doc_repo is not None else KnowledgeDocumentRepository()
         self.chunk_repo = chunk_repo if chunk_repo is not None else KnowledgeChunkRepository()
         self.fetch = fetch if fetch is not None else http_fetch
+        self.cache_repo = cache_repo if cache_repo is not None else QACacheRepository()
 
-    def _extract_text(self, fetch_result, url: str, selector: str | None = None) -> str:
+    def _bump_cache(self, school, topic) -> None:
+        """A corpus change in this (school, topic) scope invalidates any cached
+        QA answers that depend on it. Best-effort: a bump failure logs a warning
+        and never fails ingestion (CLAUDE.md degrade-gracefully)."""
+        try:
+            self.cache_repo.bump_version(scope_key_for(school, topic))
+        except Exception as exc:
+            logger.warning(
+                "knowledge QA cache bump failed for school=%r topic=%r: %r",
+                school, topic, exc,
+            )
+
+    def _extract_text(self, fetch_result, url: str, selector: str | None = None):
+        """Returns (text, content_label). Label is None for PDFs."""
         ctype = (fetch_result.content_type or "").lower()
         if "pdf" in ctype or url.lower().endswith(".pdf"):
             if selector is not None:
                 logger.warning("selector %r ignored for PDF source %s", selector, url)
-            return pages_to_marked_text(extract_pages(fetch_result.raw_content))
-        return parse_html(fetch_result.raw_content, url, selector=selector).text
+            return pages_to_marked_text(extract_pages(fetch_result.raw_content)), None
+        if "json" in ctype:
+            # NEU program overviews come from the courses.neu.edu.vn Strapi API as
+            # JSON (prose lives in *Html fields; the SPA's DOM has none). The
+            # program name doubles as the content_label fallback.
+            if selector is not None:
+                logger.warning("selector %r ignored for JSON source %s", selector, url)
+            return curriculum_text_from_json(fetch_result.raw_content)
+        parsed = parse_html(fetch_result.raw_content, url, selector=selector)
+        return parsed.text, parsed.content_label
 
     def _chunk_embed_upsert(self, doc_id, text, *, school, topic, program,
-                            year, document_type, source_url):
+                            year, document_type, source_url,
+                            chunk_strategy="size", context_label=None):
         """Chunk -> reuse/embed -> replace chunks for one document.
 
         Returns (chunks_total, chunks_embedded, chunks_reused).
         """
-        chunks = split_into_chunks(text)
+        chunks = chunk_text(text, chunk_strategy, context_label=context_label)
         hashes = [chunk_content_hash(c.chunk_text) for c in chunks]
         # Corpus-wide reuse: identical chunk text in ANY document reuses its
         # embedding, so re-ingestion never re-embeds text already seen.
@@ -138,7 +163,7 @@ class KnowledgePipeline:
             return KnowledgeIngestResult(source_url=source.source_url, skipped=True)
 
         try:
-            text = self._extract_text(fr, source.source_url, source.selector)
+            text, content_label = self._extract_text(fr, source.source_url, source.selector)
         except ContentSelectorNotFound:
             logger.warning(
                 "selector %r not found on %s — skipping (fix selector and re-run)",
@@ -152,14 +177,23 @@ class KnowledgePipeline:
             raw_text=text,
         ))
 
+        strategy = getattr(source, "chunk_strategy", "size")
+        # Program identity is seed-first (reliable on any school's HTML); the
+        # HUST breadcrumb-derived content_label is a fallback. The chunk header
+        # (context_label) carries the same chosen program so by_section embeds
+        # program identity regardless of page structure.
+        program = source.program or content_label
         total, embedded, reused = self._chunk_embed_upsert(
             doc_id, text,
-            school=source.school, topic=source.topic, program=source.program,
+            school=source.school, topic=source.topic, program=program,
             year=source.year, document_type=source.document_type,
             source_url=source.source_url,
+            chunk_strategy=strategy,
+            context_label=program,
         )
 
         self.doc_repo.mark_ingested(doc_id, content_hash)
+        self._bump_cache(source.school, source.topic)
         logger.info(
             "Ingested %s: %d chunks (%d embedded, %d reused)",
             source.source_url, total, embedded, reused,
@@ -216,6 +250,7 @@ class KnowledgePipeline:
             document_type=folder, source_url=source_url,
         )
         self.doc_repo.mark_ingested(doc_id, content_hash)
+        self._bump_cache(meta.school, None)
         logger.info(
             "Ingested %s: %d chunks (%d embedded, %d reused), "
             "pages text/ocr/failed=%d/%d/%d",
@@ -269,6 +304,7 @@ class KnowledgePipeline:
             document_type=document_type, source_url=url,
         )
         self.doc_repo.mark_ingested(doc_id, content_hash)
+        self._bump_cache(school, None)
         logger.info(
             "Ingested %s: %d chunks (%d embedded, %d reused), "
             "pages text/ocr/failed=%d/%d/%d",

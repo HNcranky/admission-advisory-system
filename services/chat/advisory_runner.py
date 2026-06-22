@@ -1,4 +1,4 @@
-from agents.models import StudentProfile
+from domain.models import StudentProfile
 from graph import graph
 from state import AgentState
 

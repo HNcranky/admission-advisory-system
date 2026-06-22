@@ -1,0 +1,530 @@
+[
+  {
+    "input": "Chương trình An toàn không gian số (IT-E15) đào tạo trong bao lâu để lấy bằng Cử nhân?",
+    "expected_output": "Thời gian đào tạo để lấy bằng Cử nhân là 4 năm.",
+    "metadata": {
+      "school": "HUST",
+      "topic": "program_overview",
+      "source_chunk_id": 410,
+      "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/an-toan-khong-gian-so-chuong-trinh-tien-tien",
+      "program": "An toàn không gian số (Chương trình tiên tiến)"
+    }
+  },
+  {
+    "input": "Ngành Công nghệ Giáo dục có những hình thức xét tuyển nào?",
+    "expected_output": "Ngành Công nghệ Giáo dục có ba hình thức xét tuyển: xét tuyển thẳng (xét tuyển tài năng), xét tuyển dựa trên kết quả thi tốt nghiệp THPT, và xét tuyển dựa trên kết quả Kỳ thi đánh giá tư duy.",
+    "metadata": {
+      "school": "HUST",
+      "topic": "program_overview",
+      "source_chunk_id": 454,
+      "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/cong-nghe-giao-duc",
+      "program": "Công nghệ giáo dục"
+    }
+  },
+  {
+    "input": "Ngành Hệ thống thông tin quản lý có những tổ hợp môn nào để xét tuyển theo kết quả Kỳ thi tốt nghiệp THPT?",
+    "expected_output": "Ngành Hệ thống thông tin quản lý có các tổ hợp môn xét tuyển theo kết quả Kỳ thi tốt nghiệp THPT là A00 (Toán, Lý, Hoá), A01 (Toán, Lý, Anh văn) và K01 (Toán, Lý/Hóa/Sinh/Tin, Ngữ văn).",
+    "metadata": {
+      "school": "HUST",
+      "topic": "program_overview",
+      "source_chunk_id": 495,
+      "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/he-thong-thong-tin-quan-ly",
+      "program": "Hệ thống thông tin quản lý"
+    }
+  },
+  {
+    "input": "Chương trình Kỹ thuật Cơ điện tử có những định hướng kiến thức đặc trưng nào?",
+    "expected_output": "Chương trình Kỹ thuật Cơ điện tử có 4 định hướng chính: Hệ thống sản xuất tự động, Thiết bị tự động, Robot, và Hệ thống cơ điện tử thông minh.",
+    "metadata": {
+      "school": "HUST",
+      "topic": "program_overview",
+      "source_chunk_id": 536,
+      "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-co-dien-tu",
+      "program": "Kỹ thuật Cơ điện tử"
+    }
+  },
+  {
+    "input": "Chương trình Kỹ thuật Hóa dược (Chương trình tiên tiến) bao gồm những khối kiến thức chuyên ngành nào?",
+    "expected_output": "Chương trình này bao gồm các kiến thức chuyên ngành như Hoá dược, Nghiên cứu - phát triển thuốc, Quản lý chất lượng dược phẩm - thực phẩm, Kỹ thuật bào chế, Phân tích và Kiểm nghiệm dược phẩm, Kỹ thuật chiết tách - tinh chế, Hương liệu - mỹ phẩm.",
+    "metadata": {
+      "school": "HUST",
+      "topic": "program_overview",
+      "source_chunk_id": 578,
+      "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-hoa-duoc-chuong-trinh-tien-tien",
+      "program": "Kỹ thuật Hóa dược (Chương trình tiên tiến)"
+    }
+  },
+  {
+    "input": "Trường Hóa và Khoa học sự sống có những ngành đào tạo nào khác ngoài Kỹ thuật thực phẩm (Chương trình tiên tiến)?",
+    "expected_output": "Ngoài Kỹ thuật thực phẩm (Chương trình tiên tiến), Trường Hóa và Khoa học sự sống còn đào tạo các ngành: Hóa học Mỹ phẩm (Chương trình tiên tiến), Quản lý Tài nguyên và Môi trường, Kỹ thuật Môi trường, Hóa học, Kỹ thuật Hóa học, Kỹ thuật Thực phẩm, Kỹ thuật Sinh học, Kỹ thuật Hóa dược (Chương trình tiên tiến).",
+    "metadata": {
+      "school": "HUST",
+      "topic": "program_overview",
+      "source_chunk_id": 620,
+      "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/ky-thuat-thuc-pham-chuong-trinh-tien-tien",
+      "program": "Kỹ thuật thực phẩm (Chương trình tiên tiến)"
+    }
+  },
+  {
+    "input": "Chương trình Tài chính - Ngân hàng bao gồm những khối kiến thức đặc trưng nào?",
+    "expected_output": "Chương trình bao gồm các khối kiến thức đặc trưng như Tài chính doanh nghiệp, Báo cáo tài chính, Phân tích tài chính, Đầu tư tài chính, Quản trị rủi ro, Nghiệp vụ ngân hàng, Quản trị kinh doanh ngân hàng thương mại, Thuế và hệ thống thuế, Bảo hiểm, Thị trường chứng khoán, Công nghệ tài chính, Phân tích dữ liệu lớn và tri thức kinh doanh, Khoa học dữ liệu ứng dụng trong kinh doanh.",
+    "metadata": {
+      "school": "HUST",
+      "topic": "program_overview",
+      "source_chunk_id": 663,
+      "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/tai-chinh-ngan-hang",
+      "program": "Tài chính - Ngân hàng"
+    }
+  },
+  {
+    "input": "Chương trình Vật lý Y khoa có những môn học tự chọn nào?",
+    "expected_output": "Các môn tự chọn bao gồm: Kỹ thuật chụp và chẩn đoán hình ảnh, xử lý ảnh điện quang y tế, thiết bị xạ trị, lập và đánh giá kế hoạch xạ trị, dược chất phóng xạ, vật lý nano y sinh, ứng dụng trí tuệ nhân tạo.",
+    "metadata": {
+      "school": "HUST",
+      "topic": "program_overview",
+      "source_chunk_id": 708,
+      "source_url": "https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc/vat-ly-y-khoa",
+      "program": "Vật lý Y khoa"
+    }
+  },
+  {
+    "input": "Quy chế tuyển sinh đại học của Đại học Bách khoa Hà Nội được ban hành kèm theo quyết định nào?",
+    "expected_output": "Quy chế tuyển sinh đại học của Đại học Bách khoa Hà Nội được ban hành kèm theo Quyết định này (Quyết định số /QĐ-ĐHBK Hà Nội, ngày tháng năm 2026).",
+    "metadata": {
+      "school": "HUST",
+      "topic": null,
+      "source_chunk_id": 1,
+      "source_url": "file:///D:/Work/admission-advisory-system/data/knowledge/pdf_text/4740_qd-dhbk-qcts.pdf",
+      "program": null
+    }
+  },
+  {
+    "input": "Khi nào quy định về xét tuyển tài năng này bắt đầu được áp dụng cho tuyển sinh đại học hệ chính quy của ĐHBK Hà Nội?",
+    "expected_output": "Quy định này được áp dụng đối với phương thức xét tuyển tài năng trong tuyển sinh đại học hệ chính quy của ĐHBK Hà Nội từ năm 2026.",
+    "metadata": {
+      "school": "HUST",
+      "topic": null,
+      "source_chunk_id": 99,
+      "source_url": "file:///D:/Work/admission-advisory-system/data/knowledge/pdf_scanned/qui-dinh-ve-xttn-nam-2026-scan.pdf",
+      "program": null
+    }
+  },
+  {
+    "input": "Những ai không được tham gia Hội đồng tuyển sinh và các ban chuyên môn của Hội đồng tuyển sinh vào ĐHBK Hà Nội?",
+    "expected_output": "Cán bộ có người thân là vợ hoặc chồng; con; anh, chị, em ruột của mình và của vợ hoặc chồng tham gia thi tuyển sinh hay xét tuyển đại học vào ĐHBK Hà Nội thì không được tham gia HĐTS và các ban chuyên môn của HĐTS trong năm tuyển sinh đó.",
+    "metadata": {
+      "school": "HUST",
+      "topic": "admission_policy",
+      "source_chunk_id": 203,
+      "source_url": "https://www.hust.edu.vn/uploads/sys/tuyen-sinh/2026_05/4740_qd-dhbk-qcts.pdf",
+      "program": null
+    }
+  },
+  {
+    "input": "Học phí cho sinh viên nước ngoài tự chi trả kinh phí học tập được tính như thế nào?",
+    "expected_output": "Mức học phí đối với sinh viên nước ngoài tự chi trả kinh phí học tập được tính bằng 1,5 lần mức học phí quy định tại mục 1, 2, 3 của Phụ lục này.",
+    "metadata": {
+      "school": "HUST",
+      "topic": "tuition",
+      "source_chunk_id": 248,
+      "source_url": "https://ctt.hust.edu.vn/Upload/Nguy%E1%BB%85n%20Qu%E1%BB%91c%20%C4%90%E1%BA%A1t/files/DTDH_QDQC/Hocphi/2025-2026/QD%20HOC%20PHI%20-%202025-2026-final.pdf",
+      "program": null
+    }
+  },
+  {
+    "input": "Thông tư này sẽ thay thế những thông tư nào trước đây?",
+    "expected_output": "Thông tư này sẽ thay thế Thông tư số 08/2022/TT-BGDĐT ngày 06 tháng 6 năm 2022 và Thông tư số 06/2025/TT-BGDĐT ngày 19 tháng 3 năm 2025.",
+    "metadata": {
+      "school": "MOET",
+      "topic": null,
+      "source_chunk_id": 285,
+      "source_url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/06-bgddt.pdf",
+      "program": null
+    }
+  },
+  {
+    "input": "Những đối tượng nào được xem là người dự tuyển tại thời điểm xét tuyển?",
+    "expected_output": "Người dự tuyển bao gồm người đã được công nhận tốt nghiệp THPT, trung học nghề của Việt Nam hoặc nước ngoài được công nhận trình độ tương đương, và người đã có bằng tốt nghiệp trung cấp ngành nghề thuộc cùng nhóm ngành dự tuyển và đã hoàn thành đủ yêu cầu khối lượng kiến thức văn hóa cấp THPT.",
+    "metadata": {
+      "school": "MOET",
+      "topic": null,
+      "source_chunk_id": 300,
+      "source_url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/06-bgddt.pdf",
+      "program": null
+    }
+  },
+  {
+    "input": "Những thí sinh đạt giải trong các kỳ thi tay nghề khu vực ASEAN hoặc quốc tế có được xét tuyển thẳng không?",
+    "expected_output": "Có, thí sinh đạt giải nhất, nhì, ba trong các kỳ thi tay nghề khu vực ASEAN và thi tay nghề quốc tế do Bộ GDĐT cử tham gia sẽ được xét tuyển thẳng, với điều kiện thời gian đạt giải không quá 03 năm tính đến thời điểm xét tuyển thẳng.",
+    "metadata": {
+      "school": "MOET",
+      "topic": null,
+      "source_chunk_id": 315,
+      "source_url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/06-bgddt.pdf",
+      "program": null
+    }
+  },
+  {
+    "input": "Thông tin tuyển sinh cần được duy trì công bố trong thời gian bao lâu trên Cổng thông tin điện tử của cơ sở đào tạo?",
+    "expected_output": "Thông tin tuyển sinh phải được duy trì tối thiểu 04 năm liên tục kể từ ngày công bố trên Cổng thông tin điện tử của cơ sở đào tạo.",
+    "metadata": {
+      "school": "MOET",
+      "topic": null,
+      "source_chunk_id": 331,
+      "source_url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/06-bgddt.pdf",
+      "program": null
+    }
+  },
+  {
+    "input": "Thí sinh cần hoàn thành việc thanh toán phí dịch vụ tuyển sinh vào thời điểm nào?",
+    "expected_output": "Thí sinh cần hoàn thành thanh toán mức thu dịch vụ tuyển sinh trước khi kết thúc thủ tục đăng ký dự tuyển theo quy định của các cơ sở đào tạo.",
+    "metadata": {
+      "school": "MOET",
+      "topic": null,
+      "source_chunk_id": 346,
+      "source_url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/06-bgddt.pdf",
+      "program": null
+    }
+  },
+  {
+    "input": "Phụ lục III cung cấp thông tin tuyển sinh cho những trình độ đào tạo nào?",
+    "expected_output": "Phụ lục III cung cấp thông tin tuyển sinh cho các ngành đào tạo trình độ đại học và ngành Giáo dục Mầm non trình độ cao đẳng.",
+    "metadata": {
+      "school": "MOET",
+      "topic": null,
+      "source_chunk_id": 361,
+      "source_url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/3/06-bgddt.pdf",
+      "program": null
+    }
+  },
+  {
+    "input": "Ngành học nào được coi là phù hợp để học tiếp lên thạc sĩ?",
+    "expected_output": "Ngành phù hợp là ngành đào tạo ở trình độ đại học (hoặc trình độ tương đương trở lên) trang bị cho người học nền tảng chuyên môn cần thiết để học tiếp chương trình đào tạo thạc sĩ của ngành tương ứng, được quy định cụ thể trong chuẩn đầu vào của chương trình đào tạo thạc sĩ.",
+    "metadata": {
+      "school": "MOET",
+      "topic": null,
+      "source_chunk_id": 375,
+      "source_url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2021/09/23-bgddt.pdf",
+      "program": null
+    }
+  },
+  {
+    "input": "Học viên theo học chương trình định hướng ứng dụng cần thực hiện học phần tốt nghiệp dưới hình thức nào?",
+    "expected_output": "Học viên theo học chương trình định hướng ứng dụng phải thực hiện một học phần tốt nghiệp dưới hình thức đề án, đồ án hoặc dự án.",
+    "metadata": {
+      "school": "MOET",
+      "topic": null,
+      "source_chunk_id": 392,
+      "source_url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2021/09/23-bgddt.pdf",
+      "program": null
+    }
+  },
+  {
+    "input": "Các cơ sở đào tạo phải công khai những thông tin gì trên trang thông tin điện tử của mình trước khi tổ chức tuyển sinh và đào tạo?",
+    "expected_output": "Trước khi tổ chức tuyển sinh và đào tạo, cơ sở đào tạo phải công khai trên trang thông tin điện tử của mình Quy chế của cơ sở đào tạo, các quy định quản lý đào tạo có liên quan đến tuyển sinh, tổ chức đào tạo và cấp bằng thạc sĩ, cùng với các quyết định mở ngành đào tạo.",
+    "metadata": {
+      "school": "MOET",
+      "topic": null,
+      "source_chunk_id": 407,
+      "source_url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2021/09/23-bgddt.pdf",
+      "program": null
+    }
+  },
+  {
+    "input": "Những đơn vị nào sẽ tích cực phối hợp và chủ động tham gia cùng Bộ Giáo dục và Đào tạo, các địa phương để chuẩn bị tổ chức Kỳ thi và tuyển sinh?",
+    "expected_output": "Tập đoàn Công nghiệp - Viễn thông Quân đội và Tổng Công ty Bưu điện Việt Nam sẽ tích cực phối hợp và chủ động tham gia cùng Bộ Giáo dục và Đào tạo, các địa phương để chuẩn bị tổ chức Kỳ thi và tuyển sinh.",
+    "metadata": {
+      "school": "MOET",
+      "topic": null,
+      "source_chunk_id": 737,
+      "source_url": "https://datafiles.chinhphu.vn/cpp/files/vbpq/2026/5/20-ct.signed.pdf",
+      "program": null
+    }
+  },
+  {
+    "input": "Kỳ thi Đánh giá tư duy (TSA) được tổ chức bởi đơn vị nào?",
+    "expected_output": "Kỳ thi Đánh giá tư duy (TSA) được Đại học Bách khoa Hà Nội nghiên cứu, thiết kế và triển khai tổ chức.",
+    "metadata": {
+      "school": "MOET",
+      "topic": "admission_policy",
+      "source_chunk_id": 711,
+      "source_url": "https://ts.hust.edu.vn/tin-tuc/gioi-thieu-ve-ky-thi-danh-gia-tu-duy-tsa",
+      "program": null
+    }
+  },
+  {
+    "input": "Thí sinh có thể đăng ký tài khoản dự thi HSA 2026 trong khoảng thời gian nào?",
+    "expected_output": "Thí sinh có thể lập tài khoản dự thi từ ngày 25/11/2025 đến hết ngày 31/01/2026.",
+    "metadata": {
+      "school": "MOET",
+      "topic": "admission_policy",
+      "source_chunk_id": 729,
+      "source_url": "https://www.hsa.edu.vn/lich-thi/lich-thi-hsa",
+      "program": null
+    }
+  },
+  {
+    "input": "Chương trình đào tạo cử nhân ngành An toàn thông tin trang bị cho sinh viên những kiến thức chuyên sâu nào?",
+    "expected_output": "Sinh viên sẽ được trang bị kiến thức chuyên sâu vào các mảng liên quan đến mạng máy tính, hệ thống thông tin, mã hóa, và các công nghệ an ninh mạng; phân tích, đánh giá rủi ro, xác định lỗ hổng tiềm năng, đánh giá mức độ nghiêm trọng và đề xuất các biện pháp cải thiện để tăng cường an toàn, bảo mật.",
+    "metadata": {
+      "school": "NEU",
+      "topic": "program_overview",
+      "source_chunk_id": 766,
+      "source_url": "https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=an-toan-thong-tin-k66-k667480202&populate=*",
+      "program": "An toàn thông tin"
+    }
+  },
+  {
+    "input": "Đại học Kinh tế Quốc dân có kế hoạch phát triển cơ sở vật chất như thế nào để trở thành đại học thông minh?",
+    "expected_output": "Đại học Kinh tế Quốc dân chú trọng đảm bảo và đáp ứng những yêu cầu về cơ sở hạ tầng, trang thiết bị thực hành, thí nghiệm, công nghệ thông tin, thư viện, học liệu, hệ thống quản lý hỗ trợ học tập và quản lý đào tạo.",
+    "metadata": {
+      "school": "NEU",
+      "topic": "program_overview",
+      "source_chunk_id": 880,
+      "source_url": "https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=cong-nghe-moi-truong-va-phat-trien-ben-vung-mnag4a50&populate=*",
+      "program": "Công nghệ môi trường và phát triển bền vững"
+    }
+  },
+  {
+    "input": "Sinh viên tốt nghiệp ngành Hệ thống thông tin có thể làm việc ở những loại hình tổ chức nào?",
+    "expected_output": "Cử nhân ngành HTTT có thể làm việc tại các cơ quan nhà nước, tổ chức chính trị xã hội, các tổ chức doanh nghiệp, các Viện, Trung tâm của các Bộ, Ngành, các công ty CNTT và công ty cung cấp dịch vụ thông tin.",
+    "metadata": {
+      "school": "NEU",
+      "topic": "program_overview",
+      "source_chunk_id": 990,
+      "source_url": "https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=he-thong-thong-tin-k66-K667480104&populate=*",
+      "program": "Hệ thống thông tin"
+    }
+  },
+  {
+    "input": "Chương trình Kinh doanh quốc tế sử dụng những phương pháp giảng dạy chính nào?",
+    "expected_output": "Chương trình chủ yếu sử dụng phương pháp giảng dạy theo mô hình Lecture/Seminar phối hợp với các phương pháp khác như dạy theo vấn đề, tình huống, mô phỏng, theo dự án và tăng cường trải nghiệm thực tế, kiến tập và thực tập.",
+    "metadata": {
+      "school": "NEU",
+      "topic": "program_overview",
+      "source_chunk_id": 1106,
+      "source_url": "https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=kinh-doanh-quoc-te-k66-K667340120&populate=*",
+      "program": "Kinh doanh quốc tế"
+    }
+  },
+  {
+    "input": "Để trở thành giảng viên giảng dạy các học phần cơ sở ngành và chuyên ngành, người đó cần có bằng cấp tối thiểu nào và thuộc nhóm ngành nào?",
+    "expected_output": "Giảng viên giảng dạy các học phần cơ sở ngành và chuyên ngành phải tốt nghiệp thạc sĩ trở lên, được đào tạo ở ít nhất một bậc học (từ bậc 6 trở lên trong Khung trình độ quốc gia) thuộc các nhóm ngành Công nghệ thông tin, Quản trị – Quản lý.",
+    "metadata": {
+      "school": "NEU",
+      "topic": "program_overview",
+      "source_chunk_id": 1221,
+      "source_url": "https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=kinh-te-so-k68ep23&populate=*",
+      "program": "Kinh tế số"
+    }
+  },
+  {
+    "input": "Chương trình Kế toán tích hợp chứng chỉ quốc tế ICAEW CFAB có thời gian đào tạo chuẩn là bao lâu?",
+    "expected_output": "Chương trình có kế hoạch đào tạo chuẩn là 04 năm.",
+    "metadata": {
+      "school": "NEU",
+      "topic": "program_overview",
+      "source_chunk_id": 1338,
+      "source_url": "https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=ke-toan-tich-hop-chung-chi-quoc-te-icaew-cfab-k66-K66EP04&populate=*",
+      "program": "Kế toán tích hợp chứng chỉ quốc tế ICAEW CFAB"
+    }
+  },
+  {
+    "input": "Đại học Kinh tế Quốc dân có chiến lược phát triển cơ sở vật chất như thế nào đến năm 2030?",
+    "expected_output": "Đại học Kinh tế Quốc dân có chiến lược phát triển đến năm 2030 trở thành đại học thông minh, chú trọng đảm bảo và đáp ứng những yêu cầu về cơ sở hạ tầng, trang thiết bị thực hành, thí nghiệm, công nghệ thông tin, thư viện, học liệu, hệ thống quản lý hỗ trợ học tập, quản lý đào tạo.",
+    "metadata": {
+      "school": "NEU",
+      "topic": "program_overview",
+      "source_chunk_id": 1457,
+      "source_url": "https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=phat-trien-quoc-te-k68ep25&populate=*",
+      "program": "Phát triển quốc tế"
+    }
+  },
+  {
+    "input": "Sinh viên ngành Quản trị chất lượng và đổi mới cần có những kỹ năng mềm nào?",
+    "expected_output": "Sinh viên cần vận dụng được các kỹ năng mềm bao gồm: sáng tạo, tư duy phản biện, trao quyền và ủy quyền, giao tiếp, quản lý thời gian, giải quyết vấn đề và ra quyết định, làm việc nhóm, quản trị xung đột và đàm phán, xây dựng thương hiệu cá nhân, thuyết trình, thích ứng và giao thoa văn hóa.",
+    "metadata": {
+      "school": "NEU",
+      "topic": "program_overview",
+      "source_chunk_id": 1575,
+      "source_url": "https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=quan-tri-chat-luong-va-doi-moi-k66-K66EP08&populate=*",
+      "program": "Quản trị chất lượng và đổi mới"
+    }
+  },
+  {
+    "input": "Để được công nhận tốt nghiệp ngành Quản trị nhân lực, sinh viên cần đáp ứng những điều kiện gì?",
+    "expected_output": "Sinh viên cần tích lũy đủ học phần, số tín chỉ và đạt chuẩn đầu ra ngoại ngữ, tin học; có điểm trung bình tích lũy toàn khóa học từ trung bình trở lên; có chứng chỉ Giáo dục quốc phòng - an ninh và hoàn thành học phần Giáo dục thể chất; hoàn thành “Tuần sinh hoạt công dân-sinh viên” và đạt điểm đánh giá rèn luyện; và tại thời điểm xét tốt nghiệp không bị truy cứu trách nhiệm hình sự hoặc không đang trong thời gian bị kỷ luật ở mức đình chỉ học tập.",
+    "metadata": {
+      "school": "NEU",
+      "topic": "program_overview",
+      "source_chunk_id": 1692,
+      "source_url": "https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=quan-tri-nhan-luc-k66-K667340404&populate=*",
+      "program": "Quản trị nhân lực"
+    }
+  },
+  {
+    "input": "Trường Đại học Kinh tế quốc dân có chiến lược phát triển cơ sở vật chất như thế nào đến năm 2030?",
+    "expected_output": "Đến năm 2030, Trường Đại học Kinh tế quốc dân có chiến lược phát triển thành đại học thông minh, chú trọng đảm bảo và đáp ứng các yêu cầu về cơ sở hạ tầng, trang thiết bị thực hành, thí nghiệm, công nghệ thông tin, thư viện, học liệu, hệ thống quản lý hỗ trợ học tập và quản lý đào tạo.",
+    "metadata": {
+      "school": "NEU",
+      "topic": "program_overview",
+      "source_chunk_id": 1805,
+      "source_url": "https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=thong-ke-kinh-te-k66-K667310107&populate=*",
+      "program": "Thống kê kinh tế"
+    }
+  },
+  {
+    "input": "Sinh viên có thể đăng ký học cùng lúc hai chương trình từ học kỳ nào nếu đạt học lực khá?",
+    "expected_output": "Từ học kỳ thứ hai, nếu đạt học lực khá sinh viên có thể được đăng ký học cùng lúc hai chương trình.",
+    "metadata": {
+      "school": "NEU",
+      "topic": "program_overview",
+      "source_chunk_id": 1925,
+      "source_url": "https://courses.neu.edu.vn/api/curriculum-curricula?filters[slug][$eq]=dinh-phi-bao-hiem-va-quan-tri-rui-ro-k66-K66EP02&populate=*",
+      "program": "Định phí bảo hiểm & Quản trị rủi ro"
+    }
+  },
+  {
+    "input": "Thí sinh đạt tổng điểm từ 22,50 trở lên sẽ tính điểm ưu tiên theo công thức nào?",
+    "expected_output": "Điểm ưu tiên = [(30 – Tổng điểm đạt được)/7,5] × Mức điểm ưu tiên quy định.",
+    "metadata": {
+      "school": "NEU",
+      "topic": null,
+      "source_chunk_id": 117,
+      "source_url": "file:///D:/Work/admission-advisory-system/data/knowledge/pdf_scanned/Th%C3%B4ng%20tin%20TS%20n%C4%83m%202026%20h%C3%ACnh%20th%E1%BB%A9c%20%C4%91%C3%A0o%20t%E1%BA%A1o%20Li%C3%AAn%20th%C3%B4ng%20%C4%90HCQ%20v%E1%BB%9Bi%20%C4%91%E1%BB%91i%20t%C6%B0%E1%BB%A3ng%20c%C3%B3%20b%E1%BA%B1ng%20t%E1%BB%91t%20nghi%E1%BB%87p%20C%C4%90CQ.pdf",
+      "program": null
+    }
+  },
+  {
+    "input": "Chương trình đào tạo Công nghệ thông tin chất lượng cao dành cho khóa QH-2022 trở đi bao gồm những phần nào?",
+    "expected_output": "Chương trình đào tạo dành cho khóa QH-2022 trở đi bao gồm: Giới thiệu chung về chương trình đào tạo, Chuẩn đầu ra của chương trình đào tạo và Nội dung chương trình đào tạo.",
+    "metadata": {
+      "school": "VNU-UET",
+      "topic": "program_overview",
+      "source_chunk_id": 738,
+      "source_url": "https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-cong-nghe-thong-tin-chat-luong-cao-4",
+      "program": "Công nghệ thông tin chất lượng cao"
+    }
+  },
+  {
+    "input": "Chương trình đào tạo Kỹ thuật máy tính dành cho khóa QH-2025 trở đi bao gồm những nội dung gì?",
+    "expected_output": "Chương trình đào tạo Kỹ thuật máy tính dành cho khóa QH-2025 trở đi bao gồm: Giới thiệu chung về chương trình đào tạo, Chuẩn đầu ra của chương trình đào tạo, Nội dung chương trình đào tạo và Hướng dẫn thực hiện chương trình đào tạo.",
+    "metadata": {
+      "school": "VNU-UET",
+      "topic": "program_overview",
+      "source_chunk_id": 748,
+      "source_url": "https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-ky-thuat-may-tinh-4",
+      "program": "Kỹ thuật máy tính"
+    }
+  },
+  {
+    "input": "Chương trình đào tạo Vật lý kỹ thuật dành cho khóa QH-2025 trở đi có những nội dung gì?",
+    "expected_output": "Chương trình đào tạo Vật lý kỹ thuật dành cho khóa QH-2025 trở đi bao gồm: Giới thiệu chung về chương trình đào tạo, Chuẩn đầu ra của chương trình đào tạo, Nội dung chương trình đào tạo và Hướng dẫn thực hiện chương trình đào tạo.",
+    "metadata": {
+      "school": "VNU-UET",
+      "topic": "program_overview",
+      "source_chunk_id": 752,
+      "source_url": "https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-vat-ly-ky-thuat-4",
+      "program": "Vật lý kỹ thuật"
+    }
+  },
+  {
+    "input": "Chương trình đào tạo Trí tuệ nhân tạo dành cho khóa QH-2025 trở đi bao gồm những phần nào?",
+    "expected_output": "Chương trình đào tạo Trí tuệ nhân tạo dành cho khóa QH-2025 trở đi bao gồm: Giới thiệu chung về chương trình đào tạo, Chuẩn đầu ra của chương trình đào tạo, Nội dung chương trình đào tạo và Hướng dẫn thực hiện chương trình đào tạo.",
+    "metadata": {
+      "school": "VNU-UET",
+      "topic": "program_overview",
+      "source_chunk_id": 756,
+      "source_url": "https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-tri-tue-nhan-tao-4",
+      "program": "Trí tuệ nhân tạo"
+    }
+  },
+  {
+    "input": "Chương trình đào tạo dành cho khóa QH-2024 trở đi bao gồm những nội dung gì?",
+    "expected_output": "Chương trình đào tạo dành cho khóa QH-2024 trở đi bao gồm Giới thiệu chung về chương trình đào tạo, Chuẩn đầu ra của chương trình đào tạo và Nội dung chương trình đào tạo.",
+    "metadata": {
+      "school": "VNU-UET",
+      "topic": "program_overview",
+      "source_chunk_id": 760,
+      "source_url": "https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-thong-thong-tin-4",
+      "program": "Hệ thống thông tin"
+    }
+  },
+  {
+    "input": "Chương trình đào tạo Kỹ thuật cơ điện tử dành cho khóa QH-2024 trở đi bao gồm những phần nào?",
+    "expected_output": "Chương trình đào tạo Kỹ thuật cơ điện tử dành cho khóa QH-2024 trở đi bao gồm: Giới thiệu chung về chương trình đào tạo, Chuẩn đầu ra của chương trình đào tạo và Nội dung chương trình đào tạo.",
+    "metadata": {
+      "school": "VNU-UET",
+      "topic": "program_overview",
+      "source_chunk_id": 764,
+      "source_url": "https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-ky-thuat-co-dien-tu-4",
+      "program": "Kỹ thuật cơ điện tử"
+    }
+  },
+  {
+    "input": "Trường Đại học Công nghệ có những địa chỉ trụ sở nào?",
+    "expected_output": "Trường Đại học Công nghệ có trụ sở tại Nhà E3, 144 Xuân Thủy, Cầu Giấy, Hà Nội.",
+    "metadata": {
+      "school": "VNU-UET",
+      "topic": "admission_policy",
+      "source_chunk_id": 254,
+      "source_url": "https://tuyensinh.uet.vnu.edu.vn/wp-content/images/Thong-tin-tuyen-sinh-DHCQ-nam-2026-cap-nhat.pdf",
+      "program": null
+    }
+  },
+  {
+    "input": "Chứng chỉ tiếng Anh quốc tế IELTS/TOEFL iBT có thể được sử dụng để làm gì trong quá trình xét tuyển?",
+    "expected_output": "Chứng chỉ tiếng Anh quốc tế IELTS/TOEFL iBT có thể dùng để quy đổi thành điểm môn tiếng Anh trong tổ hợp xét tuyển hoặc sử dụng cộng điểm khuyến khích đối với các tổ hợp xét tuyển không có môn tiếng Anh hoặc cộng điểm khuyến khích vào bài thi HSA không có môn tiếng Anh.",
+    "metadata": {
+      "school": "VNU-UET",
+      "topic": "admission_policy",
+      "source_chunk_id": 260,
+      "source_url": "https://tuyensinh.uet.vnu.edu.vn/wp-content/images/Thong-tin-tuyen-sinh-DHCQ-nam-2026-cap-nhat.pdf",
+      "program": null
+    }
+  },
+  {
+    "input": "Thí sinh trúng tuyển thẳng có cần cam kết nhập học sớm hơn lịch trình chung không?",
+    "expected_output": "Trường ĐHCN không yêu cầu thí sinh cam kết nhập học dưới mọi hình thức hoặc xác nhận nhập học sớm hơn lịch trình theo kế hoạch chung của ĐHQGHN và của Trường.",
+    "metadata": {
+      "school": "VNU-UET",
+      "topic": "admission_policy",
+      "source_chunk_id": 266,
+      "source_url": "https://tuyensinh.uet.vnu.edu.vn/wp-content/images/Thong-tin-tuyen-sinh-DHCQ-nam-2026-cap-nhat.pdf",
+      "program": null
+    }
+  },
+  {
+    "input": "Nếu thí sinh đạt nhiều giải thưởng trong cùng một môn thi, điểm cộng sẽ được tính như thế nào?",
+    "expected_output": "Với cùng môn thi đạt giải, thí sinh đạt nhiều thành tích, có nhiều điểm cộng, chỉ được tính 01 lần với mức điểm/thành tích cao nhất.",
+    "metadata": {
+      "school": "VNU-UET",
+      "topic": "admission_policy",
+      "source_chunk_id": 273,
+      "source_url": "https://tuyensinh.uet.vnu.edu.vn/wp-content/images/Thong-tin-tuyen-sinh-DHCQ-nam-2026-cap-nhat.pdf",
+      "program": null
+    }
+  },
+  {
+    "input": "Nếu tôi quên mật khẩu đăng nhập, tôi cần cung cấp những thông tin gì để được cấp lại?",
+    "expected_output": "Để được cấp lại mật khẩu, thí sinh cần điền chính xác Số CCCD và Email đã đăng ký tài khoản.",
+    "metadata": {
+      "school": "VNU-UET",
+      "topic": "admission_policy",
+      "source_chunk_id": 278,
+      "source_url": "https://tuyensinh.uet.vnu.edu.vn/wp-content/images/Huong-dan-dang-ky-xet-tuyen-2026.pdf",
+      "program": null
+    }
+  },
+  {
+    "input": "Sinh viên quốc tịch nước ngoài có phải đóng học phí khác với sinh viên Việt Nam không?",
+    "expected_output": "Không, sinh viên có quốc tịch nước ngoài áp dụng định mức thu học phí như đối với sinh viên người Việt Nam.",
+    "metadata": {
+      "school": "VNU-UET",
+      "topic": "tuition",
+      "source_chunk_id": 280,
+      "source_url": "https://uet-test.uet.edu.vn/wp-content/uploads/2025/10/Dinh-muc-hoc-phi-nam-hoc-2025-2026-1.pdf",
+      "program": null
+    }
+  }
+]

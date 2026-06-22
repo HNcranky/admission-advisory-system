@@ -36,8 +36,8 @@
 \usepackage{xurl}
 
 \usepackage[nonumberlist, nopostdot, nogroupskip, acronym]{glossaries}
-\usepackage{glossary-superragged}
-\setglossarystyle{superraggedheaderborder}
+% \usepackage{glossary-superragged}  % removed: superraggedheaderborder triggers \@endpbox brace error via supertabular
+\setglossarystyle{longheaderborder}
 \usepackage{setspace}
 \usepackage{parskip}
 
@@ -173,7 +173,7 @@
 % \restoregeometry
 
 % ===================================================
-\pagenumbering{roman}
+\pagenumbering{arabic}
 \renewcommand{\figurename}{Figure}
 \renewcommand{\tablename}{Table}
 \renewcommand{\chaptername}{CHAPTER}
@@ -193,7 +193,7 @@
 % ===================================================
 % \pagestyle{empty} % Header và footer rỗng
 \newpage
-\pagenumbering{roman} % Xóa page numbering ở cuối trang
+% \pagenumbering{roman} % removed: keep arabic numbering continuous from Acknowledgement
 \renewcommand*\contentsname{TABLE OF CONTENTS}
 
 \titlecontents{chapter}
@@ -221,9 +221,9 @@
     {\titlerule*[0.3pc]{.}\contentspage}         % filler-page-format, e.g dots
 
  % Tạo mục lục tự động
-\addtocontents{toc}{\protect\thispagestyle{empty}}
-\tableofcontents 
-\thispagestyle{empty}
+% \addtocontents{toc}{\protect\thispagestyle{empty}}
+\tableofcontents
+% \thispagestyle{empty}
 \cleardoublepage
 
 % \pagenumbering{roman}
@@ -260,7 +260,7 @@
 
 
 \newpage
-\pagenumbering{arabic}
+% \pagenumbering{arabic}  % removed: already arabic+continuous from Acknowledgement; resetting here would restart at 1
 
 \pagestyle{fancy}
 \fancyhf{}

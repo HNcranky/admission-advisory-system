@@ -1,47 +1,78 @@
 \documentclass[../main.tex]{subfiles}
 \begin{document}
 
-% Target length: <= 10 pages.
+% Target length: 13--15 pages.
 
 Chapter~\ref{chapter:Related_works} derived the system's functional and non-functional requirements.
 This chapter reviews the theoretical background and the technologies chosen to meet them.
 Each technology is presented together with the requirement it serves and the main alternative that was considered, so that the design decisions in Chapter~\ref{chapter:Experiment} rest on an explicit rationale rather than convention.
-Section~\ref{section:3.1} covers large language models and structured output, Section~\ref{section:3.2} retrieval-augmented generation over vector search, Section~\ref{section:3.3} the agentic pipeline, Section~\ref{section:3.4} document processing, and Section~\ref{section:3.5} the web stack.
+Section~\ref{section:3.1} covers large language models and structured output, Section~\ref{section:3.2} retrieval-augmented generation over vector search, Section~\ref{section:3.3} the agentic pipeline, Section~\ref{section:3.4} document processing, Section~\ref{section:3.5} the web stack, and Section~\ref{section:3.6} observability and answer caching.
 
 \section{Large language models and structured output}
 \label{section:3.1}
 
 A \gls{LLM} is a neural network trained on large text corpora to predict the next token given a context.
-Modern \gls{LLM}s are built on the Transformer architecture~\cite{vaswani2017attention}, whose self-attention mechanism lets the model condition each output token on every input token.
-A key property exploited throughout this system is \textit{in-context learning}: a sufficiently large model can perform a new task from instructions and a few examples in its prompt, without parameter updates~\cite{brown2020fewshot}.
-Every \gls{LLM}-backed step in this system --- intent classification, conflict tie-breaking, knowledge answering, and \gls{OCR} --- is implemented as a prompt with task instructions and, where helpful, worked examples, rather than as a fine-tuned model.
+Modern \gls{LLM}s are built on the Transformer architecture~\cite{vaswani2017attention}, whose self-attention mechanism computes, for each position in the input, a weighted combination of the representations of all other positions.
+Because every token can attend directly to every other token regardless of distance, the model can condition an output on long-range context --- an entire admission document or a multi-turn conversation --- without the information bottleneck of earlier recurrent architectures.
+This long-range conditioning is what makes it feasible to pass a whole retrieved passage or a full extracted profile into a single prompt and have the model reason over all of it at once.
+
+A second property the system relies on is \textit{in-context learning}: a sufficiently large model can perform a new task from instructions and a few examples placed in its prompt, without any parameter update~\cite{brown2020fewshot}.
+In-context learning is itself a consequence of \textit{instruction tuning}, a post-training stage in which a base model is fine-tuned on instruction--response pairs so that it follows natural-language directions rather than merely continuing text~\cite{ouyang2022instruct}.
+Instruction tuning is the reason a prompt that simply states the task --- ``classify this message into one of the following intents'' --- works at all, and it is why this system can be built entirely by prompting a hosted instruction-tuned model rather than by training a task-specific model.
+Every \gls{LLM}-backed step in this system --- intent classification, conflict tie-breaking, knowledge answering, and \gls{OCR} --- is therefore implemented as a prompt with task instructions and, where helpful, worked examples, rather than as a fine-tuned model.
+
+Within this prompting paradigm three techniques recur, ordered by how much reasoning they ask the model to externalize.
+The first is \textit{role and instruction prompting}: each call sends a system prompt that fixes the model's role (for example, an intent classifier for Vietnamese admission advising) and a user prompt that carries the task input; the intent-routing step uses this form alone.
+The second is \textit{few-shot prompting}: a small number of worked exemplars are included so the model infers the output format and the decision boundary from demonstration, which the system uses where a task's expected output is easier to show than to specify exhaustively.
+The third is \textit{chain-of-thought} prompting, in which the model is asked to produce intermediate reasoning steps before its final answer, improving accuracy on multi-step problems~\cite{wei2022cot}; the conflict tie-breaking and final explanation steps benefit from this style because both must justify a decision rather than only state it.
+
+Because the model defines a probability distribution over the next token, producing text requires a \textit{decoding} strategy that turns those distributions into a concrete sequence.
+Greedy decoding always takes the most probable token, which is stable but can lock the model into a repetitive cycle, whereas sampling with a \textit{temperature} parameter draws from the distribution, with higher temperature flattening it toward more varied output.
+The system leaves decoding at the provider's defaults for most calls but deliberately raises the temperature when retrying a degenerate transcription, exploiting exactly this property to break a repetition loop --- a mechanism returned to in Section~\ref{section:3.4} and Section~\ref{section:5.3}.
+
+A bare \gls{LLM}, however prompted, remains prone to \textit{hallucination}: it can state fluent but false facts that were never in its input, a failure mode surveyed across natural-language generation tasks~\cite{ji2023hallucination}.
+For an advisory system whose output must reflect official admission data, hallucination is the central risk, and two design decisions in this chapter exist to contain it.
+The first is grounding the model on retrieved source passages rather than its parametric memory, which is the academic justification for the retrieval-augmented approach of Section~\ref{section:3.2}.
+The second is constraining and validating the model's output so that a malformed or out-of-range answer is caught rather than trusted, which motivates the structured-output safeguards discussed below.
 
 The system uses the Gemini family of models through Google's hosted \gls{API}~\cite{gemini}.
 Gemini is a family of multimodal models that accept interleaved text and image input~\cite{geminiteam2023}; the multimodal capability is what makes the single-gateway approach to \gls{OCR} in Section~\ref{section:3.4} possible, since page images and text prompts pass through the same interface.
 A hosted model was preferred over a self-hosted open-weight model because the project's constraint is engineering a reliable system around an external model, not training one; the trade-off is a dependency on an external service with quotas and transient failures, which directly motivates the graceful-degradation requirement NFR-01.
 
-Two prompting techniques recur.
-The first is \textit{role and instruction prompting}: each call sends a system prompt that fixes the model's role (for example, an intent classifier for Vietnamese admission advising) and a user prompt that carries the task input.
-The second is \textit{structured output}: for tasks whose result feeds downstream code --- intent routing, profile extraction, knowledge answering --- the model is instructed to return strict \gls{JSON}, and the response is parsed into a typed object.
-Structured output is fragile by nature: a model can return prose around the \gls{JSON}, malformed syntax, or a value outside the expected set.
+Where a step's result feeds downstream code --- intent routing, profile extraction, knowledge answering --- the prompt additionally requests \textit{structured output}: the model is instructed to return strict \gls{JSON}, and the response is parsed into a typed object.
+Structured output is fragile by nature: a model can return prose around the \gls{JSON}, malformed syntax, or a value outside the expected set, and such a response passes the network layer cleanly yet cannot be used.
 The system therefore distinguishes a \textit{hard \gls{API} failure} (network, authentication, rate limit) from a \textit{structure failure} (a successful call whose body cannot be parsed into the expected schema).
-This distinction, realized as the \texttt{failure\_type} field on the inference result and discussed in detail in Section~\ref{section:5.2}, lets the system retry or fall back on structure failures while treating hard failures differently, so that a malformed response degrades gracefully instead of crashing a consultation (NFR-01).
+This distinction is realized as the \texttt{failure\_type} field on the inference result returned by the gateway: a \texttt{STRUCTURE\_FAILURE} is retried on the same model and then escalated to a fallback model, whereas a hard failure stops retrying immediately because re-issuing the same call rarely helps.
+The mechanism and its retry/fallback policy are treated in detail as a contribution in Section~\ref{section:5.2}; here it suffices that a malformed response degrades gracefully instead of crashing a consultation (NFR-01).
 
 \section{Retrieval-augmented generation and vector search}
 \label{section:3.2}
 
 A bare \gls{LLM} cannot answer questions about current admission documents: the information either postdates its training data or never appeared in it, and asking the model directly invites fabrication.
 Retrieval-augmented generation (\gls{RAG}) addresses this by retrieving relevant passages from an external corpus and conditioning the model's answer on them~\cite{lewis2020rag}.
+A survey of the area frames \gls{RAG} as a design space spanning what is retrieved, how the retriever is trained, and how retrieved context is fused into generation, rather than a single fixed recipe~\cite{gao2023ragsurvey}.
+Within that space this system adopts the simplest effective configuration --- retrieve-then-read over a frozen retriever and a frozen generator --- because the corpus is small and the engineering goal is grounding, not end-to-end retrieval training.
 This pattern directly serves the grounded-answer requirement behind UC-02: the knowledge question-answering step retrieves passages from ingested official documents and instructs the model to answer only from those passages, citing them, and to return an empty answer when they are insufficient.
 
-Retrieval is implemented by \textit{semantic vector search}.
-Each document is split into chunks, and each chunk is mapped to a dense embedding vector by an embedding model, such that semantically similar texts lie close together under cosine distance.
-A question is embedded the same way, and the chunks whose embeddings are nearest the question embedding are retrieved.
-The system embeds chunks and queries through Gemini's embedding endpoint, using distinct task types for documents and for queries so the embeddings are optimized for retrieval; the embedding dimension is fixed at 768 to match the database schema.
+Retrieval is implemented by \textit{semantic vector search}, which rests on \textit{embeddings}: learned dense vector representations of text in which semantic similarity corresponds to geometric proximity.
+Sentence-level embedding models produce such vectors so that texts with similar meaning map to nearby points, even when they share no words~\cite{reimers2019sbert}.
+Using these representations to retrieve answer passages for a question is the dense-passage-retrieval approach that underpins modern retrieval question answering, in which both questions and passages are embedded into a shared space and matched by vector similarity~\cite{karpukhin2020dpr}.
+Each ingested document is therefore split into chunks, and each chunk is mapped to a dense embedding vector; a question is embedded the same way, and the chunks whose embeddings are nearest the question embedding are returned.
+The system embeds chunks and queries through Gemini's embedding endpoint, using distinct task types --- \texttt{RETRIEVAL\_DOCUMENT} for chunks and \texttt{RETRIEVAL\_QUERY} for questions --- so the two are optimized for asymmetric retrieval; the embedding dimension is fixed at 768 to match the database schema.
+
+How a document is divided into chunks fixes the granularity of everything downstream, so it is a retrieval decision rather than a mere preprocessing detail.
+The chunker cuts text at blank-line block boundaries, falls back to sentence boundaries only when a single block exceeds a target size, and overlaps consecutive chunks by a fixed margin so that a passage straddling a cut is not lost to either neighbor.
+Chunk size is a trade-off: chunks that are too large dilute a query's match with unrelated text and blur the chunk's embedding toward an average meaning, while chunks that are too small fragment a single answer across several retrievals; aligning cuts to natural block boundaries keeps each chunk a coherent unit of meaning at a size suited to the embedding model.
+
+Proximity is measured by \textit{cosine similarity}.
+For two embedding vectors $\mathbf{u}$ and $\mathbf{v}$ it is the cosine of the angle between them, $\cos(\mathbf{u},\mathbf{v}) = \frac{\mathbf{u}\cdot\mathbf{v}}{\lVert\mathbf{u}\rVert\,\lVert\mathbf{v}\rVert}$, which is $1$ for identical direction and $0$ for orthogonal vectors; the corresponding \textit{cosine distance} is $1-\cos(\mathbf{u},\mathbf{v})$.
+This is exactly the quantity computed in the retrieval \gls{SQL}: chunks are ordered by the pgvector cosine-distance operator \texttt{embedding <=> query} and the score reported to the caller is \texttt{1 - (embedding <=> query)}, recovering cosine similarity.
 
 The embeddings and their search must be stored somewhere.
-The system stores them in PostgreSQL~\cite{postgresql} using the pgvector extension~\cite{pgvector}, which adds a native \texttt{vector} column type and approximate-nearest-neighbor indexes.
-Chunk similarity is expressed directly in \gls{SQL}: the retrieval query orders chunks by the cosine-distance operator \texttt{embedding <=> query} and converts it to a similarity score, backed by an \gls{HNSW} index for sublinear search.
+The system stores them in PostgreSQL~\cite{postgresql} using the pgvector extension~\cite{pgvector}, which adds a native \texttt{vector} column type and vector-similarity indexes.
+Comparing a query against every chunk is exact but linear in the corpus size; \gls{ANN} search trades a small, bounded loss of recall for sublinear query time, which matters once a corpus is large.
+pgvector provides this through a \gls{HNSW} index, a navigable-small-world graph in which search greedily descends from coarse to fine neighborhoods to reach a query's nearest vectors in logarithmic expected time~\cite{malkov2020hnsw}.
+At this system's scale --- hundreds of documents and chunks rather than billions --- an exact scan would in fact be adequate, but the \gls{HNSW} index is retained because it is cheap to maintain at this size and keeps query latency flat as the corpus grows.
 The main alternative is a dedicated vector database such as a standalone similarity-search service.
 A dedicated store can offer richer indexing options at very large scale, but it would introduce a second datastore to deploy, back up, and keep consistent with the relational data.
 Integrating vectors into the existing PostgreSQL instance keeps the knowledge corpus, the canonical admission records, and the chat state in one transactional database, which matches the system's scale (hundreds of documents and chunks, not billions) and the conflict-tolerance requirement NFR-02, where vector chunks and structured records are queried together.
@@ -51,17 +82,22 @@ Integrating vectors into the existing PostgreSQL instance keeps the knowledge co
 
 The advisory consultation is not a single \gls{LLM} call but a sequence of distinct reasoning stages --- completing the profile, retrieving candidate programs, checking source conflicts, ranking by eligibility, applying admission-regulation policy, and explaining the result.
 Coordinating such stages is the role of an \textit{agentic pipeline}.
-A common implementation is a function-calling loop, in which a single model is given a set of tools and decides at each step which tool to call next until it judges the task complete.
-This pattern is flexible, but the control flow is determined by the model at run time, which makes individual runs hard to reproduce and to trace --- a poor fit for a system that must explain why a recommendation changed and must expose a per-stage trace to operators.
+Designs for such pipelines occupy a spectrum: at one end sit fully autonomous tool-use loops, in which a single model is given a set of tools and decides at each step which tool to call next until it judges the task complete; at the other end sit structured workflows, in which the stages and their order are fixed in advance and the model is invoked only inside each stage.
+A survey of \gls{LLM}-based autonomous agents organizes the field along exactly this axis of how much control is delegated to the model at run time~\cite{wang2024agentsurvey}.
+
+The concrete autonomous alternative considered here is a \textit{ReAct}-style reason-act loop, in which the model interleaves free-text reasoning with tool calls and uses the observations they return to decide its next action~\cite{yao2023react}.
+This pattern is flexible and well suited to open-ended tasks, but its control flow is decided by the model at run time, so two runs on the same input can take different paths.
+That non-determinism is a poor fit for this system's requirements: a consultation must be reproducible so that a profile correction's effect is attributable (UC-04, NFR-02), and it must expose a fixed per-stage trace to operators, neither of which a run-time-decided loop guarantees.
 
 The system instead uses LangGraph~\cite{langgraph, langgraph_docs}, a library for expressing an agent as an explicit state graph: nodes are functions that read and write a shared typed state, and edges fix the order in which nodes run.
 The advisory pipeline is wired as a fixed linear graph over the six stages, with one shared state object passed from node to node.
+That state object, \texttt{AgentState}, is a single Pydantic model whose fields each stage fills in turn: the profile stage populates the student profile, the retrieval stage appends candidate programs, the conflict stage adds conflict and resolution records, and the later stages add eligibility checks, ranked recommendations, a policy decision, and the final explanation.
+Because every stage is wrapped by a tracing decorator that records the state it produced under a run identifier, the same fixed structure that orders the computation also yields the per-stage trace, so observability is a by-product of the design rather than a separate instrumentation effort.
 A fixed graph is the deliberate choice for three reasons that map onto Chapter~\ref{chapter:Related_works}'s requirements.
 First, \textit{determinism}: the same profile produces the same stage sequence, so a correction can re-run the pipeline and the change in output is attributable to the changed input (UC-04, NFR-02).
-Second, \textit{traceability}: because the stages are fixed and named, each one can be wrapped to emit a trace event, which is what populates the operator's debug panel (the observability use case in Section~\ref{subsection:2.2.1}).
+Second, \textit{traceability}: because the stages are fixed and named, each one can be wrapped to emit a span to the observability backend, which is what realizes the operator observability use case in Section~\ref{subsection:2.2.1} (detailed in Section~\ref{section:5.4}).
 Third, \textit{separation of concerns}: each stage is an independently testable function with a single responsibility, which supports the testability requirement NFR-05.
-The cost of a fixed graph is reduced flexibility --- it cannot improvise a new stage order for an unusual query --- but the advisory task has a stable shape, so this cost is acceptable.
-A survey of \gls{LLM}-based autonomous agents~\cite{wang2024agentsurvey} frames this as a spectrum between fully autonomous tool-use loops and structured, controllable workflows; this system sits deliberately at the structured end.
+The cost of a fixed graph is reduced flexibility --- it cannot improvise a new stage order for an unusual query --- but the advisory task has a stable shape, so the system sits deliberately at the structured end of the spectrum and accepts that cost.
 
 \section{Document processing}
 \label{section:3.4}
@@ -69,8 +105,9 @@ A survey of \gls{LLM}-based autonomous agents~\cite{wang2024agentsurvey} frames 
 The ingestion pipeline must turn heterogeneous official sources --- \gls{HTML} admission pages and \gls{PDF} proposal documents, some of them scanned images --- into text that can be parsed and embedded.
 For born-digital \gls{PDF}s the system extracts the embedded text layer using pdfplumber~\cite{pdfplumber}, which also recovers table structure; for rendering pages to images it uses PyMuPDF~\cite{pymupdf}.
 
-Scanned documents have no text layer and require \textit{optical character recognition} (\gls{OCR}).
-Rather than adding a separate \gls{OCR} engine, the system reuses the multimodal inference gateway: a page without a usable text layer is rendered to a PNG image at roughly 200 dots per inch and sent to the Gemini model with a transcription prompt.
+Scanned documents have no text layer and require \textit{optical character recognition} (\gls{OCR}), the task of recovering machine-readable text from an image of a page.
+A multimodal \gls{LLM} that accepts interleaved image and text input can perform \gls{OCR} as one instance of image-to-text transcription, without a purpose-built recognition engine, because the same model that reasons over text also reads the rendered page~\cite{geminiteam2023}.
+The system exploits this: rather than adding a separate \gls{OCR} engine, it reuses the multimodal inference gateway, rendering a page without a usable text layer to a PNG image at roughly 200 dots per inch and sending it to the Gemini model with a transcription prompt.
 Extraction is \textit{hybrid and per page}: a page whose text layer is long enough is used directly, and only image-only pages incur an \gls{OCR} call, which keeps cost proportional to the number of scanned pages.
 
 A failure mode specific to model-based \gls{OCR} motivates an explicit safeguard.
@@ -83,15 +120,36 @@ The rationale and the controlling thresholds are revisited as a contribution in 
 \label{section:3.5}
 
 The user-facing layer is a web application that must acknowledge a student message immediately and run the advisory pipeline without blocking the request (NFR-04).
-The application is built on FastAPI~\cite{fastapi}, an asynchronous Python web framework, served by the Uvicorn \gls{ASGI} server~\cite{uvicorn}.
-The chat interface is rendered server-side with the Jinja2 template engine~\cite{jinja2} and progressively updated by client-side JavaScript that polls for run completion and renders the stage trace.
+The application is built on FastAPI~\cite{fastapi}, a Python web framework built on the \gls{ASGI} standard, and is served by the Uvicorn \gls{ASGI} server~\cite{uvicorn}.
+The asynchronous model is what allows a single worker process to keep many slow, \gls{API}-bound consultations in flight concurrently: while one request awaits a network call it yields control rather than holding a thread, so concurrency is bounded by outstanding work rather than by a fixed thread count.
+The chat interface is rendered server-side with the Jinja2 template engine~\cite{jinja2} and progressively updated by client-side JavaScript that polls for run completion and renders the answer.
 
 Because a full advisory run issues several \gls{LLM} calls and database queries and can take tens of seconds, it cannot run inside the request that triggered it.
-The message endpoint instead creates a run record, submits the work to a background thread pool, and returns immediately; the pipeline executes on a worker thread and writes its result and trace to the database, which the interface retrieves by polling.
-A background thread pool is sufficient here because the workload is a small number of long, \gls{API}-bound tasks rather than thousands of concurrent connections; a dedicated task queue with a separate broker would add operational components disproportionate to that scale.
+The message endpoint instead writes a run record to the database in a \texttt{queued} state and returns immediately, decoupling acknowledgement from execution.
+A background run-queue worker polls that table, claims the next queued run, executes the pipeline on its own thread, writes the result back to the database --- from which the interface retrieves it by polling --- and emits the run's per-stage trace to the external observability backend.
+Claims use a \texttt{SELECT \dots\ FOR UPDATE SKIP LOCKED} query, so several worker processes or replicas can drain the same queue without ever claiming the same run twice, and a run that is interrupted by a restart survives in the table to be recovered rather than being lost with an in-memory thread pool.
+This database-backed queue is sufficient here because the workload is a small number of long, \gls{API}-bound tasks rather than thousands of concurrent connections; a dedicated task queue with a separate message broker would add operational components disproportionate to that scale (NFR-04).
 The data-validation layer throughout the application uses Pydantic~\cite{pydantic}, whose typed models define the inference requests and results, the agent state, and the chat schemas, giving every boundary in the system a validated, typed contract.
 
-This chapter reviewed the technologies underpinning the system and tied each to a requirement and an alternative: hosted multimodal \gls{LLM}s with structured output for the reasoning and \gls{OCR} steps, \gls{RAG} over pgvector for grounded knowledge answering, a fixed LangGraph pipeline for deterministic and traceable advising, a hybrid text-and-\gls{OCR} extractor for heterogeneous documents, and an asynchronous FastAPI stack for a responsive interface.
+\section{Observability and answer caching}
+\label{section:3.6}
+
+A multi-stage \gls{LLM} application is hard to debug from logs alone: a single advisory consultation fans out into six pipeline stages and several model calls, each with its own prompt, response, token usage, latency, and retry or fallback behavior.
+\textit{\gls{LLM} observability} is the practice of capturing this execution as a structured, queryable \textit{trace} --- a tree of \textit{spans}, one per logical step, with model calls recorded as \textit{generation} observations carrying the prompt, the raw output, and token counts~\cite{langfuse}.
+The data model follows the span-tree convention established by distributed tracing, in which a root span has nested child spans that record the timing and attributes of each sub-operation~\cite{opentelemetry}.
+This serves the operator observability use case of Section~\ref{subsection:2.2.1} and the traceability rationale of Section~\ref{section:3.3}: because the advisory graph is fixed, its trace tree has the same shape on every run, so a stage's latency or a malformed model response can be located precisely.
+
+An earlier iteration of this system captured stage events in its own database table and rendered them in an in-app panel, which exposed stage timings but nothing about the underlying model calls --- no prompt, no token usage, no per-attempt retry visibility.
+The system therefore adopts Langfuse, a self-hostable observability backend for \gls{LLM} applications, as a single trace sink~\cite{langfuse}; the alternative of extending the bespoke in-app panel was rejected because it would have duplicated, at higher maintenance cost, a capability the external tool already provides, including token and cost accounting the bespoke panel never had.
+Self-hosting keeps the traces --- which contain student messages and raw prompts --- on the same machine as the rest of the system, consistent with the anonymity posture of NFR-03.
+The realization of this design is presented as a contribution in Section~\ref{section:5.4}.
+
+A second concern at this layer is the cost and latency of repeated model calls.
+Because many students ask near-identical factual questions (``how much is tuition?''), a \textit{semantic cache} can reuse a previous answer when a new question is close enough in embedding space, rather than re-running retrieval and generation~\cite{bang2023gptcache}.
+A semantic cache generalizes an exact-match cache: instead of requiring identical question strings, it embeds the question and treats a stored answer as a hit when the nearest cached embedding is within a similarity threshold.
+The risk is staleness --- a cached answer can outlive the document it summarizes --- so the cache must be invalidated when the underlying corpus changes; the system's version-gated design that addresses this is detailed in Section~\ref{section:5.6}.
+
+This chapter reviewed the theoretical background and the technologies underpinning the system, tying each to a requirement and to the main alternative considered: instruction-tuned hosted multimodal \gls{LLM}s with validated structured output to contain hallucination in the reasoning and \gls{OCR} steps, rather than a self-hosted or unconstrained model; \gls{RAG} over pgvector's \gls{HNSW} \gls{ANN} index for grounded knowledge answering, rather than a separate vector database; a fixed LangGraph pipeline for deterministic and traceable advising, rather than a run-time-decided ReAct loop; a hybrid text-and-\gls{OCR} extractor for heterogeneous documents; an asynchronous FastAPI stack with a database-backed run queue for a responsive interface, rather than a broker-backed task queue; and self-hosted \gls{LLM} observability with a version-gated semantic answer cache, rather than a bespoke in-app trace panel or no caching at all.
 Chapter~\ref{chapter:Experiment} applies these technologies, presenting the system's design, implementation, and evaluation.
 
 \end{document}

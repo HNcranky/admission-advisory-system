@@ -26,6 +26,9 @@ def test_post_message_returns_follow_up_payload(monkeypatch):
                 ),
             )
 
+        def start_run(self, session_token, content, result):
+            assert not result.should_start_run  # no run dispatched for a follow-up
+
     monkeypatch.setattr("web.routes.chat_api.get_conversation_service", lambda: FakeService())
 
     response = client.post(
@@ -44,36 +47,27 @@ def test_post_message_returns_ready_payload(monkeypatch):
     client = TestClient(build_app())
 
     class FakeRepository:
-        def create_run(self, session_token, profile_state):
+        def enqueue_run(self, session_token, profile_state, dispatch_args):
             return 7
 
         def count_runs(self, session_token):
             return 1
 
-    class FakeService:
-        def __init__(self):
-            self.repository = FakeRepository()
+    service = ConversationService(repository=FakeRepository())
+    service.handle_user_message = lambda session_token, content: ConversationTurnResult(
+        session_status="ready",
+        assistant_message="Cảm ơn bạn. Mình đã có đủ thông tin và sẽ bắt đầu phân tích.",
+        should_start_run=True,
+        profile_state=ChatProfileState(
+            admission_year=2026,
+            total_score=27.0,
+            preferred_majors=["computer_science"],
+            location_preference="Ha Noi",
+            missing_slots=[],
+        ),
+    )
 
-        def handle_user_message(self, session_token, content):
-            return ConversationTurnResult(
-                session_status="ready",
-                assistant_message="Cảm ơn bạn. Mình đã có đủ thông tin và sẽ bắt đầu phân tích.",
-                should_start_run=True,
-                profile_state=ChatProfileState(
-                    admission_year=2026,
-                    total_score=27.0,
-                    preferred_majors=["computer_science"],
-                    location_preference="Ha Noi",
-                    missing_slots=[],
-                ),
-            )
-
-    class FakeDispatcher:
-        def submit(self, session_token, run_id, latest_user_message, profile_state, correction_note=None, closing_seed=0):
-            return None
-
-    monkeypatch.setattr("web.routes.chat_api.get_conversation_service", lambda: FakeService())
-    monkeypatch.setattr("web.routes.chat_api.get_run_dispatcher", lambda: FakeDispatcher())
+    monkeypatch.setattr("web.routes.chat_api.get_conversation_service", lambda: service)
 
     response = client.post(
         "/api/sessions/session-123/messages",
@@ -153,7 +147,7 @@ def test_post_message_uses_fallback_extractor_when_gateway_is_unavailable(monkey
     # unavailable the DST extractor only yields the deterministic delta
     # (active-slot parse + tiered major resolver), so no school is captured.
     assert body["profile_state"]["preferred_schools"] == []
-    assert body["profile_state"]["missing_slots"] == ["total_score", "admission_method", "subject_combination"]
+    assert body["profile_state"]["missing_slots"] == ["admission_method", "subject_combination", "total_score"]
     
     
 def test_create_session_endpoint_returns_snapshot(monkeypatch):
@@ -195,54 +189,39 @@ def test_post_message_dispatches_hybrid_run(monkeypatch):
 
     client = TestClient(build_app())
 
+    captured = {}
+
     class FakeRepository:
-        def create_run(self, session_token, profile_state):
+        def enqueue_run(self, session_token, profile_state, dispatch_args):
+            captured["dispatch_args"] = dispatch_args
             return 55
 
         def count_runs(self, session_token):
             return 1
 
-    class FakeService:
-        def __init__(self):
-            self.repository = FakeRepository()
+    service = ConversationService(repository=FakeRepository())
+    service.handle_user_message = lambda session_token, content: ConversationTurnResult(
+        session_status="running",
+        assistant_message="đang tổng hợp",
+        should_start_run=True,
+        run_kind="hybrid",
+        hybrid_intent={"route": "HYBRID", "schools": ["VNU-UET", "HUST"],
+                       "topics": ["tuition"], "needs_advisory": True},
+        profile_state=ChatProfileState(
+            admission_year=2026, total_score=27.0,
+            preferred_majors=["computer_science"], location_preference="Ha Noi",
+        ),
+    )
 
-        def handle_user_message(self, session_token, content):
-            return ConversationTurnResult(
-                session_status="running",
-                assistant_message="đang tổng hợp",
-                should_start_run=True,
-                run_kind="hybrid",
-                hybrid_intent={"route": "HYBRID", "schools": ["VNU-UET", "HUST"],
-                               "topics": ["tuition"], "needs_advisory": True},
-                profile_state=ChatProfileState(
-                    admission_year=2026, total_score=27.0,
-                    preferred_majors=["computer_science"], location_preference="Ha Noi",
-                ),
-            )
-
-    captured = {}
-
-    class FakeHybridDispatcher:
-        def submit(self, session_token, run_id, content, profile_state, intent):
-            captured["run_id"] = run_id
-            captured["intent_schools"] = intent.schools
-            captured["content"] = content
-
-    class FailRunDispatcher:
-        def submit(self, **kwargs):
-            raise AssertionError("advisory dispatcher must not be used for a hybrid run")
-
-    monkeypatch.setattr("web.routes.chat_api.get_conversation_service", lambda: FakeService())
-    monkeypatch.setattr("web.routes.chat_api.get_hybrid_dispatcher", lambda: FakeHybridDispatcher())
-    monkeypatch.setattr("web.routes.chat_api.get_run_dispatcher", lambda: FailRunDispatcher())
+    monkeypatch.setattr("web.routes.chat_api.get_conversation_service", lambda: service)
 
     response = client.post("/api/sessions/s/messages", json={"content": "so sánh UET và HUST"})
 
     assert response.status_code == 200
     assert response.json()["run_kind"] == "hybrid"
-    assert captured["run_id"] == 55
-    assert captured["intent_schools"] == ["VNU-UET", "HUST"]
-    assert captured["content"] == "so sánh UET và HUST"
+    assert captured["dispatch_args"]["run_kind"] == "hybrid"
+    assert captured["dispatch_args"]["intent"]["schools"] == ["VNU-UET", "HUST"]
+    assert captured["dispatch_args"]["content"] == "so sánh UET và HUST"
 
 
 def test_get_session_endpoint_returns_404_when_missing(monkeypatch):
@@ -258,3 +237,12 @@ def test_get_session_endpoint_returns_404_when_missing(monkeypatch):
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Session not found"
+
+
+def test_post_message_rejects_oversized_content():
+    client = TestClient(build_app())
+    response = client.post(
+        "/api/sessions/session-123/messages",
+        json={"content": "x" * 4001},
+    )
+    assert response.status_code == 422

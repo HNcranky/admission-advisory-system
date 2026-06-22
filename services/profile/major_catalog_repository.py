@@ -1,8 +1,8 @@
-from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 from ingestion.storage.db_connection import get_connection
+from services.db import cursor as _cursor, vector_literal as _vector_literal
 
 
 @dataclass
@@ -10,31 +10,6 @@ class ProgramCandidate:
     program_id: str
     canonical_name: str
     score: float
-
-
-def _vector_literal(embedding) -> Optional[str]:
-    if embedding is None:
-        return None
-    return "[" + ",".join(str(float(x)) for x in embedding) + "]"
-
-
-@contextmanager
-def _cursor(connection_factory, commit: bool = False):
-    """Yield a cursor, đảm bảo commit/rollback + cleanup connection."""
-    conn = connection_factory()
-    try:
-        cur = conn.cursor()
-        try:
-            yield cur
-            if commit:
-                conn.commit()
-        except Exception:
-            conn.rollback()
-            raise
-        finally:
-            cur.close()
-    finally:
-        conn.close()
 
 
 class ProgramCatalogRepository:

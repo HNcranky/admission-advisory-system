@@ -1,4 +1,4 @@
-                                
+
 """
 Main ingestion pipeline orchestrator.
 
@@ -71,7 +71,7 @@ class IngestionPipeline:
             f"(school={source.school_id}) URL: {target_url}"
         )
 
-                                                                  
+
         logger.info("Step 1: Fetching content...")
         fetch_result = dispatch_fetch(target_url, source)
         logger.info(
@@ -80,19 +80,19 @@ class IngestionPipeline:
             f"type={fetch_result.content_type}"
         )
 
-                                                                  
+
         logger.info("Step 2: Routing document...")
         doc_type = route_document(fetch_result)
         logger.info(f"  Routed to: {doc_type}")
 
-                                                                  
+
         logger.info("Step 3: Parsing content...")
         parse_result = dispatch_parser(
             fetch_result, doc_type, source
         )
 
-                                                            
-                                                                
+
+
         if isinstance(parse_result, list) and parse_result and isinstance(
             parse_result[0], ExtractedAdmissionFact
         ):
@@ -107,7 +107,7 @@ class IngestionPipeline:
                 f"{len(parse_result.tables)} tables"
             )
 
-                                                                  
+
             logger.info("Step 4: Extracting admission facts...")
             source_ref = SourceReference(
                 source_id=source.source_id,
@@ -131,7 +131,7 @@ class IngestionPipeline:
             logger.warning("No facts extracted, pipeline complete")
             return []
 
-                                                                  
+
         logger.info("Step 5: Normalizing facts...")
         records = normalize_facts(
             extracted_facts,
@@ -139,7 +139,7 @@ class IngestionPipeline:
         )
         logger.info(f"  Normalized {len(records)} records")
 
-                             
+
         self.registry.update_last_fetched(source.source_id)
 
         return records
@@ -246,7 +246,7 @@ class IngestionPipeline:
         Returns:
             Normalized records
         """
-                                   
+
         temp_source = SourceEntry(
             source_id="temp",
             school_id="unknown",
@@ -256,12 +256,3 @@ class IngestionPipeline:
             parser_profile=parser_profile,
         )
         return self.run_for_source(temp_source)
-
-
-                                                                  
-
-def run_ingestion(url: str):
-    """Legacy entry point for backwards compatibility."""
-    pipeline = IngestionPipeline()
-    records = pipeline.run_single_url(url)
-    return records

@@ -1,4 +1,4 @@
-from agents.models import CandidateProgram
+from domain.models import CandidateProgram
 from services.conflict.models import EvidenceOption, ResolutionOutcome
 from state import AgentState
 

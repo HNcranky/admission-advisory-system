@@ -51,14 +51,15 @@ def test_tier2_confident_single_strong_candidate_returns_it():
 
 def test_tier2_below_threshold_returns_empty():
     repo = FakeRepo([ProgramCandidate("law", "Luật", 0.40)])
-    result = resolve_majors("câu nói mơ hồ",
+    result = resolve_majors("câu nói mơ hồ", active_slot="preferred_majors",
                             repository=repo, embedder=FakeEmbedderOK())
     assert result == []
 
 
 def test_tier2_embedder_failure_degrades_to_empty():
     repo = FakeRepo([ProgramCandidate("x", "X", 0.9)])
-    result = resolve_majors("bất kỳ", repository=repo, embedder=FailingEmbedder())
+    result = resolve_majors("bất kỳ", active_slot="preferred_majors",
+                            repository=repo, embedder=FailingEmbedder())
     assert result == []
 
 
@@ -101,13 +102,13 @@ def test_tier3_llm_picks_subset_from_shortlist():
 
 def test_tier3_filters_out_ids_not_in_shortlist():
     gw = FakeGatewayPick(["software_engineering", "hallucinated_id"])
-    result = resolve_majors("...", repository=_ambiguous_repo(),
+    result = resolve_majors("...", active_slot="preferred_majors", repository=_ambiguous_repo(),
                             embedder=FakeEmbedderOK(), gateway=gw)
     assert result == ["software_engineering"]  # id ngoài shortlist bị loại
 
 
 def test_tier3_llm_failure_falls_back_to_top_embedding():
-    result = resolve_majors("...", repository=_ambiguous_repo(),
+    result = resolve_majors("...", active_slot="preferred_majors", repository=_ambiguous_repo(),
                             embedder=FakeEmbedderOK(), gateway=FailingGateway())
     assert result == ["computer_science"]  # top embedding
 
@@ -115,7 +116,47 @@ def test_tier3_llm_failure_falls_back_to_top_embedding():
 def test_tier3_not_called_when_confident():
     gw = FakeGatewayPick(["should_not_be_used"])
     repo = FakeRepo([ProgramCandidate("data_science", "KHDL", 0.85)])
-    result = resolve_majors("phân tích dữ liệu", repository=repo,
+    result = resolve_majors("phân tích dữ liệu", active_slot="preferred_majors", repository=repo,
                             embedder=FakeEmbedderOK(), gateway=gw)
     assert result == ["data_science"]
     assert gw.calls == 0  # confident → skip LLM (minimize_num_calls)
+
+
+class SpyEmbedder:
+    def __init__(self):
+        self.calls = 0
+
+    def embed(self, texts, task_type="RETRIEVAL_QUERY"):
+        self.calls += 1
+        return [[0.2] * 768 for _ in texts]
+
+
+def test_info_question_skips_tier2_when_no_major_intent():
+    # Câu hỏi thông tin (học phí) KHÔNG có ý định ngành → KHÔNG chạy embedding,
+    # không nhiễm preferred_majors bằng ứng viên tiếp tuyến.
+    spy = SpyEmbedder()
+    repo = FakeRepo([ProgramCandidate("electronics_telecom", "Điện tử - Viễn thông", 0.72)])
+    result = resolve_majors("tôi muốn tìm hiểu thông tin học phí của UET",
+                            repository=repo, embedder=spy)
+    assert result == []
+    assert spy.calls == 0  # gated trước Tier2
+
+
+def test_interest_cue_runs_tier2():
+    # Có cue sở thích ("thích") → vào Tier2 bình thường.
+    spy = SpyEmbedder()
+    repo = FakeRepo([ProgramCandidate("data_science", "Khoa học Dữ liệu", 0.85)])
+    result = resolve_majors("em thích phân tích dữ liệu lớn",
+                            repository=repo, embedder=spy)
+    assert result == ["data_science"]
+    assert spy.calls == 1
+
+
+def test_answering_major_slot_bypasses_intent_gate():
+    # User đang trả lời đúng slot ngành → bỏ qua cổng intent dù text không có cue.
+    spy = SpyEmbedder()
+    repo = FakeRepo([ProgramCandidate("data_science", "Khoa học Dữ liệu", 0.85)])
+    result = resolve_majors("phân tích số liệu", repository=repo, embedder=spy,
+                            active_slot="preferred_majors")
+    assert result == ["data_science"]
+    assert spy.calls == 1

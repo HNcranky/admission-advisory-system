@@ -180,7 +180,7 @@ def test_api_key_constructor_builds_single_key_pool(monkeypatch):
     captured = {}
 
     class _SDKClient:
-        def __init__(self, *, api_key):
+        def __init__(self, *, api_key, http_options=None):
             captured["api_key"] = api_key
             self.models = FakeModels(text='{"ok": true}', captured=captured)
 
@@ -320,3 +320,30 @@ def test_no_response_schema_leaves_config_unset():
     provider = GeminiProvider(pool=pool)
     provider.generate(_request(), _policy())  # _request() sets no schema
     assert captured["config"].response_schema is None
+
+
+# --- truncation visibility -----------------------------------------------------
+
+class _TruncatedModels:
+    """Returns truncated JSON with finish_reason=MAX_TOKENS (real google-genai
+    shape: response.candidates[0].finish_reason + usage_metadata)."""
+
+    def generate_content(self, *, model, contents, config=None):
+        return SimpleNamespace(
+            text='{"answer": "học phí UET là',  # cut off mid-string
+            candidates=[SimpleNamespace(finish_reason=SimpleNamespace(name="MAX_TOKENS"))],
+            usage_metadata=SimpleNamespace(
+                prompt_token_count=400, candidates_token_count=800, total_token_count=1200
+            ),
+        )
+
+
+def test_truncated_json_warns_and_returns_structure_failure(caplog):
+    pool = GeminiKeyPool(["k1"], client_factory=lambda k: SimpleNamespace(models=_TruncatedModels()))
+    provider = GeminiProvider(pool=pool)
+    policy = InferencePolicy(agent_name="knowledge_qa_agent", primary_model="gemini-2.5-flash", max_tokens=800)
+    with caplog.at_level("WARNING"):
+        result = provider.generate(_request(agent="knowledge_qa_agent"), policy)
+    assert result.failure_type == "STRUCTURE_FAILURE"
+    assert "truncated at max_tokens=800" in caplog.text
+    assert "knowledge_qa_agent" in caplog.text

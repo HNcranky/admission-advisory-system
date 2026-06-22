@@ -2,7 +2,7 @@ import logging
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Tuple
 
-from ingestion.knowledge.embedder import GeminiEmbedder
+from services.inference.embedder import GeminiEmbedder
 from services.knowledge.repository import chunk_content_hash
 from services.profile.major_catalog_repository import ProgramCatalogRepository
 from services.profile_service import load_program_aliases

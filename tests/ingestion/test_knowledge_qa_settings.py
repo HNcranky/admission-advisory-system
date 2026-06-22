@@ -19,3 +19,10 @@ def test_knowledge_qa_top_k_env_overridable(monkeypatch):
     finally:
         monkeypatch.delenv("KNOWLEDGE_QA_TOP_K", raising=False)
         importlib.reload(settings)  # restore defaults for other tests
+
+
+def test_program_match_threshold_default():
+    import importlib
+    import ingestion.config.settings as s
+    importlib.reload(s)
+    assert s.KNOWLEDGE_PROGRAM_MATCH_THRESHOLD == 0.5

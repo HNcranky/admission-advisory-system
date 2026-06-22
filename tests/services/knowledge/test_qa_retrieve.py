@@ -11,7 +11,10 @@ class _FakeRepo:
     def __init__(self):
         self.calls = []
 
-    def vector_search(self, embedding, school=None, topic=None, limit=None):
+    def resolve_program(self, question, school=None):
+        return None
+
+    def vector_search(self, embedding, school=None, topic=None, program=None, limit=None):
         self.calls.append((school, topic))
         return [ScoredChunk(chunk_text=f"{school}:{topic}", score=0.7, school=school or "x")]
 

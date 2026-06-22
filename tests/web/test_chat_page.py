@@ -14,18 +14,18 @@ def test_chat_page_renders_reset_and_results_regions():
     assert 'id="send-button"' in response.text
 
 
-def test_chat_page_renders_three_column_shell():
+def test_chat_page_renders_two_column_shell():
     client = TestClient(build_app())
 
     response = client.get("/")
     body = response.text
 
     assert response.status_code == 200
-    assert 'class="app-shell"' in body or 'class="app-shell chat-shell"' in body
+    assert 'class="app-shell chat-shell"' in body
     assert 'class="app-header"' in body
     assert 'id="profile-panel"' in body
     assert 'id="chat-panel"' in body
-    assert 'id="trace-panel"' in body
+    assert 'id="trace-panel"' not in body
 
 
 def test_chat_page_renders_collapse_and_drawer_buttons():
@@ -36,9 +36,9 @@ def test_chat_page_renders_collapse_and_drawer_buttons():
 
     assert response.status_code == 200
     assert 'id="collapse-left"' in body
-    assert 'id="collapse-right"' in body
     assert 'id="open-left-drawer"' in body
-    assert 'id="open-right-drawer"' in body
+    assert 'id="collapse-right"' not in body
+    assert 'id="open-right-drawer"' not in body
 
 
 def test_chat_page_preserves_legacy_ids_for_existing_js():
@@ -48,7 +48,7 @@ def test_chat_page_preserves_legacy_ids_for_existing_js():
     body = response.text
 
     assert response.status_code == 200
-    for legacy in ("chat-transcript", "chat-form", "chat-input", "profile-summary", "trace-cards"):
+    for legacy in ("chat-transcript", "chat-form", "chat-input", "profile-summary"):
         assert f'id="{legacy}"' in body
 
 

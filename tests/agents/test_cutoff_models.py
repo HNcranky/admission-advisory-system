@@ -1,4 +1,4 @@
-from agents.models import CandidateProgram, CutoffAssessment, CutoffEntry, RankedRecommendation
+from domain.models import CandidateProgram, CutoffAssessment, CutoffEntry, RankedRecommendation
 
 
 def test_cutoff_entry_minimal():

@@ -1,4 +1,4 @@
-from agents.models import Evidence
+from domain.models import Evidence
 from services.chat.compare_orchestrator import CompareOrchestrator
 from services.chat.intent_router import IntentResult
 from services.chat.models import ChatProfileState

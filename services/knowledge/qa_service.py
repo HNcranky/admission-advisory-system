@@ -3,8 +3,11 @@ from typing import Optional
 
 from ingestion.config.settings import (
     KNOWLEDGE_QA_MIN_SCORE, KNOWLEDGE_QA_NATIONAL_TOP_K, KNOWLEDGE_QA_TOP_K,
+    KNOWLEDGE_QA_CACHE_ENABLED, KNOWLEDGE_QA_CACHE_THRESHOLD,
+    KNOWLEDGE_QA_CACHE_TTL_DAYS,
 )
-from ingestion.knowledge.embedder import GeminiEmbedder
+from observability.prompts import get_prompt_service
+from services.inference.embedder import GeminiEmbedder
 from services import build_default_gateway
 from services.inference.models import InferenceRequest
 from services.knowledge.models import Citation, KnowledgeQAResult
@@ -37,6 +40,10 @@ class KnowledgeQAService:
         top_k: int = KNOWLEDGE_QA_TOP_K,
         min_score: float = KNOWLEDGE_QA_MIN_SCORE,
         national_top_k: int = KNOWLEDGE_QA_NATIONAL_TOP_K,
+        cache=None,
+        cache_enabled: bool = KNOWLEDGE_QA_CACHE_ENABLED,
+        cache_threshold: float = KNOWLEDGE_QA_CACHE_THRESHOLD,
+        cache_ttl_days: int = KNOWLEDGE_QA_CACHE_TTL_DAYS,
     ):
         self._chunk_repository = chunk_repository or KnowledgeChunkRepository()
         self._embedder = embedder or GeminiEmbedder()
@@ -44,6 +51,19 @@ class KnowledgeQAService:
         self._top_k = top_k
         self._min_score = min_score
         self._national_top_k = national_top_k
+        # Cache resolution: an explicit repo wins (tests inject a fake); else
+        # auto-create when enabled (the production no-arg path); else disabled.
+        if cache is not None:
+            self._cache = cache
+        elif cache_enabled:
+            from services.knowledge.qa_cache import QACacheRepository
+            self._cache = QACacheRepository()
+        else:
+            self._cache = None
+        self._cache_threshold = cache_threshold
+        self._cache_ttl_days = cache_ttl_days
+        from services.knowledge.qa_graph import build_kqa_graph
+        self._graph = build_kqa_graph(self)
 
     def embed_query(self, question: str):
         """Embed a retrieval query. Exposed so callers (e.g. the fan-out) can
@@ -60,31 +80,82 @@ class KnowledgeQAService:
         national=None,
         retrieval_query: Optional[str] = None,
     ) -> KnowledgeQAResult:
-        # Embedding precedence: caller-supplied vector > retrieval_query (e.g. a
-        # context-augmented follow-up) > the raw question. Generation always uses
-        # `question` (see _generate), so the augmented text never reaches the prompt.
-        if query_vector is not None:
-            embedding = query_vector
-        elif retrieval_query:
-            embedding = self.embed_query(retrieval_query)
-        else:
-            embedding = self.embed_query(question)
-        chunks = self._chunk_repository.vector_search(
-            embedding, school=school, topic=topic, limit=self._top_k
+        # No cache for cross-school / no-topic calls (the fanout always supplies
+        # a concrete (school, topic); direct school=None calls bypass).
+        if self._cache is None or school is None or topic is None:
+            return self._run_graph(
+                question, school, topic, conversation_context,
+                query_vector, national, retrieval_query,
+            )
+
+        # Embed once: reuse the fanout's vector, else embed the retrieval query.
+        embedding = query_vector
+        if embedding is None:
+            embedding = self.embed_query(retrieval_query or question)
+
+        try:
+            hit = self._cache.lookup(embedding, school, topic, self._cache_threshold)
+            if hit is not None:
+                return hit.to_result(from_cache=True)
+        except Exception as exc:  # never let the cache break QA
+            logger.warning("knowledge QA cache lookup failed: %r", exc)
+
+        # MISS → normal generation, reusing the embedding (no second embed).
+        result = self._run_graph(
+            question, school, topic, conversation_context,
+            embedding, national, retrieval_query,
         )
-        chunks = self._augment_with_national(embedding, school, topic, chunks, national=national)
-        confidence = chunks[0].score if chunks else 0.0
-        if not chunks or confidence < self._min_score:
-            return KnowledgeQAResult(has_data=False, confidence=confidence)
-        return self._generate(question, chunks, confidence, conversation_context)
+
+        # Quality gate: only cache grounded, confident answers, so a later,
+        # better answer (after more docs arrive) is regenerated, not blocked.
+        try:
+            if result.has_data and result.confidence >= self._min_score:
+                dep_versions = self._cache.current_versions(
+                    self._cache.scope_keys(school, topic)
+                )
+                self._cache.store(
+                    school, topic, question, embedding, result,
+                    dep_versions, self._cache_ttl_days,
+                )
+        except Exception as exc:
+            logger.warning("knowledge QA cache store failed: %r", exc)
+        return result
+
+    def _run_graph(
+        self,
+        question: str,
+        school: Optional[str],
+        topic: Optional[str],
+        conversation_context: str,
+        query_vector,
+        national,
+        retrieval_query: Optional[str],
+    ) -> KnowledgeQAResult:
+        # Facade over the compiled subgraph. The graph nodes call the very same
+        # helpers (embed_query, vector_search, _augment_with_national, _generate)
+        # with identical embedding precedence and confidence gate. The graph's
+        # embed node reuses a supplied query_vector instead of re-embedding.
+        from services.knowledge.qa_graph import KQAState
+        state = KQAState(
+            question=question,
+            school=school,
+            topic=topic,
+            conversation_context=conversation_context,
+            query_vector=query_vector,
+            national=national,
+            retrieval_query=retrieval_query,
+        )
+        final = self._graph.invoke(state)
+        return final["result"] if isinstance(final, dict) else final.result
 
     def retrieve(self, question: str, school, topic):
-        """Production-equivalent retrieval (embed → vector_search → national
-        augment), exposed so the eval curation can freeze the same chunks
-        production would surface. Mirrors answer()'s retrieval branch."""
+        """Production-equivalent retrieval (embed → resolve program → vector_search
+        → national augment), exposed so the eval curation can freeze the same
+        chunks production would surface. Mirrors answer()'s retrieval branch."""
         embedding = self.embed_query(question)
+        program = self._chunk_repository.resolve_program(question, school)
         chunks = self._chunk_repository.vector_search(
-            embedding, school=school, topic=topic, limit=self._top_k
+            embedding, school=school, topic=topic, program=program, limit=self._top_k
         )
         return self._augment_with_national(embedding, school, topic, chunks)
 
@@ -128,11 +199,13 @@ class KnowledgeQAService:
 
     def _generate(self, question, chunks, confidence, conversation_context) -> KnowledgeQAResult:
         try:
+            cp = get_prompt_service().get("knowledge-qa", fallback=KNOWLEDGE_QA_SYSTEM_PROMPT)
             result = self._gateway.run(
                 InferenceRequest(
                     agent_name="knowledge_qa_agent",
                     task_type="knowledge_qa",
-                    system_prompt=KNOWLEDGE_QA_SYSTEM_PROMPT,
+                    system_prompt=cp.text,
+                    prompt=cp.handle,
                     user_prompt=self._build_user_prompt(question, chunks, conversation_context),
                     output_mode="json",
                     temperature=0.0,

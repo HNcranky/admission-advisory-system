@@ -1,6 +1,7 @@
 import hashlib
-from contextlib import contextmanager
 
+from ingestion.config.settings import KNOWLEDGE_PROGRAM_MATCH_THRESHOLD
+from services.db import cursor as _cursor, vector_literal as _vector_literal
 from services.knowledge.db import get_knowledge_db_connection
 from services.knowledge.models import KnowledgeChunk, ScoredChunk, KnowledgeDocument
 
@@ -19,31 +20,6 @@ def _parse_vector(raw) -> list[float]:
     if not s:
         return []
     return [float(x) for x in s.split(",")]
-
-
-def _vector_literal(embedding):
-    if embedding is None:
-        return None
-    return "[" + ",".join(str(float(x)) for x in embedding) + "]"
-
-
-@contextmanager
-def _cursor(connection_factory, commit: bool = False):
-    """Yield a cursor, guaranteeing commit/rollback and connection cleanup."""
-    conn = connection_factory()
-    try:
-        cur = conn.cursor()
-        try:
-            yield cur
-            if commit:
-                conn.commit()
-        except Exception:
-            conn.rollback()
-            raise
-        finally:
-            cur.close()
-    finally:
-        conn.close()
 
 
 # SELECT column order shared by the read methods (id is selected separately).
@@ -184,7 +160,35 @@ class KnowledgeChunkRepository:
             score=row[12],
         )
 
-    def vector_search(self, embedding, school=None, topic=None, limit=5):
+    def resolve_program(self, question, school=None,
+                        threshold=KNOWLEDGE_PROGRAM_MATCH_THRESHOLD):
+        """Best program label whose name appears inside the question, or None.
+
+        word_similarity(program, question) scores the (short) program label
+        against the best-matching window of the (long) question. Scoped to
+        `school` when given so labels don't collide across schools. Returns the
+        top program only when its score clears `threshold`; otherwise None, so
+        callers degrade to vector-only retrieval.
+        """
+        if not question:
+            return None
+        sql = (
+            "SELECT program, MAX(word_similarity(program, %s)) AS sim "
+            "FROM knowledge_chunks WHERE program IS NOT NULL"
+        )
+        params = [question]
+        if school is not None:
+            sql += " AND school = %s"
+            params.append(school)
+        sql += " GROUP BY program ORDER BY sim DESC LIMIT 1"
+        with _cursor(self.connection_factory) as cur:
+            cur.execute(sql, tuple(params))
+            row = cur.fetchone()
+        if row is None or row[1] is None or row[1] < threshold:
+            return None
+        return row[0]
+
+    def vector_search(self, embedding, school=None, topic=None, program=None, limit=5):
         literal = _vector_literal(embedding)
         sql = (
             f"SELECT id, {_CHUNK_COLUMNS}, "
@@ -200,6 +204,10 @@ class KnowledgeChunkRepository:
             # multi-topic, so they stay candidates for every topic filter.
             sql += " AND (topic = %s OR topic IS NULL)"
             params.append(topic)
+        if program is not None:
+            # Exact match: the value comes FROM the DB via resolve_program.
+            sql += " AND program = %s"
+            params.append(program)
         sql += " ORDER BY embedding <=> %s::vector LIMIT %s"
         params.append(literal)
         params.append(limit)

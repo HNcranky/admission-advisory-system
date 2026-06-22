@@ -8,12 +8,12 @@ STT | Ten nganh/chuong trinh | Ma xet tuyen | So luong tuyen sinh.
 
 import logging
 import re
-import unicodedata
 from typing import Iterable, List, Optional
 
 from bs4 import BeautifulSoup, Tag
 
 from ingestion.config.settings import ADMISSION_YEAR
+from services.text_utils import vietnamese_fold
 from ingestion.models.pipeline_models import (
     ExtractedAdmissionFact,
     SourceReference,
@@ -50,14 +50,7 @@ def _safe_decode(content: bytes) -> str:
 
 
 def _normalize(text: str) -> str:
-    decomposed = unicodedata.normalize("NFKD", text)
-    without_marks = "".join(
-        ch for ch in decomposed if not unicodedata.combining(ch)
-    )
-    # NFKD does not split precomposed Đ/đ; map them explicitly so callers can
-    # use ASCII keywords like "dbcl" / "du bi".
-    folded = without_marks.translate({ord("Đ"): "D", ord("đ"): "d"})
-    return re.sub(r"\s+", " ", folded).lower().strip()
+    return vietnamese_fold(text)
 
 
 def _clean_text(text: str) -> str:

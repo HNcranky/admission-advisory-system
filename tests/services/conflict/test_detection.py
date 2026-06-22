@@ -1,4 +1,4 @@
-from agents.models import CandidateProgram, CutoffEntry, Evidence
+from domain.models import CandidateProgram, CutoffEntry, Evidence
 from services.conflict.detection import detect_cutoff_conflicts, detect_quota_conflicts
 
 

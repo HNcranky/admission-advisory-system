@@ -1,0 +1,41 @@
+# selector: .entry-content
+# source-listing: https://uet.vnu.edu.vn/chuong-trinh-dao-tao/
+Công nghệ thông tin chất lượng cao	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-cong-nghe-thong-tin-chat-luong-cao-4
+Công nghệ kỹ thuật điện tử – truyền thông (chương trình chuẩn quốc tế)	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-cong-nghe-ky-thuat-dien-tu-truyen-thong-chuong-trinh-chuan-quoc-te-4
+Khoa học máy tính (chương trình chuẩn quốc tế)	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-khoa-hoc-may-tinh-chuong-trinh-chuan-quoc-te-4
+Công nghệ kỹ thuật điện tử – viễn thông	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-cong-nghe-ky-thuat-dien-tu-truyen-thong-clc-tt23-4
+Công nghệ kỹ thuật cơ điện tử (CLC TT23)	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-cong-nghe-ky-thuat-co-dien-tu-clc-tt23-4
+Công nghệ kỹ thuật điện tử – truyền thông	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-cong-nghe-ky-thuat-dien-tu-truyen-thong-4
+Công nghệ thông tin	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-cong-nghe-thong-tin-4
+Khoa học máy tính	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-khoa-hoc-may-tinh-12
+Truyền thông và mạng máy tính	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-truyen-thong-va-mang-may-tinh-4
+Công nghệ thông tin định hướng thị trường Nhật Bản	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-cong-nghe-thong-tin-dinh-huong-thi-truong-nhat-ban-4
+Kỹ thuật máy tính	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-ky-thuat-may-tinh-4
+Kỹ thuật robot	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-ky-thuat-robot-4
+Cơ kỹ thuật	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-co-ky-thuat-4
+Kỹ thuật điều khiển và tự động hóa	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-ky-thuat-dieu-khien-va-tu-dong-hoa-4
+Vật lý kỹ thuật	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-vat-ly-ky-thuat-4
+Kỹ thuật năng lượng	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-ky-thuat-nang-luong-4
+Công nghệ kỹ thuật xây dựng	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-cong-nghe-ky-thuat-xay-dung-4
+Công nghệ nông nghiệp	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-cong-nghe-nong-nghiep-4
+Trí tuệ nhân tạo	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-tri-tue-nhan-tao-4
+An toàn thông tin	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-toan-thong-tin-4
+Kỹ thuật phần mềm	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-ky-thuat-phan-mem-4
+Mạng máy tính và truyền thông dữ liệu	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-truyen-du-lieu-va-mang-may-tinh-4
+Hệ thống thông tin	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-thong-thong-tin-4
+Khoa học máy tính	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-khoa-hoc-may-tinh-4
+Kỹ thuật điện tử	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-ky-thuat-dien-tu-4
+Kỹ thuật viễn thông	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-ky-thuat-vien-thong-4
+Vật liệu và linh kiện nano	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-vat-lieu-va-linh-kien-nano-4
+Cơ kỹ thuật	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-co-ky-thuat-8
+Kỹ thuật cơ điện tử	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-ky-thuat-co-dien-tu-4
+Kỹ thuật xây dựng	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-ky-thuat-xay-dung-4
+Kỹ thuật phần mềm	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-ky-thuat-phan-mem-8
+Mạng máy tính và truyền thông dữ liệu	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-mang-may-tinh-va-truyen-thong-du-lieu-4
+Hệ thống thông tin	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-thong-thong-tin-8
+Khoa học máy tính	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-khoa-hoc-may-tinh-8
+Kỹ thuật điện tử	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-ky-thuat-dien-tu-8
+Kỹ thuật viễn thông	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-ky-thuat-vien-thong-8
+Vật liệu và linh kiện nano	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-vat-lieu-va-linh-kien-nano-8
+Cơ kỹ thuật	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-co-ky-thuat-12
+Kỹ thuật xây dựng	https://uet-test.uet.edu.vn/chuong-trinh-dao-tao-nganh-ky-thuat-xay-dung-8

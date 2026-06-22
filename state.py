@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from agents.models import (
+from domain.models import (
     CandidateProgram,
     EligibilityCheck,
     Evidence,

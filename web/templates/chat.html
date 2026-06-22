@@ -54,7 +54,7 @@
     </symbol>
   </defs>
 </svg>
-<div class="app-shell chat-shell" data-debug-ui="{{ 'true' if debug_ui_enabled else 'false' }}">
+<div class="app-shell chat-shell">
   <header class="app-header">
     <div class="app-header__brand">
       <span class="app-header__logo" aria-hidden="true">A</span>
@@ -69,15 +69,6 @@
         aria-controls="profile-panel"
       >
         <span aria-hidden="true">☰</span>
-      </button>
-      <button
-        id="open-right-drawer"
-        type="button"
-        class="icon-button app-header__drawer-trigger"
-        aria-label="Mở phân tích AI"
-        aria-controls="trace-panel"
-      >
-        <span aria-hidden="true">⋮</span>
       </button>
       <button
         id="theme-toggle"
@@ -110,7 +101,7 @@
     </div>
   </header>
 
-  <main class="grid-3col">
+  <main class="grid-2col">
     <aside class="panel panel--side panel--left" id="profile-panel" aria-label="Hồ sơ học sinh">
       <div class="panel__header">
         <h2 class="panel__title">Hồ sơ</h2>
@@ -155,50 +146,9 @@
         </div>
       </form>
     </section>
-
-    <aside class="panel panel--side panel--right" id="trace-panel" aria-label="Phân tích của AI">
-      <div class="panel__header">
-        <button
-          id="collapse-right"
-          type="button"
-          class="icon-button panel__collapse"
-          aria-label="Thu gọn cột phân tích"
-          aria-controls="trace-panel"
-        >
-          <span aria-hidden="true">▶</span>
-        </button>
-        <h2 class="panel__title">Phân tích của AI</h2>
-        <button type="button" class="panel__drawer-close" aria-label="Đóng">×</button>
-      </div>
-      <div class="panel__body">
-        <ol class="trace-cards" id="trace-cards">
-          {% for stage in stage_labels %}
-            <li class="trace-card trace-card--pending"
-                data-stage="{{ stage.id }}"
-                data-sequence="{{ loop.index0 }}">
-              <div class="trace-card__row">
-                <span class="trace-card__icon" aria-hidden="true">
-                  <svg class="icon icon--stage"><use href="#icon-{{ stage.icon }}"/></svg>
-                </span>
-                <span class="trace-card__name">{{ stage.label }}</span>
-                <span class="trace-card__status" aria-hidden="true">
-                  <svg class="icon icon--status"><use href="#icon-status-pending"/></svg>
-                </span>
-                <span class="trace-card__meta">pending</span>
-              </div>
-              <pre class="trace-card__body" hidden></pre>
-            </li>
-          {% endfor %}
-        </ol>
-      </div>
-    </aside>
   </main>
 
   <div id="drawer-backdrop" class="drawer-backdrop" hidden></div>
 </div>
 <ol id="toast-stack" aria-live="polite" aria-atomic="false"></ol>
-<script>
-  window.__stageLabels = {{ stage_labels | tojson }};
-  window.__debugUi = {{ 'true' if debug_ui_enabled else 'false' }};
-</script>
 {% endblock %}
