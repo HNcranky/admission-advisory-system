@@ -6,9 +6,9 @@
 \section{Motivation}
 \label{section:1.1}
 
-Choosing a university program is among the most consequential decisions a Vietnamese student makes, and it must be made from information that is unusually hard to assemble.
-Every year, following the national high-school graduation examination, a large cohort of candidates across the country must convert their results into a small, ranked set of program applications under intense competition for a limited number of places.
-The choice shapes a student's field of study and early career, and once the application window closes it is difficult to revise.
+Choosing a university program is one of the most important decisions a Vietnamese student makes, and the information needed to make it is hard to gather.
+Every year, after the national high-school graduation examination, many students must turn their results into a short, ranked list of applications, competing for a limited number of places.
+The choice shapes a student's field of study and early career, and once the application window closes it is hard to change.
 The difficulty of the decision falls not only on students but also on the parents and teachers who advise them.
 
 The facts a student needs are scattered across three kinds of sources that share no common format.
@@ -17,7 +17,7 @@ Detailed admission proposals are released as \gls{PDF} documents, some of which 
 Nationwide rules are issued separately by the \gls{MOET}, which also operates the central application portal.
 
 This information is not only fragmented but unstable and inconsistent.
-Admission documents are revised repeatedly through an admission season, so a figure read in one week may be superseded the next.
+Admission documents are revised repeatedly through an admission season, so a figure read in one week may be replaced the next.
 Worse, sources disagree: two official publications for the same program can state different quotas, and an aggregator portal can republish a cutoff score that no longer matches the school's own page.
 A student facing these contradictions has no straightforward way to tell which value is current or authoritative.
 
@@ -34,7 +34,8 @@ Hotlines and human counselors personalize their advice but cannot scale to every
 Aggregator portals collect cutoff scores and program lists into searchable tables and so improve discoverability, but they republish figures without provenance, so a student cannot judge a number that disagrees with a school's own page.
 General-purpose \gls{LLM} chatbots are conversational and always available, but their training data lags the admission season and they fabricate plausible-sounding figures when asked about specific quotas or cutoffs.
 Specialized admission-engagement platforms deployed by universities abroad, such as Element451~\cite{element451} and Mainstay~\cite{mainstay}, show that grounded, knowledge-base-backed admission chat is practical.
-These products are built on conversational frameworks of the kind exemplified by Rasa's \gls{CALM} architecture~\cite{rasa_calm} and Google Dialogflow CX~\cite{dialogflow}, but each serves a single institution's own trusted data and is not designed to reconcile contradictory figures from independent sources.
+These products are built on conversational frameworks such as Rasa's \gls{CALM} architecture~\cite{rasa_calm} and Google Dialogflow CX~\cite{dialogflow}.
+Each one, however, serves a single institution's own trusted data and is not designed to reconcile contradictory figures from independent sources.
 
 Across these channels, three gaps recur.
 None reconciles contradictory official data, none combines grounded answers with incremental personalization, and none collects a student profile gradually and withholds recommendations until it has enough data to give them responsibly.
@@ -46,10 +47,11 @@ The first is to collect admission data from official sources and normalize it in
 The second is to consolidate that data into a canonical, conflict-aware store that preserves contradictory values per source rather than silently discarding them.
 The third is to conduct an \gls{LLM}-based advisory conversation that collects a student profile incrementally and produces grounded, conflict-aware program recommendations alongside free-form question answering.
 
-The scope is deliberately bounded.
-The configured data sources are the universities registered in the ingestion configuration --- principally HUST and VNU-UET for structured admission data, with HUST, NEU, VNU-UET, and national \gls{MOET} documents in the knowledge corpus --- rather than every Vietnamese university.
+The scope is kept narrow on purpose.
+The configured data sources are the universities registered in the ingestion configuration, not every Vietnamese university.
+Structured admission data comes mainly from HUST and VNU-UET, while the knowledge corpus draws on HUST, NEU, VNU-UET, and national \gls{MOET} documents.
 The user-facing dialogue is conducted in Vietnamese, the language of its intended students, while this thesis is written in English.
-Training or fine-tuning a language model is out of scope; the work concerns engineering a reliable system around a hosted model.
+Training or fine-tuning a language model is out of scope: the work concerns engineering a reliable system around a hosted model.
 
 \section{Tentative solution}
 \label{section:1.3}

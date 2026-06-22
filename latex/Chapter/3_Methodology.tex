@@ -18,15 +18,20 @@ The underlying Transformer architecture lets every token attend to every other t
 Every \gls{LLM}-backed step in this system is therefore a prompt to a hosted instruction-tuned model rather than a trained component.
 
 Three prompting techniques recur.
-Role-and-instruction prompting fixes the model's task through a system prompt and is used alone by intent routing.
-Few-shot prompting adds worked exemplars where the output is easier to show than to specify.
-Chain-of-thought prompting asks for intermediate reasoning before the answer~\cite{wei2022cot}, which helps the conflict tie-breaking and final-explanation steps because both must justify a decision rather than only state it.
+
+\begin{itemize}
+    \item \textit{Role-and-instruction} prompting fixes the model's task through a system prompt and is used alone by intent routing.
+    \item \textit{Few-shot} prompting adds worked exemplars where the output is easier to show than to specify.
+    \item \textit{Chain-of-thought} prompting asks for intermediate reasoning before the answer~\cite{wei2022cot}, which helps the conflict tie-breaking and final-explanation steps, because both must justify a decision rather than only state it.
+\end{itemize}
 Decoding is left at the provider's defaults, except that a degenerate transcription is retried at a higher \textit{temperature} to break a repetition loop, a mechanism returned to in Section~\ref{section:3.4} and Section~\ref{section:5.3}.
 
 A bare \gls{LLM} remains prone to \textit{hallucination}: fluent but unsupported statements never present in its input~\cite{ji2023hallucination}.
 For an advisory system whose output must reflect official data this is the central risk, and two decisions in this chapter contain it: grounding the model on retrieved passages (Section~\ref{section:3.2}) and validating its output against an expected schema.
-The system uses the Gemini family of hosted multimodal models~\cite{gemini, geminiteam2023}; the multimodal capability is what lets the same interface serve both text reasoning and the \gls{OCR} of Section~\ref{section:3.4}.
-A hosted model was preferred over a self-hosted open-weight one because the project's goal is engineering a reliable system around an external model, not training one; the cost is a dependency on a quota-limited service that can fail transiently, which directly motivates the graceful-degradation requirement NFR-01.
+The system uses the Gemini family of hosted multimodal models~\cite{gemini, geminiteam2023}.
+The multimodal capability is what lets the same interface serve both text reasoning and the \gls{OCR} of Section~\ref{section:3.4}.
+A hosted model was preferred over a self-hosted open-weight one because the project's goal is engineering a reliable system around an external model, not training one.
+The cost is a dependency on a quota-limited service that can fail at times, which directly motivates the graceful-degradation requirement NFR-01.
 
 Where a step's result feeds downstream code, the prompt requests \textit{structured output} --- strict \gls{JSON} parsed into a typed object.
 Such a response can pass the network layer cleanly yet be unusable: prose around the \gls{JSON}, malformed syntax, or an out-of-range value.
@@ -50,7 +55,8 @@ Proximity is measured by \textit{cosine similarity}, $\cos(\mathbf{u},\mathbf{v}
 This is exactly the retrieval \gls{SQL}: chunks are ordered by the pgvector operator \texttt{embedding <=> query} and scored as \texttt{1 - (embedding <=> query)}.
 The vectors live in PostgreSQL~\cite{postgresql} via the pgvector extension~\cite{pgvector}, which adds a native \texttt{vector} type and an \gls{HNSW} index for approximate nearest-neighbor (\gls{ANN}) search in logarithmic expected time~\cite{malkov2020hnsw}.
 At this scale an exact scan would suffice, but the index is cheap to maintain and keeps latency flat as the corpus grows.
-The alternative, a dedicated vector database, offers richer indexing at very large scale but adds a second datastore to deploy and keep consistent with the relational data; integrating vectors into the one PostgreSQL instance keeps the knowledge corpus, the canonical records, and the chat state in a single transactional store, which the conflict-tolerance requirement NFR-02 relies on.
+The alternative, a dedicated vector database, offers richer indexing at very large scale, but it adds a second datastore to deploy and keep consistent with the relational data.
+Integrating vectors into the one PostgreSQL instance keeps the knowledge corpus, the canonical records, and the chat state in a single transactional store, which the conflict-tolerance requirement NFR-02 relies on.
 
 \section{Agentic pipelines}
 \label{section:3.3}
@@ -62,7 +68,14 @@ That non-determinism is a poor fit here: a consultation must be reproducible so 
 
 The system uses LangGraph~\cite{langgraph, langgraph_docs}, which expresses an agent as an explicit state graph: nodes are functions reading and writing a shared typed state, and edges fix their order.
 The advisory pipeline is a fixed linear graph over the six stages, threaded by one Pydantic state object (\texttt{AgentState}) that each stage fills in turn.
-A fixed graph is chosen for three reasons that map onto Chapter~\ref{chapter:Related_works}: \textit{determinism}, so the same profile yields the same stage sequence and a correction's effect is attributable (UC-04, NFR-02); \textit{traceability}, since named static stages can each emit a span to the observability backend (Section~\ref{section:5.4}); and \textit{separation of concerns}, since each stage is an independently testable single-responsibility function (NFR-05).
+A fixed graph is chosen for three reasons that map onto Chapter~\ref{chapter:Related_works}:
+
+\begin{itemize}
+    \item \textit{determinism} --- the same profile yields the same stage sequence, so a correction's effect is attributable (UC-04, NFR-02);
+    \item \textit{traceability} --- named static stages can each emit a span to the observability backend (Section~\ref{section:5.4});
+    \item \textit{separation of concerns} --- each stage is an independently testable single-responsibility function (NFR-05).
+\end{itemize}
+
 The cost is reduced flexibility --- the graph cannot improvise a new stage order --- but the advisory task has a stable shape, so the system sits deliberately at the structured end of the spectrum.
 
 \section{Document processing and the OCR model choice}
@@ -121,14 +134,20 @@ Every boundary in the application is a Pydantic~\cite{pydantic} typed model, giv
 A multi-stage \gls{LLM} application is hard to debug from logs: one consultation fans out into six stages and several model calls, each with its own prompt, tokens, latency, and retry behavior.
 \textit{\gls{LLM} observability} captures this as a structured \textit{trace} --- a tree of \textit{spans}, with model calls recorded as \textit{generation} observations carrying prompt, output, and token counts~\cite{langfuse} --- following the span-tree convention of distributed tracing~\cite{opentelemetry}.
 Because the advisory graph is fixed, its trace tree has the same shape on every run, so a slow stage or a malformed response can be located precisely.
-An earlier iteration captured stage events in its own table and an in-app panel, which showed stage timings but no prompt, token, or retry detail; the system therefore adopts Langfuse as a single self-hosted trace sink, rejecting the bespoke panel as a higher-maintenance duplicate of an existing tool, and keeping captured prompts and student messages on the same machine (NFR-03).
+An earlier iteration captured stage events in its own table and an in-app panel, which showed stage timings but no prompt, token, or retry detail; the system therefore adopts Langfuse as a single self-hosted trace sink, rejecting the custom panel as a higher-maintenance duplicate of an existing tool, and keeping captured prompts and student messages on the same machine (NFR-03).
 The realization is presented as a contribution in Section~\ref{section:5.4}.
 
 A second concern is the cost and latency of repeated calls.
 Because many students ask near-identical factual questions, a \textit{semantic cache} can reuse a previous answer when a new question is close enough in embedding space, generalizing an exact-match cache by accepting a stored answer within a similarity threshold~\cite{bang2023gptcache}.
 The risk is staleness --- a cached answer can outlive the document it summarizes --- so the cache is invalidated when the corpus changes; the version-gated design is detailed in Section~\ref{section:5.6}.
 
-This chapter selected the system's technologies against its requirements: instruction-tuned hosted multimodal \gls{LLM}s with validated structured output to contain hallucination, rather than a self-hosted or unconstrained model; \gls{RAG} over pgvector's \gls{HNSW} index for grounded answering, rather than a separate vector database; a fixed LangGraph pipeline for deterministic and traceable advising, rather than a run-time ReAct loop; a hybrid text-and-\gls{OCR} extractor using the cheapest sufficient Gemini tier already in the gateway, rather than a second model provider; an asynchronous FastAPI stack with a durable database-backed run queue, rather than a broker-backed task queue; and self-hosted observability with a version-gated semantic cache, rather than a bespoke trace panel or no caching.
+This chapter selected the system's technologies against its requirements, and in each case named the alternative that was rejected.
+Hallucination is contained with instruction-tuned hosted multimodal \gls{LLM}s and validated structured output, rather than a self-hosted or unconstrained model.
+Grounded answering uses \gls{RAG} over pgvector's \gls{HNSW} index, rather than a separate vector database.
+The advisory pipeline is a fixed LangGraph graph for deterministic and traceable advising, rather than a run-time ReAct loop.
+Ingestion uses a hybrid text-and-\gls{OCR} extractor on the cheapest sufficient Gemini tier already in the gateway, rather than a second model provider.
+The web layer is an asynchronous FastAPI stack with a durable database-backed run queue, rather than a broker-backed task queue.
+Finally, observability is self-hosted and paired with a version-gated semantic cache, rather than a custom trace panel or no caching.
 Chapter~\ref{chapter:Experiment} applies these technologies, presenting the system's design, implementation, and evaluation.
 
 \end{document}

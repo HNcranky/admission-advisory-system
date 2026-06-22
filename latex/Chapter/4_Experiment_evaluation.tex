@@ -14,7 +14,8 @@ Section~\ref{section:4.1} covers the architecture and package design, Section~\r
 
 The system is built as a \textit{layered, service-oriented monolith}: a single deployable application internally organized into layers (web, services, advisory pipeline, ingestion, database) with explicit boundaries between them.
 A microservice decomposition was considered and rejected.
-The functional requirements form one cohesive domain --- a student message flows through routing, profile collection, retrieval, reasoning, and explanation in a single logical transaction --- and splitting these stages across network boundaries would add serialization, partial-failure handling, and deployment complexity without a corresponding scaling benefit at the system's scale.
+The functional requirements form one cohesive domain: a student message flows through routing, profile collection, retrieval, reasoning, and explanation in a single logical transaction.
+Splitting these stages across network boundaries would add serialization, partial-failure handling, and deployment complexity, with no matching scaling benefit at the system's scale.
 A monolith also keeps the vector corpus, the canonical admission records, and the chat state in one PostgreSQL instance, which the conflict-tolerance requirement (NFR-02) relies on, since conflict detection queries structured records and \gls{RAG} queries vector chunks against the same database.
 The layered internal structure preserves most of the benefits a service split would have offered --- clear interfaces, independent testability, single-responsibility modules --- without the distributed-systems cost.
 
@@ -43,7 +44,9 @@ Three packages carry the core logic and are described in detail.
 
 \textbf{Advisory pipeline.}
 The pipeline is defined as a LangGraph state graph over the shared state object \texttt{AgentState}.
-That single Pydantic model threads the entire run: it carries the parsed \texttt{student\_profile} and \texttt{retrieval\_filters} the early stages write, the \texttt{retrieved\_programs}, \texttt{conflict\_records}, and \texttt{resolution\_outcomes} the middle stages attach, the \texttt{eligibility\_checks} and \texttt{ranked\_recommendations} the reasoning stage produces, and a \texttt{trace\_run\_id} from which the run's observability trace identifier is derived, tying every stage's span to one run.
+That single Pydantic model threads the entire run.
+The early stages write the parsed \texttt{student\_profile} and \texttt{retrieval\_filters}; the middle stages attach the \texttt{retrieved\_programs}, \texttt{conflict\_records}, and \texttt{resolution\_outcomes}; and the reasoning stage produces the \texttt{eligibility\_checks} and \texttt{ranked\_recommendations}.
+It also carries a \texttt{trace\_run\_id}, from which the run's observability trace identifier is derived, tying every stage's span to one run.
 Six nodes are registered and connected in a fixed linear order --- \texttt{profile}, \texttt{retrieve}, \texttt{conflict}, \texttt{reason}, \texttt{policy}, \texttt{explain} --- as shown in Figure~\ref{fig:advisory-graph} and in the wiring excerpt of Listing~\ref{lst:graph}.
 Each node is a thin function in the \texttt{agents} package that reads fields from the state, calls a service for the real work, writes its results back, and returns the state; for example, the reasoning node calls \texttt{reason\_candidates} and stores the resulting eligibility checks and ranked recommendations.
 Every node is wrapped by a \texttt{traced(...)} decorator from the tracing service that opens a per-stage observability span, so the fixed structure of the graph is exactly what makes the pipeline observable: because the edges are static rather than chosen at runtime, the stage sequence is identical on every run and each stage maps to one predictable span in the run's trace (Section~\ref{section:5.4}).
@@ -79,7 +82,7 @@ graph = builder.compile()
 All \gls{LLM} access is funneled through the inference gateway.
 A call site builds an \texttt{InferenceRequest} and receives an \texttt{InferenceResult}; the gateway resolves a per-agent policy from the model registry (primary model, optional fallback model, retry budget) and delegates the actual call to the Gemini provider.
 The policy fields are resolved by the calling agent's name, so a high-volume step such as intent classification can run with \texttt{allow\_fallback} off and degrade to deterministic keywords, while a harder-to-reconstruct step can be granted a secondary model --- the resilience budget is allocated per call site rather than globally.
-This single choke point is where the retry, fallback, and failure-type logic of Section~\ref{section:5.2} lives, so every reasoning step in the system inherits the same resilience without repeating it.
+This single entry point is where the retry, fallback, and failure-type logic of Section~\ref{section:5.2} lives, so every reasoning step in the system inherits the same resilience without repeating it.
 
 \textbf{Ingestion pipeline.}
 The ingestion layer is orchestrated by the ingestion pipeline, which runs each source through five steps: fetch (dispatched by strategy), route (predict the document type), parse (dispatch the matching parser), extract (pull admission facts from parsed text and tables), and normalize (map raw facts to canonical records using per-school dictionaries).
@@ -123,7 +126,9 @@ Figure~\ref{fig:seq-advisory} traces a student message that triggers an advisory
 The message endpoint in the \texttt{chat\_api} route calls the conversation service, which classifies intent, updates the profile, and decides whether to start a run.
 When a run is warranted, \texttt{start\_run} inserts a row into \texttt{chat\_advisory\_runs} in the \textit{queued} state, recording the dispatch arguments and a profile snapshot, and the endpoint returns immediately so the request does not block (NFR-04).
 The work is drained off that queue by a separate \texttt{RunQueueWorker}: it polls for the oldest queued run and claims it atomically with an \texttt{UPDATE \ldots FOR UPDATE SKIP LOCKED} statement, so several worker replicas can run without ever claiming the same row.
-Holding a claim, the worker opens the run's observability trace, hands the run to the \texttt{RunDispatcher}, which marks the run \textit{running}, invokes the LangGraph pipeline through \texttt{advisory\_runner} (each stage emitting a span and each \gls{LLM} call a generation record), persists the final answer, and marks the session \textit{completed} (or appends a recovery message and marks it \textit{failed} on an exception).
+Holding a claim, the worker opens the run's observability trace and hands the run to the \texttt{RunDispatcher}.
+The dispatcher marks the run \textit{running} and invokes the LangGraph pipeline through \texttt{advisory\_runner}, where each stage emits a span and each \gls{LLM} call a generation record.
+It then persists the final answer and marks the session \textit{completed}, or, on an exception, appends a recovery message and marks the session \textit{failed}.
 The browser polls the session endpoint until the run completes and then renders the answer.
 Routing the run through a persisted queue rather than an in-process executor is what lets a run survive a restart of the web process and lets the application scale to more than one worker.
 

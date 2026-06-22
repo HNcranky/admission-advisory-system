@@ -27,7 +27,7 @@ These portals improve discoverability, but they republish data without provenanc
 
 The fourth channel is \textit{general-purpose \gls{LLM} chatbots}.
 They are conversational and always available, but their training data lags the admission season by months or years, and they fabricate plausible-sounding numbers when asked about specific quotas or cutoffs.
-Without grounding in current official documents, their answers cannot be trusted for a decision as consequential as a university application.
+Without grounding in current official documents, their answers cannot be trusted for a decision as important as a university application.
 
 The fifth channel is \textit{specialized admission engagement platforms} deployed by universities abroad, such as Element451's AI-first student engagement suite~\cite{element451} and the Mainstay platform~\cite{mainstay}, built on conversational frameworks of the kind exemplified by Rasa's \gls{CALM} architecture~\cite{rasa_calm} and Google Dialogflow CX~\cite{dialogflow}.
 These products demonstrate that grounded, knowledge-base-backed admission chat is practical at scale.
@@ -35,10 +35,13 @@ However, they are institution-centric: each deployment serves one university's o
 
 Table~\ref{table:channel-comparison} summarizes the comparison.
 
-These channels can be situated against two strands of prior work.
-Research on \gls{LLM} reliability documents that models without access to current, authoritative context hallucinate factual details, producing fluent but unfaithful text~\cite{ji2023hallucination}; this is the failure mode that makes a general-purpose chatbot unsafe for quoting a specific quota or cutoff.
-It is also why the commercial education platforms cited above --- Element451~\cite{element451} and Mainstay~\cite{mainstay}, built on dialogue frameworks such as Rasa's \gls{CALM} architecture~\cite{rasa_calm} and Google Dialogflow CX~\cite{dialogflow} --- pair conversation with a grounding knowledge base rather than relying on a model's parametric memory.
-What none of this prior work targets is a setting in which the grounding sources are themselves mutually inconsistent: those systems assume one institution curates one trusted corpus, whereas a Vietnamese applicant must reconcile several independent official publications that openly disagree.
+These channels can be compared against two strands of prior work.
+Research on \gls{LLM} reliability shows that, without access to current and authoritative context, models hallucinate factual details and produce fluent but unfaithful text~\cite{ji2023hallucination}.
+This is the failure mode that makes a general-purpose chatbot unsafe for quoting a specific quota or cutoff.
+It is also why the commercial education platforms cited above pair conversation with a grounding knowledge base rather than relying on what the model memorized in training.
+Those platforms --- Element451~\cite{element451} and Mainstay~\cite{mainstay} --- are built on dialogue frameworks such as Rasa's \gls{CALM} architecture~\cite{rasa_calm} and Google Dialogflow CX~\cite{dialogflow}.
+What none of this prior work targets is a setting in which the grounding sources themselves disagree.
+Those systems assume one institution curates one trusted corpus, whereas a Vietnamese applicant must reconcile several independent official publications that openly disagree.
 
 \begin{table}[H]
     \centering
@@ -64,12 +67,13 @@ What none of this prior work targets is a setting in which the grounding sources
 \end{table}
 
 Three gaps recur across every channel.
-First, no channel reconciles contradictory data: even authoritative sources disagree with each other, and every existing tool silently picks one value or presents none.
-In the Vietnamese context this is not an edge case --- quotas, cutoff scores, and admission methods are revised repeatedly within a single season --- so a tool that commits to one value is frequently wrong without signalling it.
-Second, no channel combines personalization with grounding: human counselors personalize but do not scale, while portals scale but treat every student identically.
-Aggregators and generic chatbots reach any applicant, but neither weighs an individual's score, subject combination, and budget against a specific program's published requirements.
-Third, no conversational tool collects a student profile incrementally and gates its recommendations on having sufficient data, the way a careful human counselor does.
-A student who states only a vague interest such as ``thích lập trình'' cannot be served a reliable recommendation until enough of a profile exists to constrain retrieval to admissible programs.
+
+\begin{enumerate}
+    \item \textbf{No channel reconciles contradictory data.} Even authoritative sources disagree with each other, and every existing tool silently picks one value or presents none. In the Vietnamese context this is not an edge case --- quotas, cutoff scores, and admission methods are revised repeatedly within a single season --- so a tool that commits to one value is frequently wrong without signalling it.
+    \item \textbf{No channel combines personalization with grounding.} Human counselors personalize but do not scale, while portals scale but treat every student identically. Aggregators and generic chatbots reach any applicant, but neither weighs an individual's score, subject combination, and budget against a specific program's published requirements.
+    \item \textbf{No conversational tool collects a student profile incrementally} and gates its recommendations on having sufficient data, the way a careful human counselor does. A student who states only a vague interest such as ``thích lập trình'' cannot be served a reliable recommendation until enough of a profile exists to constrain retrieval to admissible programs.
+\end{enumerate}
+
 The system described in this thesis is designed to close these three gaps for the Vietnamese admission context.
 
 \section{Functional overview}
@@ -254,7 +258,9 @@ The optional slots --- location preference and tuition budget --- are collected 
     \end{tabular}
 \end{table}
 
-The honesty obligation in A1 is enforced mechanically rather than left to the model: an answer is withheld whenever retrieval confidence falls below the \texttt{KNOWLEDGE\_QA\_MIN\_SCORE} threshold, and national-regulation passages are retrieved under their own \texttt{KNOWLEDGE\_QA\_NATIONAL\_TOP\_K} budget so ministry rules surface even for a school-scoped question.
+The honesty obligation in A1 is enforced by code, not left to the model.
+An answer is withheld whenever retrieval confidence falls below the \texttt{KNOWLEDGE\_QA\_MIN\_SCORE} threshold.
+National-regulation passages are retrieved under their own \texttt{KNOWLEDGE\_QA\_NATIONAL\_TOP\_K} budget, so ministry rules surface even for a school-scoped question.
 
 \subsection{UC-03: Hybrid comparison}
 
@@ -352,40 +358,45 @@ Writing one row per source in step~5, instead of overwriting a shared key, is th
 
 The functional behavior above is constrained by six non-functional requirements.
 
-\textbf{NFR-01 --- Graceful degradation under \gls{LLM} outage.}
-Every \gls{LLM}-backed step must have a deterministic fallback, because the assistant depends on an external inference service with quotas and transient failures.
-Intent classification falls back to keyword rules, knowledge answering degrades to an honest ``no data'' reply, and structured-output failures are retried or routed to fallback models rather than surfaced as crashes.
-An advisory consultation must never silently stall because one classification call failed.
-Concretely, every model call routes through a single inference gateway, and when that gateway is unavailable intent classification falls back to a deterministic keyword router.
+\begin{description}
+    \item[NFR-01 --- Graceful degradation under \gls{LLM} outage.]
+    Every \gls{LLM}-backed step must have a deterministic fallback, because the assistant depends on an external inference service with quotas and transient failures.
+    Intent classification falls back to keyword rules, knowledge answering degrades to an honest ``no data'' reply, and structured-output failures are retried or routed to fallback models rather than surfaced as crashes.
+    An advisory consultation must never silently stall because one classification call failed.
+    Concretely, every model call routes through a single inference gateway, and when that gateway is unavailable intent classification falls back to a deterministic keyword router.
 
-\textbf{NFR-02 --- Conflict tolerance and data freshness.}
-The store must preserve disagreeing values rather than overwrite them: canonical records are unique per source, so two official publications quoting different quotas coexist as two rows with provenance.
-Recommendations built on conflicting data must disclose the conflict and recommend checking the latest official announcement.
-Ingestion must be re-runnable at any time, with idempotent migrations and upsert semantics, so the operator can refresh a school during the admission season.
-Per-source coexistence is enforced by a \texttt{UNIQUE (school\_id, admission\_year, program\_id, admission\_method, source\_url)} constraint introduced in the per-source canonical-records migration, and every migration script is numbered and idempotent so it can be replayed without error.
+    \item[NFR-02 --- Conflict tolerance and data freshness.]
+    The store must preserve disagreeing values rather than overwrite them: canonical records are unique per source, so two official publications quoting different quotas coexist as two rows with provenance.
+    Recommendations built on conflicting data must disclose the conflict and recommend checking the latest official announcement.
+    Ingestion must be re-runnable at any time, with idempotent migrations and upsert semantics, so the operator can refresh a school during the admission season.
+    Per-source coexistence is enforced by a \texttt{UNIQUE (school\_id, admission\_year, program\_id, admission\_method, source\_url)} constraint introduced in the per-source canonical-records migration, and every migration script is numbered and idempotent so it can be replayed without error.
 
-\textbf{NFR-03 --- Anonymity.}
-Students must be able to use the assistant without registering: sessions are identified only by a random token, and the collected profile contains academic attributes (scores, preferred majors) rather than personal identifiers.
-The token is minted as a random URL-safe string by the chat session service, so no email, name, or device identifier is ever requested.
+    \item[NFR-03 --- Anonymity.]
+    Students must be able to use the assistant without registering: sessions are identified only by a random token, and the collected profile contains academic attributes (scores, preferred majors) rather than personal identifiers.
+    The token is minted as a random URL-safe string by the chat session service, so no email, name, or device identifier is ever requested.
 
-\textbf{NFR-04 --- Responsiveness.}
-A full advisory run involves several \gls{LLM} calls and database queries and may take tens of seconds.
-The message endpoint must therefore acknowledge immediately and execute the run on a background executor, while the interface polls for completion and shows per-stage progress instead of a frozen screen.
-In practice the endpoint persists a queued row in \texttt{chat\_advisory\_runs} and returns at once, and a background \texttt{RunQueueWorker} claims pending runs with \texttt{SKIP LOCKED} before driving the pipeline, so multiple workers never execute the same run.
+    \item[NFR-04 --- Responsiveness.]
+    A full advisory run involves several \gls{LLM} calls and database queries and may take tens of seconds.
+    The message endpoint must therefore acknowledge immediately and execute the run on a background executor, while the interface polls for completion and shows per-stage progress instead of a frozen screen.
+    In practice the endpoint persists a queued row in \texttt{chat\_advisory\_runs} and returns at once, and a background \texttt{RunQueueWorker} claims pending runs with \texttt{SKIP LOCKED} before driving the pipeline, so multiple workers never execute the same run.
 
-\textbf{NFR-05 --- Testability.}
-The test suite must run against an isolated database that is created automatically and never touches development data, so that integration tests can exercise real \gls{SQL} paths safely.
-This isolation is provided by an autouse fixture in the test configuration, which redirects the shared database name to \texttt{admission\_test} before any test opens a connection.
-Repositories must accept injectable connection factories so tests can substitute fixtures.
+    \item[NFR-05 --- Testability.]
+    The test suite must run against an isolated database that is created automatically and never touches development data, so that integration tests can exercise real \gls{SQL} paths safely.
+    This isolation is provided by an autouse fixture in the test configuration, which redirects the shared database name to \texttt{admission\_test} before any test opens a connection.
+    Repositories must accept injectable connection factories so tests can substitute fixtures.
 
-\textbf{NFR-06 --- Crawling resilience.}
-Several official Vietnamese sources, including government domains, serve broken \gls{TLS} certificate chains.
-The fetcher must be able to proceed with verification disabled by explicit configuration, and every such fetch must be logged so the relaxation is visible rather than silent.
-This is the \texttt{ADVISORY\_FETCH\_VERIFY\_SSL} flag honored by the HTTP fetcher, which emits a warning on every request made with certificate verification turned off.
+    \item[NFR-06 --- Crawling resilience.]
+    Several official Vietnamese sources, including government domains, serve broken \gls{TLS} certificate chains.
+    The fetcher must be able to proceed with verification disabled by explicit configuration, and every such fetch must be logged so the relaxation is visible rather than silent.
+    This is the \texttt{ADVISORY\_FETCH\_VERIFY\_SSL} flag honored by the HTTP fetcher, which emits a warning on every request made with certificate verification turned off.
+\end{description}
 
 This chapter derived the system's requirements from a survey of existing admission-information channels, read against prior work on grounded conversational agents and \gls{LLM} reliability.
-That comparison showed that commercial education platforms and the research literature alike establish grounding as a precondition for trustworthy answers, yet none of them addresses the reconciliation of mutually inconsistent official sources; concretely, no current channel reconciles contradictory data, and none combines grounded answers with incremental, profile-aware personalization.
-The resulting requirements were specified as a use-case model centered on an anonymous multi-turn advisory consultation, grounded knowledge answering, and operator-driven ingestion, constrained by graceful degradation, conflict tolerance, anonymity, responsiveness, testability, and crawling resilience.
+That comparison showed that both commercial education platforms and the research literature treat grounding as a precondition for trustworthy answers.
+None of them, however, reconciles official sources that disagree with each other.
+In short, no current channel reconciles contradictory data, and none combines grounded answers with incremental, profile-aware personalization.
+The resulting requirements were specified as a use-case model centered on an anonymous multi-turn advisory consultation, grounded knowledge answering, and operator-driven ingestion.
+These functions are constrained by six non-functional requirements: graceful degradation, conflict tolerance, anonymity, responsiveness, testability, and crawling resilience.
 Chapter~\ref{chapter:Methodology} reviews the theoretical background and the technologies selected to satisfy these requirements.
 
 \end{document}
