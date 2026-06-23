@@ -1,5 +1,12 @@
-% Code-listing configuration (referenced by \include{lstlisting} in main.tex).
-% The template does not ship this file; minimal Python-oriented setup.
+% Code/prompt rendering configuration (\include{lstlisting} from main.tex).
+% Two independent mechanisms live here:
+%   (1) listings   — ASCII Python/shell code listings in Chapter 4.
+%   (2) tcolorbox + fvextra — verbatim Vietnamese system prompts in Appendix B.
+%       listings' UTF-8 reader mangles the diacritics (it needed a large
+%       literate accent map), so the prompts now use fvextra (native UTF-8)
+%       inside a breakable tcolorbox instead — long prompts split across pages.
+
+% --- (1) Python/shell code listings (Chapter 4) ---
 \lstset{
   basicstyle=\ttfamily\small,
   breaklines=true,
@@ -13,23 +20,29 @@
 }
 \renewcommand{\lstlistingname}{Listing}
 
-% Style for reproducing the system's runtime prompts verbatim (Appendix B).
-% The prompts are Vietnamese with a few non-ASCII symbols; extendedchars+utf8
-% reuse the document's existing Vietnamese input setup, and the literate map
-% covers the symbols (-> x --) that inputenc would otherwise not have set up.
-\lstdefinestyle{promptstyle}{
-  language={},
-  basicstyle=\ttfamily\footnotesize,
+% --- (2) Vietnamese system-prompt boxes (Appendix B) ---
+% Symbols that occur in the prompts but are not set up for direct UTF-8 use
+% (others, e.g. em dash, are predefined; declared here so verbatim is robust).
+\newunicodechar{→}{\ensuremath{\rightarrow}}
+\newunicodechar{×}{\ensuremath{\times}}
+\newunicodechar{—}{\textemdash}
+
+% Verbatim body: native UTF-8 (keeps the diacritics), wraps long lines anywhere.
+\DefineVerbatimEnvironment{promptverbatim}{Verbatim}{%
+  fontsize=\footnotesize,
   breaklines=true,
-  breakatwhitespace=false,
-  columns=fullflexible,
-  keepspaces=true,
-  frame=single,
-  numbers=none,
-  showstringspaces=false,
-  extendedchars=true,
-  inputencoding=utf8,
-  upquote=true,
-  captionpos=b,
-  literate={→}{{$\rightarrow$}}1 {×}{{$\times$}}1 {—}{{\textemdash}}1
+  breakanywhere=true,
+}
+
+% Breakable, titled, numbered box for each prompt.
+% Usage: \begin{promptbox}[label={lst:...}]{<caption>} ... \end{promptbox}
+\newtcolorbox[auto counter]{promptbox}[2][]{%
+  breakable, enhanced,
+  colback=gray!4,
+  colframe=black!72,
+  coltitle=white,
+  fonttitle=\bfseries\small,
+  title={Prompt~\thetcbcounter:~#2},
+  left=2mm, right=2mm, top=1mm, bottom=1mm,
+  #1,
 }

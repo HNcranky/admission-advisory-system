@@ -40,6 +40,7 @@ The remainder of the chapter addresses each problem in turn, one section per pro
 Official admission data is not only fragmented but internally inconsistent: two authoritative publications for the same program can state different quotas, and two sources can record different historical cutoff scores for the same program and year.
 As established in Chapter~\ref{chapter:Related_works}, every existing channel resolves such disagreement silently --- it picks one value or shows none --- which hides exactly the uncertainty a student needs to know about before committing an application.
 Consolidating these sources therefore cannot mean overwriting one value with another; the disagreement must survive into the recommendation.
+Such contradictions are infrequent in the corpus gathered so far, so the value of this subsystem is not measured by how often it fires but by what it prevents when it does: it is a resilience mechanism for rare, high-impact inconsistencies, in the same sense that a safeguard is justified by the cost of the failure it averts rather than by its frequency.
 The general problem of combining records that describe the same entity but disagree on their values is studied as \textit{data fusion}~\cite{bleiholder2009fusion}.
 It frames the available strategies as resolving, ignoring, or deferring a conflict.
 The design below applies the deferring strategy where a conflict cannot be settled objectively.
@@ -99,6 +100,7 @@ The pipeline surfaces conflicts instead of hiding them.
 When a program's sources disagree in a way that matters, the recommendation marks the field as uncertain, lists the differing values, and advises the student to verify against the latest official announcement, which is the behavior required by edge case EC-16 and the conflict-disclosure use case of Chapter~\ref{chapter:Related_works}.
 The conservative division of labor --- a fully deterministic comparison that resolves a quota conflict only when one value objectively outranks the others, and a decision-changing test that refuses to settle a cutoff conflict whenever the choice would alter the student's fit category --- keeps every consolidation auditable and defers, rather than guesses, exactly the cases where an over-confident commitment could mislead a student.
 The conflict-handling edge cases (EC-16 and EC-17) are among the 17 satisfied cases reported in Section~\ref{section:4.4}.
+Because real contradictions are rare in the live corpus, the subsystem is exercised additionally with controlled synthetic conflicts (Section~\ref{subsection:4.4.6}): across five injected disagreements and three agreeing controls it detects every conflict with no false positives, resolves the cases that have an objective winner, and --- the result that matters most here --- leaves an equal-trust tie and a decision-changing cutoff disagreement unresolved and surfaced rather than silently settled, which is exactly the behavior this contribution claims.
 
 \section{Resilient LLM inference gateway}
 \label{section:5.2}

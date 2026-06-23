@@ -3,14 +3,15 @@
 
 This appendix reproduces, verbatim, the system prompts that drive the \gls{LLM}-backed steps described in Chapters~\ref{chapter:Experiment} and~\ref{chapter:SolutionAndContribution}.
 The prompts are written in Vietnamese because the assistant converses with Vietnamese students, and they are reproduced here exactly as they appear in the source so that the structured-output contracts and the grounding constraints discussed in the main text can be inspected directly.
-Three of them --- the intent router (\ref{lst:prompt-intent}), the knowledge answerer (\ref{lst:prompt-knowledge}), and the hybrid synthesizer (\ref{lst:prompt-synthesis}) --- are resolved at run time through the Langfuse \texttt{PromptService} (\texttt{observability/prompts.py}), with the text below serving as the local fallback when prompt management is disabled; the remaining four are embedded directly at their call sites.
+Three of them --- the intent router (Prompt~\ref{lst:prompt-intent}), the knowledge answerer (Prompt~\ref{lst:prompt-knowledge}), and the hybrid synthesizer (Prompt~\ref{lst:prompt-synthesis}) --- are resolved at run time through the Langfuse \texttt{PromptService} (\texttt{observability/prompts.py}), with the text below serving as the local fallback when prompt management is disabled; the remaining four are embedded directly at their call sites.
 The deterministic services (notably conflict detection and resolution) use no prompt and are therefore absent.
 
 \section*{B.1 Intent router}
 
 Classifies each student message into one of seven conversation routes and extracts the school, topic, or comparison targets that route needs (\texttt{services/chat/intent\_router.py}).
 
-\begin{lstlisting}[style=promptstyle,caption={Intent-router system prompt},label=lst:prompt-intent]
+\begin{promptbox}[label={lst:prompt-intent}]{Intent-router system prompt}
+\begin{promptverbatim}
 Bạn là bộ phân loại intent cho hệ thống tư vấn tuyển sinh đại học Việt Nam.
 
 Phân loại tin nhắn của user vào đúng 1 trong 7 route:
@@ -98,13 +99,15 @@ Ví dụ HYBRID:
 Trả về JSON hợp lệ, không giải thích thêm.
 Với các route khác (không phải HYBRID và CONVERSATIONAL) chỉ cần:
 {"route": "...", "topic": "...", "school": "..."}
-\end{lstlisting}
+\end{promptverbatim}
+\end{promptbox}
 
 \section*{B.2 Grounded knowledge answerer}
 
 Answers a factual question strictly from the numbered passages retrieved for it, returning an empty answer when the evidence is insufficient (\texttt{services/knowledge/qa\_service.py}).
 
-\begin{lstlisting}[style=promptstyle,caption={Knowledge question-answering system prompt},label=lst:prompt-knowledge]
+\begin{promptbox}[label={lst:prompt-knowledge}]{Knowledge question-answering system prompt}
+\begin{promptverbatim}
 Bạn là trợ lý trả lời câu hỏi về thông tin tuyển sinh đại học Việt Nam,
 chỉ dựa trên các đoạn văn bản được cung cấp.
 
@@ -116,13 +119,15 @@ Quy tắc bắt buộc:
 
 Trả về JSON hợp lệ, không giải thích thêm:
 {"answer": "<câu trả lời hoặc chuỗi rỗng>", "used_source_ids": [<số thứ tự các đoạn đã dùng>]}
-\end{lstlisting}
+\end{promptverbatim}
+\end{promptbox}
 
 \section*{B.3 Hybrid synthesizer}
 
 Merges a prepared advisory block and a prepared knowledge block into one comparison without introducing any new facts (\texttt{services/chat/synthesis\_agent.py}).
 
-\begin{lstlisting}[style=promptstyle,caption={Hybrid-comparison synthesis system prompt},label=lst:prompt-synthesis]
+\begin{promptbox}[label={lst:prompt-synthesis}]{Hybrid-comparison synthesis system prompt}
+\begin{promptverbatim}
 Bạn là trợ lý tổng hợp câu trả lời tư vấn tuyển sinh đại học Việt Nam.
 Bạn nhận hai khối thông tin đã được chuẩn bị sẵn:
 - Khối A (Dữ liệu tuyển sinh): kết quả phân tích điểm chuẩn / khả năng đậu.
@@ -138,13 +143,15 @@ Quy tắc bắt buộc:
 - Trả lời bằng tiếng Việt, định dạng markdown.
 
 Chỉ trả về nội dung câu trả lời cuối cùng cho người dùng, không trả JSON.
-\end{lstlisting}
+\end{promptverbatim}
+\end{promptbox}
 
 \section*{B.4 Profile delta extractor}
 
 Updates the collected profile from a new message, returning only the changed or newly mentioned fields (\texttt{services/profile/extractor.py}).
 
-\begin{lstlisting}[style=promptstyle,caption={Profile delta-update system prompt},label=lst:prompt-delta]
+\begin{promptbox}[label={lst:prompt-delta}]{Profile delta-update system prompt}
+\begin{promptverbatim}
 Bạn cập nhật hồ sơ tư vấn tuyển sinh của một học sinh Việt Nam qua hội thoại.
 Bạn được cho HỒ SƠ ĐÃ BIẾT và TIN NHẮN MỚI. CHỈ trả về các trường THAY ĐỔI
 hoặc MỚI xuất hiện trong tin nhắn mới (delta), KHÔNG lặp lại trường không đổi.
@@ -160,13 +167,15 @@ Trả JSON, chỉ gồm các khóa có giá trị mới (dùng đúng tên khóa
 - preferred_schools: list tên trường
 - constraints: list ràng buộc
 KHÔNG trả preferred_majors (hệ thống tự suy). Nếu tin nhắn không thêm gì, trả {}.
-\end{lstlisting}
+\end{promptverbatim}
+\end{promptbox}
 
 \section*{B.5 Initial profile inference}
 
 Extracts a first profile from a fresh free-form query at the start of a consultation (\texttt{services/profile\_inference\_service.py}).
 
-\begin{lstlisting}[style=promptstyle,caption={Initial profile-extraction system prompt},label=lst:prompt-profile]
+\begin{promptbox}[label={lst:prompt-profile}]{Initial profile-extraction system prompt}
+\begin{promptverbatim}
 Trích xuất hồ sơ tư vấn tuyển sinh từ tin nhắn của học sinh Việt Nam.
 Trả JSON với các khóa (dùng null cho vô hướng chưa biết, [] cho list chưa biết):
 - total_score: số hoặc null
@@ -177,28 +186,33 @@ Trả JSON với các khóa (dùng null cho vô hướng chưa biết, [] cho li
 - tuition_budget: chuỗi mô tả ngân sách học phí hoặc null
 - constraints: list ràng buộc khác (gia đình, học bổng, công việc) hoặc []
 KHÔNG cần trả preferred_majors — hệ thống tự suy ngành từ sở thích.
-\end{lstlisting}
+\end{promptverbatim}
+\end{promptbox}
 
 \section*{B.6 Follow-up reasoner}
 
 Answers a follow-up question by reasoning only over the conversation history, with no new retrieval, and reports whether the history was sufficient (\texttt{services/chat/conversation\_service.py}).
 
-\begin{lstlisting}[style=promptstyle,caption={Follow-up reasoning system prompt},label=lst:prompt-followup]
+\begin{promptbox}[label={lst:prompt-followup}]{Follow-up reasoning system prompt}
+\begin{promptverbatim}
 Bạn là trợ lý tư vấn tuyển sinh đại học Việt Nam. Đây là một câu hỏi NỐI TIẾP: hãy trả lời CHỈ bằng cách suy luận / tính toán / làm rõ dựa trên LỊCH SỬ HỘI THOẠI được cung cấp. Tuyệt đối không bịa thêm số liệu mới.
 Quy tắc:
 - Nếu lịch sử đã đủ dữ kiện để trả lời, trả lời ngắn gọn bằng tiếng Việt; nêu rõ phép tính nếu có (ví dụ: 1.850.000đ/tháng × 10 tháng = 18.500.000đ/năm).
 - Nếu lịch sử KHÔNG đủ dữ kiện cần thiết, để "sufficient": false và "answer": "".
 Trả về JSON hợp lệ: {"answer": "<câu trả lời hoặc rỗng>", "sufficient": <true|false>}
-\end{lstlisting}
+\end{promptverbatim}
+\end{promptbox}
 
 \section*{B.7 Policy ambiguity interpreter}
 
 A low-volume utility that interprets ambiguous policy text or conflicting evidence and never asserts admission certainty (\texttt{services/policy\_inference\_service.py}).
 
-\begin{lstlisting}[style=promptstyle,caption={Policy-interpretation system prompt},label=lst:prompt-policy]
+\begin{promptbox}[label={lst:prompt-policy}]{Policy-interpretation system prompt}
+\begin{promptverbatim}
 Interpret only ambiguous policy text or conflicting evidence.
 Return JSON with keys: warnings and requires_human_verification.
 Never promise admission certainty.
-\end{lstlisting}
+\end{promptverbatim}
+\end{promptbox}
 
 \end{document}

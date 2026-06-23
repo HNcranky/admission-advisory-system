@@ -173,6 +173,108 @@ Against the 25 cases in `docs/edge-case.md`:
   reasoning ignores both fields → future-work cluster "structured preferences"
   (EC-07/08/11/19/20/25), cited in §6.2.
 
+## Subsystem evaluation framework (2026-06-23)
+
+Evaluation is split by subsystem (no single whole-system metric). Harnesses live
+under `eval/`; deterministic ones (reliability, conflict) run in the test suite
+under `tests/eval/`. Reports are written to `docs/superpowers/evals/`.
+
+### Axis 1 — Knowledge QA quality (MEASURED, `eval/knowledge_qa/`)
+Golden set: **32 human-verified cases** (26 answerable + 6 abstain),
+`eval/knowledge_qa/golden_set.json`. Generation-only over frozen
+production-equivalent retrieval; judge = `gemini-2.5-flash` (LLM-as-judge).
+Numbers for the production model `gemini-2.5-flash`
+(report `docs/superpowers/evals/2026-06-10-knowledge-qa-flash-vs-flash-lite.md`):
+
+| Metric | Value |
+|---|---|
+| Faithfulness (grounded, no hallucination) | 0.958 |
+| Answer correctness | 0.769 |
+| Citation F1 | 0.656 |
+| Abstention accuracy (declines when unsupported) | 0.938 |
+
+Metric definitions: faithfulness/correctness from the judge; citation F1 from
+exact chunk-text match of cited vs expected source ids (`grader.py`); abstention
+accuracy = fraction of cases where answered-vs-abstained matches the label.
+
+**Production model update (2026-06-23):** runtime moved off `gemini-2.5-flash`/
+`-flash-lite` (20 requests/day cap) to **`gemini-3.1-flash-lite`** (≈500 req/day) for
+both tiers in `factory.py` via `.env` (`ADVISORY_MODEL_LITE`/`ADVISORY_MODEL_STRONG`).
+Same harness, judge = `gemini-3.1-flash-lite`, candidate max_tokens 2048 (report
+`docs/superpowers/evals/2026-06-23-knowledge-qa-gemini3-tier.md`):
+
+| Metric | `gemini-3.1-flash-lite` |
+|---|---|
+| Faithfulness | 1.000 |
+| Answer correctness | 0.769 |
+| Citation F1 | 0.646 |
+| Abstention accuracy | 0.938 |
+
+On par with `gemini-2.5-flash`, far above old `-flash-lite` (correctness 0.615).
+CAVEAT (state in thesis): this run self-judged (judge = candidate model) with a larger
+token budget than the 2.5-flash baseline above → a validation of adequacy, not a strictly
+controlled delta. `gemini-3.5-flash` was NOT adopted: it returns empty (`has_data=False`)
+through the json+`thinking_budget=0` path and runs 20–90 s/call (vs ~1.5 s for
+3.1-flash-lite) — unusable for interactive advisory as wired.
+
+### Axis 2 — Retrieval quality (HARNESS BUILT, NUMBERS PENDING, `eval/retrieval/`)
+Labelled set: **48 questions** from `eval/knowledge_qa/qna_corpus_eval.json`, each
+with a gold `source_chunk_id` (one relevant chunk per query). Production retrieval
+path (embed → resolve program → pgvector search → national augment); Recall@k =
+hit-rate gold chunk in top k; MRR = mean reciprocal rank.
+Run: `python -m eval.retrieval.run` (needs DB + Gemini embeddings).
+% TODO-VERIFY: run `python -m eval.retrieval.run`; record Recall@1/3/5/10 + MRR here.
+
+### Axis 3 — Runtime latency (HARNESS BUILT, NUMBERS PENDING, `eval/latency/`)
+Wall-clock per `KnowledgeQAService.answer` (embed→retrieve→generate) over a
+15-question sample; reports p50/p95/mean end-to-end and generation-only.
+Run: `EVAL_LATENCY_N=15 python -m eval.latency.run` (needs DB + Gemini).
+Environment-specific (network + Gemini endpoint) — record machine + date.
+% TODO-VERIFY: run `python -m eval.latency.run`; record p50/p95 e2e + generation here.
+
+### Axis 4 — Reliability under failure (MEASURED, `eval/reliability/`)
+Synthetic failure injection against the real `LLMGateway.run` (provider mocked,
+no network). 5 scenarios across 3 families. Report
+`docs/superpowers/evals/reliability-gateway.md`; covered by `tests/eval/reliability/`.
+
+| Family | Scenarios | Recovered |
+|---|---|---|
+| Fallback recovery (hard API failure: timeout / 5xx) | 2 | 2 (100%) |
+| Structured-output recovery (malformed JSON: retry + fallback) | 2 | 2 (100%) |
+| Graceful-degradation contract (no fallback → surfaces InferenceError) | 1 | 1 (100%) |
+| **All** | **5** | **5 (100%)** |
+
+### Axis 5 — Conflict detection/resolution (MEASURED, synthetic, `eval/conflict/`)
+Controlled contradictions injected into the deterministic conflict service (no
+LLM, no DB). 5 injected conflicts + 3 agreeing controls. Report
+`docs/superpowers/evals/conflict-synthetic.md`; covered by `tests/eval/conflict/`.
+
+| Metric | Value |
+|---|---|
+| Detection recall (injected conflicts found) | 5/5 = 100% |
+| False positives (agreeing sources wrongly flagged) | 0/3 = 0% |
+
+Resolution behaviour (key result): decisive cases resolve by trust_level /
+corroboration; an equal-trust tie and a **decision-changing** cutoff (values
+straddle the applicant's score) are left **unresolved** and surfaced, never
+silently picked. This is the designed conflict policy, demonstrated end to end.
+
+### Axis 6 — Advisory recommendation validity (HARNESS BUILT, NUMBERS PENDING, `eval/advisory/`)
+**12 synthetic student profiles** (`eval/advisory/profiles.json`) seeded into the
+advisory pipeline. Deterministic checks: constraint satisfaction (recommended
+major matches a requested major), eligibility consistency (no below-cutoff program
+presented as reachable without a caution), coverage (matchable profiles get a
+recommendation; the unmatchable one gets none).
+Run: `python -m eval.advisory.run` (needs DB + Gemini; reason/policy/explain LLM).
+Complements the edge-case matrix below (behavioural advisory evidence).
+% TODO-VERIFY: run `python -m eval.advisory.run`; record constraint/eligibility/coverage here.
+
+### Axis 7 — Semantic cache (NOT MEASURED — honest limitation)
+`knowledge_qa_cache` is empty in dev and disabled by default; no hit-rate / cost /
+latency-reduction figure can be reported. Stated as a limitation and future work
+(§6.2): an instrumented soak with replayed queries would produce hit-rate and
+token-saving numbers. Do NOT cite an invented cache hit-rate.
+
 ## Contribution commits (verified `git log`)
 
 - `c2ef582` — feat: implement deterministic keyword fallback for intent classification (§5.2)

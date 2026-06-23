@@ -1,6 +1,13 @@
+import os
+
 from services.inference.gateway import LLMGateway
 from services.inference.registry import ModelRegistry
 from services.inference.telemetry import InferenceTelemetry
+
+# Matches the production knowledge_qa_agent budget in factory.py: 800 truncates a
+# grounded answer mid-JSON → MAX_TOKENS → STRUCTURE_FAILURE, which would unfairly
+# penalize a candidate for a budget artifact rather than a quality gap.
+_QA_MAX_TOKENS = 2048
 
 
 def build_model_gateway(model: str) -> LLMGateway:
@@ -14,7 +21,7 @@ def build_model_gateway(model: str) -> LLMGateway:
                 "output_mode": "json",
                 "max_retries": 1,
                 "allow_fallback": False,
-                "max_tokens": 800,
+                "max_tokens": _QA_MAX_TOKENS,
                 "thinking_budget": 0,
             },
         },
@@ -23,13 +30,17 @@ def build_model_gateway(model: str) -> LLMGateway:
 
 
 def build_judge_gateway() -> LLMGateway:
-    """A fixed `flash` judge, so the judge never confounds the flash-vs-flash-lite
-    comparison."""
+    """A fixed judge, so the judge never confounds the candidate comparison. The
+    model is env-configurable (EVAL_JUDGE_MODEL) because the historical default
+    `gemini-2.5-flash` is capped at 20 requests/day on the free tier, which a
+    multi-candidate run exhausts; set it to a higher-quota model (e.g.
+    `gemini-3.5-flash`) before a multi-candidate run."""
+    judge_model = os.getenv("EVAL_JUDGE_MODEL", "gemini-2.5-flash")
     registry = ModelRegistry(
-        default_model="gemini-2.5-flash",
+        default_model=judge_model,
         agent_overrides={
             "qa_eval_judge": {
-                "primary_model": "gemini-2.5-flash",
+                "primary_model": judge_model,
                 "output_mode": "json",
                 "max_retries": 1,
                 "allow_fallback": False,

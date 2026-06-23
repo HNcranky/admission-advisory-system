@@ -98,9 +98,19 @@ Condensed 2026-06-22 to a decision-driven form (need → alternatives → choice
       knowledge docs 93 / chunks 692, 34,413 Python LOC, 1,123 tests collected
       / 1,122 passing).
 - [~] 4.3.3 Screenshots of main flows.
-- [~] 4.4 Testing: pytest suite on isolated `admission_test` DB
-      (`tests/conftest.py::_isolate_test_db`); edge-case compliance matrix
-      result 17/25 passing (verify against `docs/edge-case.md` run).
+- [~] 4.4 Evaluation (restructured 2026-06-23, subsystem axes per reviewer):
+      4.4.1 functional correctness (pytest 1123 on isolated `admission_test` DB,
+      `tests/conftest.py::_isolate_test_db`); 4.4.2 knowledge-QA quality
+      (32-case golden set, LLM-judge: faithfulness 0.958 / correctness 0.769 /
+      citation F1 0.656 / abstention 0.938, `eval/knowledge_qa/`); 4.4.3 retrieval
+      Recall@k+MRR (48-q labelled set, `eval/retrieval/`, NUMBERS PENDING run);
+      4.4.4 runtime latency p50/p95 (`eval/latency/`, PENDING run); 4.4.5
+      reliability recovery 5/5=100% (`eval/reliability/`, in suite); 4.4.6 synthetic
+      conflict detection 5/5 + 0 FP (`eval/conflict/`, in suite); 4.4.7 advisory
+      eligibility/constraint/coverage (12 synthetic profiles, `eval/advisory/`,
+      PENDING run) + edge-case matrix 17/25; 4.4.8 limitations (cache unmeasured,
+      no human rubric). All numbers + run commands in `latex/FACTS.md`
+      "Subsystem evaluation framework".
 - [~] 4.5 Deployment: Docker Compose (pgvector/pgvector:pg16), uvicorn.
 
 ## Chapter 5 — Solution and contribution (≥ 5 pages)

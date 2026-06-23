@@ -49,7 +49,7 @@ The third is to conduct an \gls{LLM}-based advisory conversation that collects a
 
 The scope is kept narrow on purpose.
 The configured data sources are the universities registered in the ingestion configuration, not every Vietnamese university.
-Structured admission data comes mainly from HUST and VNU-UET, while the knowledge corpus draws on HUST, NEU, VNU-UET, and national \gls{MOET} documents.
+Structured admission data comes mainly from \gls{HUST} and \gls{VNU-UET}, while the knowledge corpus draws on HUST, \gls{NEU}, VNU-UET, and national \gls{MOET} documents.
 The user-facing dialogue is conducted in Vietnamese, the language of its intended students, while this thesis is written in English.
 Training or fine-tuning a language model is out of scope: the work concerns engineering a reliable system around a hosted model.
 
@@ -61,8 +61,9 @@ Grounded answering is provided by \gls{RAG}~\cite{lewis2020rag} over a vector st
 The advisory consultation is orchestrated as a fixed LangGraph~\cite{langgraph} state graph whose six stages --- profile, retrieve, conflict, reason, policy, explain --- run in a deterministic and traceable order.
 All model access passes through a single resilient inference gateway, built on a hosted Gemini model~\cite{gemini}, that distinguishes hard \gls{API} failures from malformed-output failures and degrades gracefully through retries, fallbacks, and deterministic alternatives.
 
-The thesis makes three principal contributions, developed in Chapter~\ref{chapter:SolutionAndContribution}.
-The first is conflict-aware data consolidation: contradictory quota and cutoff figures are preserved per source and surfaced in recommendations, with model judgment confined to the narrow cases where it is safe.
+The thesis makes three principal engineering contributions, developed in Chapter~\ref{chapter:SolutionAndContribution}.
+The first is conflict-aware data consolidation: when official sources contradict each other on quotas or cutoff scores, the system preserves every value per source and surfaces the disagreement in its recommendations instead of silently picking one, with model judgment confined to the narrow cases where it is safe.
+Such contradictions are infrequent in the current corpus, so this is best understood as a resilience feature for rare but high-impact inconsistencies: preserving per-source provenance keeps recommendations correct when revisions or conflicting publications do occur, and a synthetic evaluation (Section~\ref{section:4.4}) confirms the detection and disclosure behavior on injected conflicts.
 The second is the resilient inference gateway, which keeps the assistant usable through model outages by treating the two failure modes differently and providing a deterministic fallback for intent routing.
 The third is end-to-end ingestion of heterogeneous official sources, including a hybrid text-and-\gls{OCR} extractor with an explicit safeguard against model transcription failures on scanned documents.
 Three further contributions concern the engineering of the application itself: unified observability that makes every advisory run a single queryable trace, the declarative orchestration of the conversation and knowledge flows as reusable graphs, and a version-gated semantic cache that reuses past answers without serving stale ones.

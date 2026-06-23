@@ -8,9 +8,17 @@ from eval.knowledge_qa.grader import _answered, grade_case
 from eval.knowledge_qa.reporter import aggregate, render_report
 from eval.knowledge_qa.runner import run_case
 
-MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
-BASELINE = "gemini-2.5-flash"
-REPORT_PATH = Path("docs/superpowers/evals/2026-06-10-knowledge-qa-flash-vs-flash-lite.md")
+# Baseline = the previously-validated production model; candidates = the gemini-3.x
+# tier now wired into factory.py (LITE=gemini-3.1-flash-lite carries the default +
+# every fallback, so its quality is load-bearing; STRONG=gemini-3.5-flash drives the
+# reasoning agents). Override the list via EVAL_MODELS (comma-separated) if needed.
+MODELS = (
+    os.getenv("EVAL_MODELS")
+    or "gemini-2.5-flash,gemini-3.1-flash-lite,gemini-3.5-flash"
+).split(",")
+MODELS = [m.strip() for m in MODELS if m.strip()]
+BASELINE = os.getenv("EVAL_BASELINE", "gemini-2.5-flash")
+REPORT_PATH = Path("docs/superpowers/evals/2026-06-23-knowledge-qa-gemini3-tier.md")
 
 # Each case fires several Gemini calls (generation per model + a flash judge per
 # answerable case). On a rate-limited free-tier key pool an unthrottled burst
@@ -55,6 +63,12 @@ def _grade(case, result, model, judge):
 def main() -> None:
     cases = load_golden_set()
     judge = build_judge_gateway()
+    judge_model = os.getenv("EVAL_JUDGE_MODEL", "gemini-2.5-flash")
+    print(f"Models: {', '.join(MODELS)} | baseline: {BASELINE} | judge: {judge_model}")
+    print(f"Cases: {len(cases)} | call delay: {CALL_DELAY_SECONDS}s")
+    if judge_model == "gemini-2.5-flash" and len(MODELS) > 2:
+        print("WARN: judge on gemini-2.5-flash (20 req/day) with >2 models will "
+              "likely exhaust quota — set EVAL_JUDGE_MODEL=gemini-3.5-flash.")
     grades = {m: [] for m in MODELS}
 
     for case in cases:

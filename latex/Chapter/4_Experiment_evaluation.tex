@@ -5,7 +5,7 @@
 
 Chapter~\ref{chapter:Methodology} reviewed the technologies the system is built on.
 This chapter presents how they are assembled into a working system and how the result is evaluated.
-Section~\ref{section:4.1} covers the architecture and package design, Section~\ref{section:4.2} the user interface, layer interactions, and database, Section~\ref{section:4.3} the implementation libraries and measured achievements, Section~\ref{section:4.4} the testing strategy and its results, and Section~\ref{section:4.5} the deployment.
+Section~\ref{section:4.1} covers the architecture and package design, Section~\ref{section:4.2} the user interface, layer interactions, and database, Section~\ref{section:4.3} the implementation libraries and measured achievements, Section~\ref{section:4.4} the subsystem-by-subsystem evaluation of correctness, retrieval quality, latency, reliability, conflict handling, and recommendation validity, and Section~\ref{section:4.5} the deployment.
 
 \section{Architecture design}
 \label{section:4.1}
@@ -383,22 +383,179 @@ The chat interface in Figure~\ref{fig:ui-landing} greets the student and invites
 As the conversation proceeds, the left pane fills with the collected profile while the background advisory run progresses, and its completion is signaled in the conversation itself.
 A completed consultation presents ranked program recommendations in the conversation pane, each with a fit assessment and, where the underlying sources disagree, an explicit note advising the student to verify against the latest official announcement.
 
-\section{Testing}
+\section{Evaluation}
 \label{section:4.4}
 
-The system is verified by an automated test suite that currently collects 1{,}123 tests across 194 test files, built with the pytest framework~\cite{pytest} and spanning unit tests of individual services, integration tests that exercise real \gls{SQL} paths, and end-to-end tests of the advisory and ingestion flows.
+A system that assembles ingestion, retrieval, generation, advisory reasoning, and an inference gateway cannot be judged by one aggregate number, because each part can fail in a different way and for a different reason.
+The evaluation is therefore organized by subsystem: each subsection states what is being measured, on what data, and with what metric, so the question ``how do you know this part works'' has a concrete answer for every component rather than a single test-pass count.
+The harnesses live under \texttt{eval/}; the deterministic ones run inside the test suite (\texttt{tests/eval/}), and every run writes a report under \texttt{docs/superpowers/evals/}.
+Three axes report measured numbers (functional correctness, knowledge-QA quality, reliability, and conflict handling); the remaining axes (retrieval, latency, advisory validity) ship as reproducible harnesses whose figures are filled in from a live run, since they require the database and a metered Gemini key.
 
-The defining feature of the test strategy is \textit{database isolation}.
-An autouse fixture in the test configuration redirects the entire suite to an automatically created \texttt{admission\_test} database, so integration and end-to-end tests can create, mutate, and drop data without ever touching the development database.
-This makes the integration tests safe to run repeatedly and satisfies the testability requirement NFR-05.
+\subsection{Functional correctness}
+\label{subsection:4.4.1}
 
-The most recent full run on the isolated database completed in approximately 14 seconds with 1{,}122 tests passing, one skipped, and no errors.
-The skipped test is an end-to-end conflict-resolution scenario that requires an external dataset dump not committed to the repository.
-An earlier run reported a single full-suite error from an integration test of the in-app trace endpoint; that endpoint and its test were removed when the trace viewer was retired, so the suite now runs clean.
+The base layer of evidence is an automated test suite that collects 1{,}123 tests across 194 test files, built with the pytest framework~\cite{pytest} and spanning unit tests of individual services, integration tests that exercise real \gls{SQL} paths, and end-to-end tests of the advisory and ingestion flows.
+The defining feature of the strategy is \textit{database isolation}: an autouse fixture redirects the entire suite to an automatically created \texttt{admission\_test} database, so integration and end-to-end tests can create, mutate, and drop data without ever touching the development database, which satisfies the testability requirement NFR-05.
+The most recent full run on the isolated database completed in approximately 14 seconds with 1{,}122 tests passing, one skipped, and no errors; the single skip is an end-to-end conflict-resolution scenario that requires an external dataset dump not committed to the repository.
+Functional correctness establishes that the code does what its units specify, but it does not establish that the AI-centric behavior is good; the following subsections measure that directly.
 
-Beyond the automated suite, the system's conversational behavior was evaluated against a catalogue of 25 edge cases documented in the project's requirements (\texttt{docs/edge-case.md}), covering short answers to pending questions, multi-slot messages, profile corrections, ambiguous major terms, conflicting source data, budget filtering, and conversation control.
-In the most recent evaluation, 17 of the 25 cases were fully satisfied, 4 partially, and 4 not yet, up from 8 of 25 at an earlier baseline.
-Table~\ref{table:edge-cases} summarizes the outcome.
+\subsection{Knowledge question-answering quality}
+\label{subsection:4.4.2}
+
+The knowledge \gls{QA} path is evaluated against a golden set of 32 human-verified cases (\texttt{eval/knowledge\_qa/golden\_set.json}), of which 26 are answerable from the supplied passages and 6 are deliberately unanswerable so that abstention can be measured.
+To isolate generation quality from retrieval noise, each case freezes the production-equivalent retrieved chunks and feeds them straight into generation, and a separate \texttt{gemini-2.5-flash} model acts as judge (the LLM-as-judge pattern).
+Four metrics are reported: \textit{faithfulness}, the fraction of answers that use only information present in the passages and invent nothing; \textit{answer correctness}, the fraction that state the expected facts; \textit{citation F1}, the harmonic mean of precision and recall of the cited source chunks against the expected ones; and \textit{abstention accuracy}, the fraction of cases where the decision to answer or to decline matches the label.
+Table~\ref{table:eval-qa} reports the result for the production model.
+
+\begin{table}[H]
+    \centering
+    \caption{Knowledge-QA quality on the 32-case golden set (\texttt{gemini-2.5-flash})}
+    \label{table:eval-qa}
+    \begin{tabular}{|p{7.5cm}|c|}
+        \hline
+        \textbf{Metric} & \textbf{Score} \\
+        \hline
+        Faithfulness (grounded, no hallucination) & 0.958 \\
+        \hline
+        Answer correctness & 0.769 \\
+        \hline
+        Citation F1 & 0.656 \\
+        \hline
+        Abstention accuracy (declines when unsupported) & 0.938 \\
+        \hline
+    \end{tabular}
+\end{table}
+
+The high faithfulness and abstention scores are the load-bearing result for an advisory product: the system rarely fabricates and reliably declines when the corpus does not support an answer, so a wrong answer is far more likely to be a missing fact than an invented one.
+The same harness doubles as a model-selection tool: re-running it on the cheaper \texttt{gemini-2.5-flash-lite} dropped correctness from 0.769 to 0.615, which is the measured justification for keeping the stronger model on this task rather than a qualitative preference.
+The harness later guided a second decision: to lift a restrictive per-day request budget, the runtime was moved to the newer lightweight \texttt{gemini-3.1-flash-lite}, and re-running the evaluation confirmed it holds the quality line, scoring 1.000 faithfulness, 0.769 correctness, 0.646 citation F1, and 0.938 abstention accuracy --- on par with \texttt{gemini-2.5-flash} and well clear of the older \texttt{gemini-2.5-flash-lite}.
+This later run judged with the same lightweight model and a larger output-token budget, so it is read as a validation that the cheaper model is adequate rather than as a strictly controlled comparison, and is reported with that limitation stated.
+
+\subsection{Retrieval quality}
+\label{subsection:4.4.3}
+
+Generation can only be faithful if retrieval surfaces the right passage, so the retriever is measured separately.
+The labelled set reuses the 48 questions of \texttt{eval/knowledge\_qa/qna\_corpus\_eval.json}, each annotated with the gold chunk its answer was written from, i.e. exactly one relevant chunk per query.
+For every question the harness (\texttt{eval/retrieval/run.py}) runs the production retrieval path --- embed the query, resolve the program filter, search pgvector, and augment with national documents --- and records the rank at which the gold chunk appears.
+With one relevant chunk per query, Recall@$k$ is the fraction of questions whose gold chunk falls in the top $k$, and \gls{MRR} is the mean of $1/\text{rank}$.
+% TODO-VERIFY: run `python -m eval.retrieval.run` (DB up + Gemini key) and paste Recall@1/3/5/10 + MRR into Table~\ref{table:eval-retrieval} and FACTS.md.
+\begin{table}[H]
+    \centering
+    \caption{Retrieval quality on 48 labelled questions (one relevant chunk each)}
+    \label{table:eval-retrieval}
+    \begin{tabular}{|p{7.5cm}|c|}
+        \hline
+        \textbf{Metric} & \textbf{Value} \\
+        \hline
+        Recall@1 & \texttt{<pending run>} \\
+        \hline
+        Recall@5 & \texttt{<pending run>} \\
+        \hline
+        Recall@10 & \texttt{<pending run>} \\
+        \hline
+        MRR & \texttt{<pending run>} \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\subsection{Runtime latency}
+\label{subsection:4.4.4}
+
+For an interactive advisory product, response time is a first-class quality, so the knowledge-QA path is profiled end to end.
+The harness (\texttt{eval/latency/run.py}) times the production \texttt{answer} call --- embed, retrieve, generate --- over a fixed sample of the labelled corpus and reports the median (p50), the 95th percentile (p95), and the mean, separating generation-only latency on the already-retrieved chunks so the model step can be told apart from retrieval.
+Because the numbers depend on network conditions and the Gemini endpoint, the run records its date and machine, and the figures below are read from a single controlled run rather than presented as a hardware-independent constant.
+% TODO-VERIFY: run `python -m eval.latency.run` (DB up + Gemini key) and paste p50/p95 e2e + generation into Table~\ref{table:eval-latency} and FACTS.md.
+\begin{table}[H]
+    \centering
+    \caption{Knowledge-QA latency over a 15-question sample}
+    \label{table:eval-latency}
+    \begin{tabular}{|p{5cm}|c|c|}
+        \hline
+        \textbf{Stage} & \textbf{p50 (ms)} & \textbf{p95 (ms)} \\
+        \hline
+        End-to-end answer & \texttt{<pending>} & \texttt{<pending>} \\
+        \hline
+        Generation only & \texttt{<pending>} & \texttt{<pending>} \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\subsection{Reliability under failure}
+\label{subsection:4.4.5}
+
+Every \gls{LLM} call passes through one gateway, so the gateway's retry and fallback behavior is what keeps a transient Gemini failure from reaching the student.
+The reliability harness (\texttt{eval/reliability/}) injects synthetic failure modes into the \textit{real} \texttt{LLMGateway.run} while mocking only the provider, so the retry loop, the structured-output branch, and the fallback branch all execute as in production with no network and no key.
+Five scenarios cover three families: a hard \gls{API} failure on the primary model (timeout or 5xx) recovering on the fallback model; a malformed-JSON response recovering by retry and by fallback; and a no-fallback configuration whose contract is to surface \texttt{InferenceError} so the call site can degrade deterministically.
+All five scenarios recover as designed, as Table~\ref{table:eval-reliability} reports, and the harness is also asserted in the test suite (\texttt{tests/eval/reliability/}) so a regression in the gateway would break the build.
+
+\begin{table}[H]
+    \centering
+    \caption{Inference-gateway recovery under injected failures}
+    \label{table:eval-reliability}
+    \begin{tabular}{|p{8.5cm}|c|c|}
+        \hline
+        \textbf{Failure family} & \textbf{Scenarios} & \textbf{Recovered} \\
+        \hline
+        Fallback recovery (hard API failure: timeout / 5xx) & 2 & 2 \\
+        \hline
+        Structured-output recovery (malformed JSON: retry + fallback) & 2 & 2 \\
+        \hline
+        Graceful-degradation contract (no fallback) & 1 & 1 \\
+        \hline
+        \textbf{All} & \textbf{5} & \textbf{5 (100\%)} \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\subsection{Conflict detection and resolution}
+\label{subsection:4.4.6}
+
+Contradictions between official sources are rare in the current corpus, so the conflict subsystem cannot be exercised by the live data alone; it is instead evaluated with controlled synthetic contradictions, which is an accepted approach for an application thesis when the real-world trigger is infrequent.
+The harness (\texttt{eval/conflict/}) injects two sources that publish different quota or cutoff values for the same program, together with agreeing controls, and drives the deterministic conflict service (detection, comparison, resolution --- no \gls{LLM}).
+Across five injected conflicts and three agreeing controls the service achieves perfect detection with no false positives (Table~\ref{table:eval-conflict}).
+The decisive behavioral result is in how it resolves: a clear trust or corroboration advantage resolves to the stronger source, whereas an equal-trust tie and a \textit{decision-changing} cutoff disagreement --- one whose competing values straddle the applicant's score and so would flip the recommendation --- are left unresolved and surfaced to the student rather than silently decided.
+This is the conflict policy of Section~\ref{section:5.1} demonstrated end to end, and the harness is asserted in the suite (\texttt{tests/eval/conflict/}).
+
+\begin{table}[H]
+    \centering
+    \caption{Synthetic conflict detection (5 injected conflicts, 3 agreeing controls)}
+    \label{table:eval-conflict}
+    \begin{tabular}{|p{8.5cm}|c|}
+        \hline
+        \textbf{Metric} & \textbf{Value} \\
+        \hline
+        Detection recall (injected conflicts found) & 5/5 = 100\% \\
+        \hline
+        False positives (agreeing sources flagged) & 0/3 = 0\% \\
+        \hline
+    \end{tabular}
+\end{table}
+
+\subsection{Advisory recommendation validity}
+\label{subsection:4.4.7}
+
+A recommendation has no single ground-truth ``best'' answer, so the advisory pipeline is judged on the two properties that can be checked objectively against the canonical store plus a coverage check.
+The harness (\texttt{eval/advisory/}) seeds 12 synthetic student profiles (\texttt{eval/advisory/profiles.json}) spanning low, medium, high, and edge scores directly into the pipeline, then verifies for every recommendation that the program matches a major the student asked for (\textit{constraint satisfaction}) and that no program is presented as reachable when the applicant's score is below its reference cutoff without an explicit caution (\textit{eligibility consistency}), and per profile that a matchable student receives a recommendation while a deliberately unmatchable one receives none rather than a fabricated answer (\textit{coverage}).
+% TODO-VERIFY: run `python -m eval.advisory.run` (DB up + Gemini key) and paste constraint/eligibility/coverage rates into Table~\ref{table:eval-advisory} and FACTS.md.
+\begin{table}[H]
+    \centering
+    \caption{Advisory validity over 12 synthetic profiles}
+    \label{table:eval-advisory}
+    \begin{tabular}{|p{8.5cm}|c|}
+        \hline
+        \textbf{Metric} & \textbf{Value} \\
+        \hline
+        Constraint satisfaction (recommended major requested) & \texttt{<pending run>} \\
+        \hline
+        Eligibility consistency (no uncautioned below-cutoff pick) & \texttt{<pending run>} \\
+        \hline
+        Coverage (per-profile match/no-match correct) & \texttt{<pending run>} \\
+        \hline
+    \end{tabular}
+\end{table}
+
+This automated check is complemented by a behavioral evaluation against the catalogue of 25 edge cases documented in the project's requirements (\texttt{docs/edge-case.md}), covering short answers to pending questions, multi-slot messages, profile corrections, ambiguous major terms, conflicting source data, budget filtering, and conversation control.
+In the most recent evaluation, 17 of the 25 cases were fully satisfied, 4 partially, and 4 not yet, up from 8 of 25 at an earlier baseline (Table~\ref{table:edge-cases}).
 
 \begin{table}[H]
     \centering
@@ -420,6 +577,13 @@ Table~\ref{table:edge-cases} summarizes the outcome.
 The four unmet cases share a single root cause: the profile model stores location and tuition as flat strings, and the reasoning stage does not yet consume them, so preferences that should soften or expand the search are not acted on.
 This cluster is carried forward as the principal item of future work in Section~\ref{section:6.2}.
 
+\subsection{Limitations of the evaluation}
+\label{subsection:4.4.8}
+
+Two components are deliberately not given a quantitative score because the data to support one does not yet exist.
+The semantic answer cache of Section~\ref{section:5.6} is disabled by default and empty in the development database, so no hit-rate, cost-saving, or latency-reduction figure can be reported honestly; producing one would require an instrumented soak with a replayed query stream, which is recorded as future work in Section~\ref{section:6.2}.
+Likewise, the advisory and edge-case judgments above measure constraint and eligibility consistency rather than subjective recommendation quality, which would need a panel of human counselors; the present evaluation establishes that recommendations are valid and safe, not that they are optimal, and that boundary is stated rather than glossed.
+
 \section{Deployment}
 \label{section:4.5}
 
@@ -439,8 +603,8 @@ uvicorn web.app:build_app --factory --reload    # serve the chat application
 
 This separation --- a containerized database, a one-command schema setup, an application server, and an offline ingestion \gls{CLI} --- keeps the runtime dependencies minimal (a Python environment and a Docker engine) while the idempotent migrations and upsert-based ingestion let the operator refresh school data at any time during the admission season, as required by NFR-02.
 
-This chapter presented the system's layered architecture, the design of its core packages, the two-pane interface, the layer interactions behind the two central flows, the database schema, and the deployment, then evaluated the result against an automated suite of more than 1{,}000 tests and a 25-case edge-case catalogue.
-The evaluation showed a system that is functionally substantial and well tested, with a clearly identified cluster of unmet preference-handling cases.
-Chapter~\ref{chapter:SolutionAndContribution} steps back from the full system to present its three principal contributions in depth.
+This chapter presented the system's layered architecture, the design of its core packages, the two-pane interface, the layer interactions behind the two central flows, the database schema, and the deployment, then evaluated the result subsystem by subsystem: functional correctness over more than 1{,}000 tests, grounded knowledge-QA quality, retrieval recall, runtime latency, gateway reliability, conflict detection, and advisory recommendation validity, each with its own data and metric.
+The evaluation showed a system that is functionally substantial, grounded and reliable where it has been measured, with the unscored cache and the subjective dimension of recommendation quality stated as explicit limitations rather than left implied.
+Chapter~\ref{chapter:SolutionAndContribution} steps back from the full system to present its principal engineering outcomes in depth.
 
 \end{document}

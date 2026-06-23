@@ -44,14 +44,14 @@ def verdict(baseline: ModelReport, candidate: ModelReport, tol: float = 0.05):
 
 def render_report(reports: dict, baseline: str, tol: float = 0.05) -> str:
     base = reports[baseline]
-    cand_name = next(m for m in reports if m != baseline)
-    cand = reports[cand_name]
-    passed, reason = verdict(base, cand, tol=tol)
+    candidates = [m for m in reports if m != baseline]
 
     lines = [
-        "# Knowledge-QA model-tier eval: flash vs flash-lite",
+        "# Knowledge-QA model-tier eval",
         "",
-        f"Baseline: `{baseline}` · Candidate: `{cand_name}` · Cases: {base.n_cases}",
+        f"Baseline: `{baseline}` · Candidates: "
+        + ", ".join(f"`{m}`" for m in candidates)
+        + f" · Cases: {base.n_cases}",
         "",
         "| Metric | " + " | ".join(f"`{m}`" for m in reports) + " |",
         "|---|" + "---|" * len(reports),
@@ -65,9 +65,11 @@ def render_report(reports: dict, baseline: str, tol: float = 0.05) -> str:
     for label, attr in metrics:
         row = [f"{getattr(reports[m], attr):.3f}" for m in reports]
         lines.append(f"| {label} | " + " | ".join(row) + " |")
-    lines += [
-        "",
-        f"**Verdict:** {'PASS — adopt flash-lite' if passed else 'FAIL — keep flash'}. {reason}",
-        "",
-    ]
+
+    lines += ["", "## Verdict per candidate", ""]
+    for cand_name in candidates:
+        passed, reason = verdict(base, reports[cand_name], tol=tol)
+        tag = "PASS — safe to adopt" if passed else "FAIL — regresses vs baseline"
+        lines.append(f"- **`{cand_name}`** — {tag}. {reason}")
+    lines.append("")
     return "\n".join(lines)

@@ -30,7 +30,10 @@
 \usepackage{outlines}
 \usepackage[font=small,labelfont=bf]{caption}
 
-\usepackage{listings}
+\usepackage{listings} % Python/shell code listings (Chapter 4)
+\usepackage{fvextra} % UTF-8 verbatim with line breaking (Vietnamese prompts, Appendix B)
+\usepackage[most]{tcolorbox} % breakable titled boxes wrapping the prompts (Appendix B)
+\usepackage{newunicodechar} % map the few non-ASCII symbols used inside the prompts
 \usepackage{float}
 \usepackage{subcaption}
 \usepackage{xurl}
@@ -164,6 +167,24 @@
 \setlength{\parindent}{15pt}
 
 
+
+% --- Allow long monospace identifiers/paths to wrap, to prevent margin overflow ---
+% Code tokens (env vars, table names, file paths) are set in \texttt and do not
+% hyphenate; without break points a long token overshoots the right margin.
+% Underscores are the dominant segment boundary in these tokens; permit a
+% zero-width break after each underscore so long identifiers wrap cleanly.
+% Declared robust so the macro survives \write into .toc/.lof/.lot/.aux when it
+% appears inside a caption; neutralised in PDF bookmark strings just below.
+\makeatletter
+\DeclareRobustCommand{\_}{\textunderscore\penalty\z@\hspace{0pt}}
+\makeatother
+\pdfstringdefDisableCommands{\def\_{_}}
+% Last-resort line stretch so any remaining unbreakable run (e.g. a slash path
+% or a non-hyphenating word) loosens its spacing instead of spilling into the
+% right margin.
+\setlength{\emergencystretch}{3em}
+\tolerance=2000
+\hbadness=2000
 
 % =========================== BODY ===============
 \begin{document}
