@@ -30,30 +30,32 @@ CALL_DELAY_SECONDS = float(os.getenv("EVAL_CALL_DELAY_SECONDS", "1.0"))
 
 def _load_corpus():
     data = json.loads(CORPUS_PATH.read_text(encoding="utf-8"))
-    return [c for c in data if c.get("metadata", {}).get("source_chunk_id")]
+    return [c for c in data if c.get("metadata", {}).get("source_url")]
 
 
-def _gold_texts(chunk_ids):
-    """Map gold chunk id -> chunk_text straight from the knowledge store."""
-    from services.knowledge.repository import get_knowledge_db_connection
+def _corpus_source_urls():
+    """Source URLs currently present in the knowledge store. Gold is matched at
+    DOCUMENT granularity (source URL), not chunk id: re-ingestion reassigns chunk
+    ids, so the corpus's original `source_chunk_id` no longer identifies the same
+    text, but the source URL of the document an answer was written from is stable.
+    Recall@k then asks the standard document-retrieval question: did the top k
+    chunks include one from the correct source document?"""
+    from services.knowledge.db import get_knowledge_db_connection
 
     conn = get_knowledge_db_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute(
-                "SELECT id, chunk_text FROM knowledge_chunks WHERE id = ANY(%s)",
-                (list(chunk_ids),),
-            )
-            rows = cur.fetchall()
+            cur.execute("SELECT DISTINCT source_url FROM knowledge_chunks")
+            return {r[0] for r in cur.fetchall()}
     finally:
         conn.close()
-    return {row[0]: row[1] for row in rows}
 
 
-def _rank_of_gold(retrieved, gold_text):
-    """1-based rank of the gold chunk among retrieved chunks, or None if absent."""
+def _rank_of_gold(retrieved, gold_url):
+    """1-based rank of the first retrieved chunk from the gold source document,
+    or None if no retrieved chunk came from it."""
     for i, chunk in enumerate(retrieved, start=1):
-        if chunk.chunk_text == gold_text:
+        if (chunk.source_url or "") == gold_url:
             return i
     return None
 
@@ -62,26 +64,24 @@ def main() -> None:
     from services.knowledge.qa_service import KnowledgeQAService
 
     corpus = _load_corpus()
-    gold_ids = {c["metadata"]["source_chunk_id"] for c in corpus}
-    gold_text_by_id = _gold_texts(gold_ids)
+    present_urls = _corpus_source_urls()
 
     service = KnowledgeQAService(top_k=K_MAX, cache_enabled=False)
 
     ranks = []
     missing_gold = 0
-    skipped = []
     for case in corpus:
         meta = case["metadata"]
-        gold_text = gold_text_by_id.get(meta["source_chunk_id"])
-        if gold_text is None:
-            # Gold chunk id no longer in the store (re-ingest changed ids).
+        gold_url = meta.get("source_url")
+        if gold_url not in present_urls:
+            # Gold document not in the current corpus (e.g. a local file ingested
+            # on another machine, or a source dropped on re-ingest).
             missing_gold += 1
-            skipped.append(case["input"])
             continue
         retrieved = service.retrieve(
             case["input"], school=meta.get("school"), topic=meta.get("topic")
         )
-        ranks.append(_rank_of_gold(retrieved, gold_text))
+        ranks.append(_rank_of_gold(retrieved, gold_url))
         if CALL_DELAY_SECONDS:
             time.sleep(CALL_DELAY_SECONDS)
 
@@ -94,13 +94,14 @@ def main() -> None:
 
     lines = ["# Retrieval-quality eval (Recall@k, MRR)", ""]
     lines.append(
-        f"Labelled set: `{CORPUS_PATH}` — {n} questions with a gold chunk, "
-        "one relevant chunk each. Production retrieval path, read-only."
+        f"Labelled set: `{CORPUS_PATH}` — {n} questions scored. Gold is the source "
+        "document (URL) the answer was written from; Recall@k = top-k chunks include "
+        "one from that document. Production retrieval path, read-only."
     )
     if missing_gold:
         lines.append(
-            f"\n> {missing_gold} question(s) skipped: their gold `source_chunk_id` "
-            "is no longer in the store (re-ingest changed chunk ids); re-curate to restore."
+            f"\n> {missing_gold} question(s) skipped: their gold source document is "
+            "not in the current corpus (local file from another machine, or dropped on re-ingest)."
         )
     lines.append("")
     lines.append("| Metric | Value |")

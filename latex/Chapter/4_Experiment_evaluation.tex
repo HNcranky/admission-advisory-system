@@ -435,50 +435,57 @@ This later run judged with the same lightweight model and a larger output-token 
 \label{subsection:4.4.3}
 
 Generation can only be faithful if retrieval surfaces the right passage, so the retriever is measured separately.
-The labelled set reuses the 48 questions of \texttt{eval/knowledge\_qa/qna\_corpus\_eval.json}, each annotated with the gold chunk its answer was written from, i.e. exactly one relevant chunk per query.
-For every question the harness (\texttt{eval/retrieval/run.py}) runs the production retrieval path --- embed the query, resolve the program filter, search pgvector, and augment with national documents --- and records the rank at which the gold chunk appears.
-With one relevant chunk per query, Recall@$k$ is the fraction of questions whose gold chunk falls in the top $k$, and \gls{MRR} is the mean of $1/\text{rank}$.
-% TODO-VERIFY: run `python -m eval.retrieval.run` (DB up + Gemini key) and paste Recall@1/3/5/10 + MRR into Table~\ref{table:eval-retrieval} and FACTS.md.
+The labelled set draws on the 48 questions of \texttt{eval/knowledge\_qa/qna\_corpus\_eval.json}, each tagged with the source document its answer was written from; that document is the retrieval ground truth.
+For every question the harness (\texttt{eval/retrieval/run.py}) runs the production retrieval path --- embed the query, resolve the program filter, search pgvector, and augment with national documents --- and records the rank of the first retrieved chunk that comes from the gold source document.
+Gold is matched at document granularity (source URL) rather than by chunk identifier, because re-ingestion reassigns chunk ids while a document's URL is stable; Recall@$k$ is then the fraction of questions whose gold document appears among the top $k$ retrieved chunks, and \gls{MRR} is the mean of $1/\text{rank}$.
+Three of the 48 questions are excluded because their gold document --- a local file ingested on a different machine --- is absent from the current corpus, leaving 45 scored questions.
+The result is reported in Table~\ref{table:eval-retrieval}.
 \begin{table}[H]
     \centering
-    \caption{Retrieval quality on 48 labelled questions (one relevant chunk each)}
+    \caption{Retrieval quality on 45 scored questions (gold = source document)}
     \label{table:eval-retrieval}
     \begin{tabular}{|p{7.5cm}|c|}
         \hline
         \textbf{Metric} & \textbf{Value} \\
         \hline
-        Recall@1 & \texttt{<pending run>} \\
+        Recall@1 & 0.711 \\
         \hline
-        Recall@5 & \texttt{<pending run>} \\
+        Recall@3 & 0.756 \\
         \hline
-        Recall@10 & \texttt{<pending run>} \\
+        Recall@5 & 0.778 \\
         \hline
-        MRR & \texttt{<pending run>} \\
+        Recall@10 & 0.778 \\
+        \hline
+        MRR & 0.739 \\
         \hline
     \end{tabular}
 \end{table}
+
+The retriever places a chunk from the correct document first for 71\% of questions and within the top five for 78\%, and the gap between Recall@5 and Recall@10 is nil, so when the right document is found at all it is almost always found early; the remaining misses are questions whose answer document the embedding similarity does not rank, which bounds the achievable groundedness of Section~\ref{subsection:4.4.2} from below.
 
 \subsection{Runtime latency}
 \label{subsection:4.4.4}
 
 For an interactive advisory product, response time is a first-class quality, so the knowledge-QA path is profiled end to end.
 The harness (\texttt{eval/latency/run.py}) times the production \texttt{answer} call --- embed, retrieve, generate --- over a fixed sample of the labelled corpus and reports the median (p50), the 95th percentile (p95), and the mean, separating generation-only latency on the already-retrieved chunks so the model step can be told apart from retrieval.
-Because the numbers depend on network conditions and the Gemini endpoint, the run records its date and machine, and the figures below are read from a single controlled run rather than presented as a hardware-independent constant.
-% TODO-VERIFY: run `python -m eval.latency.run` (DB up + Gemini key) and paste p50/p95 e2e + generation into Table~\ref{table:eval-latency} and FACTS.md.
+Because the numbers depend on network conditions and the Gemini endpoint, the figures below are read from a single paced run rather than presented as a hardware-independent constant.
 \begin{table}[H]
     \centering
-    \caption{Knowledge-QA latency over a 15-question sample}
+    \caption{Knowledge-QA latency over a six-question sample (\texttt{gemini-3.1-flash-lite})}
     \label{table:eval-latency}
     \begin{tabular}{|p{5cm}|c|c|}
         \hline
         \textbf{Stage} & \textbf{p50 (ms)} & \textbf{p95 (ms)} \\
         \hline
-        End-to-end answer & \texttt{<pending>} & \texttt{<pending>} \\
+        End-to-end answer & 1785 & 1866 \\
         \hline
-        Generation only & \texttt{<pending>} & \texttt{<pending>} \\
+        Generation only & 1268 & 1395 \\
         \hline
     \end{tabular}
 \end{table}
+
+A grounded answer returns in under two seconds end to end, of which roughly 1.3 seconds is the model generation and the remainder is embedding and the pgvector search, so the retrieval the system adds over a bare model call costs about half a second.
+The sample is small (six questions, paced to stay within the free-tier rate limit), so the figures characterize the order of magnitude rather than a precise distribution; the qualitative result --- an interactive, sub-two-second knowledge response --- is what the measurement supports.
 
 \subsection{Reliability under failure}
 \label{subsection:4.4.5}
@@ -536,23 +543,26 @@ This is the conflict policy of Section~\ref{section:5.1} demonstrated end to end
 
 A recommendation has no single ground-truth ``best'' answer, so the advisory pipeline is judged on the two properties that can be checked objectively against the canonical store plus a coverage check.
 The harness (\texttt{eval/advisory/}) seeds 12 synthetic student profiles (\texttt{eval/advisory/profiles.json}) spanning low, medium, high, and edge scores directly into the pipeline, then verifies for every recommendation that the program matches a major the student asked for (\textit{constraint satisfaction}) and that no program is presented as reachable when the applicant's score is below its reference cutoff without an explicit caution (\textit{eligibility consistency}), and per profile that a matchable student receives a recommendation while a deliberately unmatchable one receives none rather than a fabricated answer (\textit{coverage}).
-% TODO-VERIFY: run `python -m eval.advisory.run` (DB up + Gemini key) and paste constraint/eligibility/coverage rates into Table~\ref{table:eval-advisory} and FACTS.md.
+The 12 profiles produced 108 recommendations in total; their aggregate validity is reported in Table~\ref{table:eval-advisory}.
 \begin{table}[H]
     \centering
-    \caption{Advisory validity over 12 synthetic profiles}
+    \caption{Advisory validity over 12 synthetic profiles (108 recommendations)}
     \label{table:eval-advisory}
     \begin{tabular}{|p{8.5cm}|c|}
         \hline
         \textbf{Metric} & \textbf{Value} \\
         \hline
-        Constraint satisfaction (recommended major requested) & \texttt{<pending run>} \\
+        Constraint satisfaction (recommended major requested) & 108/108 = 100\% \\
         \hline
-        Eligibility consistency (no uncautioned below-cutoff pick) & \texttt{<pending run>} \\
+        Eligibility consistency (no uncautioned below-cutoff pick) & 108/108 = 100\% \\
         \hline
-        Coverage (per-profile match/no-match correct) & \texttt{<pending run>} \\
+        Coverage (per-profile match/no-match correct) & 11/12 = 92\% \\
         \hline
     \end{tabular}
 \end{table}
+
+Every recommendation the pipeline surfaced satisfied the student's major constraint and was eligibility-consistent, and the system met the coverage expectation on eleven of the twelve profiles.
+The single coverage miss is the deliberately unmatchable profile --- a student asking for medicine, which the configured schools do not offer --- for which the pipeline still returned two adjacent-program recommendations instead of declining; it is the one case where the system reaches for a near match rather than reporting none, and it is recorded as such rather than smoothed over.
 
 This automated check is complemented by a behavioral evaluation against the catalogue of 25 edge cases documented in the project's requirements (\texttt{docs/edge-case.md}), covering short answers to pending questions, multi-slot messages, profile corrections, ambiguous major terms, conflicting source data, budget filtering, and conversation control.
 In the most recent evaluation, 17 of the 25 cases were fully satisfied, 4 partially, and 4 not yet, up from 8 of 25 at an earlier baseline (Table~\ref{table:edge-cases}).

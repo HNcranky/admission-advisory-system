@@ -217,20 +217,36 @@ controlled delta. `gemini-3.5-flash` was NOT adopted: it returns empty (`has_dat
 through the json+`thinking_budget=0` path and runs 20–90 s/call (vs ~1.5 s for
 3.1-flash-lite) — unusable for interactive advisory as wired.
 
-### Axis 2 — Retrieval quality (HARNESS BUILT, NUMBERS PENDING, `eval/retrieval/`)
-Labelled set: **48 questions** from `eval/knowledge_qa/qna_corpus_eval.json`, each
-with a gold `source_chunk_id` (one relevant chunk per query). Production retrieval
-path (embed → resolve program → pgvector search → national augment); Recall@k =
-hit-rate gold chunk in top k; MRR = mean reciprocal rank.
-Run: `python -m eval.retrieval.run` (needs DB + Gemini embeddings).
-% TODO-VERIFY: run `python -m eval.retrieval.run`; record Recall@1/3/5/10 + MRR here.
+### Axis 2 — Retrieval quality (MEASURED 2026-06-23, `eval/retrieval/`)
+Labelled set: 48 questions from `eval/knowledge_qa/qna_corpus_eval.json`; **45 scored**
+(3 skipped: gold doc was a local file from another machine, absent post-reingest).
+Gold is matched at **document granularity (source URL)**, NOT chunk id — re-ingest
+reassigns chunk ids so the corpus's `source_chunk_id` no longer identifies the same
+text (verified: id 410 now holds an unrelated chunk). Recall@k = top-k chunks include
+one from the gold source document. Production retrieval path, read-only.
+Report `docs/superpowers/evals/retrieval-recall.md`:
 
-### Axis 3 — Runtime latency (HARNESS BUILT, NUMBERS PENDING, `eval/latency/`)
-Wall-clock per `KnowledgeQAService.answer` (embed→retrieve→generate) over a
-15-question sample; reports p50/p95/mean end-to-end and generation-only.
-Run: `EVAL_LATENCY_N=15 python -m eval.latency.run` (needs DB + Gemini).
-Environment-specific (network + Gemini endpoint) — record machine + date.
-% TODO-VERIFY: run `python -m eval.latency.run`; record p50/p95 e2e + generation here.
+| Metric | Value |
+|---|---|
+| Recall@1 | 0.711 |
+| Recall@3 | 0.756 |
+| Recall@5 | 0.778 |
+| Recall@10 | 0.778 |
+| MRR | 0.739 |
+
+### Axis 3 — Runtime latency (MEASURED 2026-06-23, `eval/latency/`)
+Wall-clock per `KnowledgeQAService.answer` (embed→retrieve→generate), production
+model `gemini-3.1-flash-lite`. Report `docs/superpowers/evals/latency-knowledge-qa.md`.
+**6-question sample, paced** (`EVAL_LATENCY_N=6 EVAL_CALL_DELAY_SECONDS=10`) — bigger
+unpaced runs trip the free-tier embedding/generation RPM (key-pool cooldown), so the
+sample is small; figures are order-of-magnitude, environment-specific.
+
+| Stage | p50 (ms) | p95 (ms) |
+|---|---|---|
+| End-to-end answer | 1785 | 1866 |
+| Generation only | 1268 | 1395 |
+
+Sub-2 s end-to-end; retrieval adds ~0.5 s over the bare model call.
 
 ### Axis 4 — Reliability under failure (MEASURED, `eval/reliability/`)
 Synthetic failure injection against the real `LLMGateway.run` (provider mocked,
@@ -259,15 +275,21 @@ corroboration; an equal-trust tie and a **decision-changing** cutoff (values
 straddle the applicant's score) are left **unresolved** and surfaced, never
 silently picked. This is the designed conflict policy, demonstrated end to end.
 
-### Axis 6 — Advisory recommendation validity (HARNESS BUILT, NUMBERS PENDING, `eval/advisory/`)
+### Axis 6 — Advisory recommendation validity (MEASURED 2026-06-23, `eval/advisory/`)
 **12 synthetic student profiles** (`eval/advisory/profiles.json`) seeded into the
-advisory pipeline. Deterministic checks: constraint satisfaction (recommended
-major matches a requested major), eligibility consistency (no below-cutoff program
-presented as reachable without a caution), coverage (matchable profiles get a
-recommendation; the unmatchable one gets none).
-Run: `python -m eval.advisory.run` (needs DB + Gemini; reason/policy/explain LLM).
+advisory pipeline (needs `cutoff_records` populated — `python -m ingestion.ingest_cutoffs
+--seed`, 28 rows). Report `docs/superpowers/evals/advisory-eligibility.md`. 108
+recommendations total:
+
+| Metric | Value |
+|---|---|
+| Constraint satisfaction (recommended major requested) | 108/108 = 100% |
+| Eligibility consistency (no uncautioned below-cutoff pick) | 108/108 = 100% |
+| Coverage (per-profile match/no-match correct) | 11/12 = 92% |
+
+The one coverage miss = `edge-unmatched-major` (asks for medicine, not offered by the
+configured schools): pipeline returned 2 adjacent-program recs instead of declining.
 Complements the edge-case matrix below (behavioural advisory evidence).
-% TODO-VERIFY: run `python -m eval.advisory.run`; record constraint/eligibility/coverage here.
 
 ### Axis 7 — Semantic cache (NOT MEASURED — honest limitation)
 `knowledge_qa_cache` is empty in dev and disabled by default; no hit-rate / cost /
