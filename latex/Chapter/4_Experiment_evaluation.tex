@@ -4,20 +4,20 @@
 % Target length: 17-20 pages.
 
 Chapter~\ref{chapter:Methodology} reviewed the technologies the system is built on.
-This chapter presents how they are assembled into a working system and how the result is evaluated.
-Section~\ref{section:4.1} covers the architecture and package design, Section~\ref{section:4.2} the user interface, layer interactions, and database, Section~\ref{section:4.3} the implementation libraries and measured achievements, Section~\ref{section:4.4} the subsystem-by-subsystem evaluation of correctness, retrieval quality, latency, reliability, conflict handling, and recommendation validity, and Section~\ref{section:4.5} the deployment.
+This chapter shows how they are assembled into a working system and how the result is evaluated.
+Section~\ref{section:4.1} covers the architecture and package design, Section~\ref{section:4.2} the user interface, layer interactions, and database, Section~\ref{section:4.3} the implementation libraries and measured achievements, Section~\ref{section:4.4} the subsystem-by-subsystem evaluation, and Section~\ref{section:4.5} the deployment.
 
 \section{Architecture design}
 \label{section:4.1}
 
 \subsection{Software architecture selection}
 
-The system is built as a \textit{layered, service-oriented monolith}: a single deployable application internally organized into layers (web, services, advisory pipeline, ingestion, database) with explicit boundaries between them.
-A microservice decomposition was considered and rejected.
-The functional requirements form one cohesive domain: a student message flows through routing, profile collection, retrieval, reasoning, and explanation in a single logical transaction.
-Splitting these stages across network boundaries would add serialization, partial-failure handling, and deployment complexity, with no matching scaling benefit at the system's scale.
-A monolith also keeps the vector corpus, the canonical admission records, and the chat state in one PostgreSQL instance, which the conflict-tolerance requirement (NFR-02) relies on, since conflict detection queries structured records and \gls{RAG} queries vector chunks against the same database.
-The layered internal structure preserves most of the benefits a service split would have offered --- clear interfaces, independent testability, single-responsibility modules --- without the distributed-systems cost.
+The system is built as a \textit{layered, service-oriented monolith}: one deployable application organized into layers (web, services, advisory pipeline, ingestion, database) with clear boundaries between them.
+I considered a microservice split and rejected it.
+The requirements form one domain: a student message flows through routing, profile collection, retrieval, reasoning, and explanation in a single logical transaction.
+Splitting these stages across the network would add serialization, partial-failure handling, and deployment cost, with no scaling benefit at this scale.
+A monolith also keeps the vector corpus, the canonical admission records, and the chat state in one PostgreSQL instance, which the conflict-tolerance requirement (NFR-02) needs, since conflict detection queries structured records and \gls{RAG} queries vector chunks against the same database.
+The layered structure keeps most of the benefits a service split would offer - clear interfaces, independent testability, single-responsibility modules - without the distributed-systems cost.
 
 \subsection{Overall design}
 
@@ -31,10 +31,10 @@ Figure~\ref{fig:package-overview} shows the package structure and the principal 
 \end{figure}
 
 The \texttt{web} package is the entry layer: it exposes the chat \gls{HTTP} \gls{API} and serves the interface.
-The \texttt{services} package holds the domain logic, divided into focused sub-packages --- \texttt{chat} (session, routing, dispatch), \texttt{inference} (the \gls{LLM} gateway), \texttt{knowledge} (\gls{RAG}), \texttt{conflict}, \texttt{cutoff}, \texttt{profile}, and \texttt{tracing}.
-Two further top-level packages cross-cut the services: \texttt{domain} holds the shared Pydantic models, and \texttt{observability} holds the Langfuse client and the run-trace helpers that emit a span per pipeline stage and a generation record per \gls{LLM} call.
-The advisory pipeline --- the orchestration graph, its shared state object, and the \texttt{agents} package --- is the orchestration layer driven by the chat dispatchers.
-The \texttt{ingestion} package is an independent layer feeding the database offline.
+The \texttt{services} package holds the domain logic, split into focused sub-packages - \texttt{chat} (session, routing, dispatch), \texttt{inference} (the \gls{LLM} gateway), \texttt{knowledge} (\gls{RAG}), \texttt{conflict}, \texttt{cutoff}, \texttt{profile}, and \texttt{tracing}.
+Two top-level packages cross-cut the services: \texttt{domain} holds the shared Pydantic models, and \texttt{observability} holds the Langfuse client and the run-trace helpers that emit a span per pipeline stage and a generation record per \gls{LLM} call.
+The advisory pipeline - the orchestration graph, its shared state object, and the \texttt{agents} package - is the orchestration layer driven by the chat dispatchers.
+The \texttt{ingestion} package is an independent layer that feeds the database offline.
 All layers converge on a single PostgreSQL instance.
 Dependencies point inward and downward: the web layer depends on services, services depend on the inference gateway and the database, and no lower layer depends on the web layer.
 
@@ -43,13 +43,13 @@ Dependencies point inward and downward: the web layer depends on services, servi
 Three packages carry the core logic and are described in detail.
 
 \textbf{Advisory pipeline.}
-The pipeline is defined as a LangGraph state graph over the shared state object \texttt{AgentState}.
-That single Pydantic model threads the entire run.
+The pipeline is a LangGraph state graph over the shared state object \texttt{AgentState}, a single Pydantic model that threads the whole run.
 The early stages write the parsed \texttt{student\_profile} and \texttt{retrieval\_filters}; the middle stages attach the \texttt{retrieved\_programs}, \texttt{conflict\_records}, and \texttt{resolution\_outcomes}; and the reasoning stage produces the \texttt{eligibility\_checks} and \texttt{ranked\_recommendations}.
-It also carries a \texttt{trace\_run\_id}, from which the run's observability trace identifier is derived, tying every stage's span to one run.
-Six nodes are registered and connected in a fixed linear order --- \texttt{profile}, \texttt{retrieve}, \texttt{conflict}, \texttt{reason}, \texttt{policy}, \texttt{explain} --- as shown in Figure~\ref{fig:advisory-graph} and in the wiring excerpt of Listing~\ref{lst:graph}.
-Each node is a thin function in the \texttt{agents} package that reads fields from the state, calls a service for the real work, writes its results back, and returns the state; for example, the reasoning node calls \texttt{reason\_candidates} and stores the resulting eligibility checks and ranked recommendations.
-Every node is wrapped by a \texttt{traced(...)} decorator from the tracing service that opens a per-stage observability span, so the fixed structure of the graph is exactly what makes the pipeline observable: because the edges are static rather than chosen at runtime, the stage sequence is identical on every run and each stage maps to one predictable span in the run's trace (Section~\ref{section:5.4}).
+It also carries a \texttt{trace\_run\_id} that ties every stage's span to one run.
+Six nodes run in a fixed linear order - \texttt{profile}, \texttt{retrieve}, \texttt{conflict}, \texttt{reason}, \texttt{policy}, \texttt{explain} - as shown in Figure~\ref{fig:advisory-graph} and the wiring excerpt of Listing~\ref{lst:graph}.
+Each node is a thin function in the \texttt{agents} package that reads fields from the state, calls a service for the real work, writes results back, and returns the state; the reasoning node, for example, calls \texttt{reason\_candidates} and stores the resulting eligibility checks and ranked recommendations.
+Every node is wrapped by a \texttt{traced(...)} decorator from the tracing service that opens a per-stage observability span.
+The fixed graph is what makes the pipeline observable: because the edges are static, the stage sequence is the same on every run and each stage maps to one predictable span in the trace (Section~\ref{section:5.3}).
 
 \begin{figure}[H]
     \centering
@@ -58,7 +58,7 @@ Every node is wrapped by a \texttt{traced(...)} decorator from the tracing servi
     \label{fig:advisory-graph}
 \end{figure}
 
-The wiring, reproduced verbatim in Listing~\ref{lst:graph}, makes the determinism explicit: each \texttt{add\_node} call wraps an agent function in the \texttt{traced(stage, sequence, extractor)} decorator before registering it, and the six \texttt{add\_edge} calls fix the order, leaving no conditional branch for an \gls{LLM} to choose at runtime.
+The wiring in Listing~\ref{lst:graph} makes this explicit: each \texttt{add\_node} call wraps an agent function in the \texttt{traced(stage, sequence, extractor)} decorator, and the six \texttt{add\_edge} calls fix the order, leaving no branch for an \gls{LLM} to choose at runtime.
 
 \begin{lstlisting}[language=Python,caption={Advisory pipeline wiring in \texttt{graph.py}: each node is registered through the tracing decorator and the edges fix a linear order},label=lst:graph,basicstyle=\footnotesize\ttfamily,breaklines=true,breakatwhitespace=false,columns=fullflexible,showstringspaces=false]
 builder.add_node("profile",  traced("profile",  0, extract_profile)(profile_agent))
@@ -79,14 +79,14 @@ graph = builder.compile()
 \end{lstlisting}
 
 \textbf{Inference gateway.}
-All \gls{LLM} access is funneled through the inference gateway.
-A call site builds an \texttt{InferenceRequest} and receives an \texttt{InferenceResult}; the gateway resolves a per-agent policy from the model registry (primary model, optional fallback model, retry budget) and delegates the actual call to the Gemini provider.
-The policy fields are resolved by the calling agent's name, so a high-volume step such as intent classification can run with \texttt{allow\_fallback} off and degrade to deterministic keywords, while a harder-to-reconstruct step can be granted a secondary model --- the resilience budget is allocated per call site rather than globally.
-This single entry point is where the retry, fallback, and failure-type logic of Section~\ref{section:5.2} lives, so every reasoning step in the system inherits the same resilience without repeating it.
+All \gls{LLM} access goes through the inference gateway.
+A call site builds an \texttt{InferenceRequest} and receives an \texttt{InferenceResult}; the gateway resolves a per-agent policy from the model registry (primary model, optional fallback model, retry budget) and delegates the call to the Gemini provider.
+The policy is keyed by the calling agent's name, so a high-volume step such as intent classification can run with \texttt{allow\_fallback} off and degrade to deterministic keywords, while a harder step can be granted a secondary model.
+This single entry point is where the retry, fallback, and failure-type logic of Section~\ref{section:5.1} lives, so every reasoning step inherits the same resilience without repeating it.
 
 \textbf{Ingestion pipeline.}
-The ingestion layer is orchestrated by the ingestion pipeline, which runs each source through five steps: fetch (dispatched by strategy), route (predict the document type), parse (dispatch the matching parser), extract (pull admission facts from parsed text and tables), and normalize (map raw facts to canonical records using per-school dictionaries).
-Normalized records are persisted by the database writer, which upserts each record with an \texttt{ON CONFLICT} key that includes the source \gls{URL} (\texttt{(school\_id, admission\_year, program\_id, admission\_method, source\_url)}), so a re-fetch refreshes the same publication in place while two officially disagreeing sources remain two distinct rows.
+The ingestion pipeline runs each source through five steps: fetch (dispatched by strategy), route (predict the document type), parse (dispatch the matching parser), extract (pull admission facts from parsed text and tables), and normalize (map raw facts to canonical records using per-school dictionaries).
+The database writer then upserts each record with an \texttt{ON CONFLICT} key that includes the source \gls{URL} (\texttt{(school\_id, admission\_year, program\_id, admission\_method, source\_url)}), so a re-fetch refreshes the same publication in place while two disagreeing sources stay as two distinct rows.
 The pipeline can run for one source, for all sources of a school, or for an ad-hoc \gls{URL}, matching the operator use cases of Section~\ref{subsection:2.2.2}.
 
 \section{Detailed design}
@@ -96,9 +96,9 @@ The pipeline can run for one source, for all sources of a school, or for an ad-h
 
 The interface is a single-page chat application with a two-pane layout, shown in Figure~\ref{fig:ui-landing}.
 The center pane is the conversation.
-The left pane shows the profile the system has collected so far and the latest recommendation, making the incremental profile collection visible to the student.
-An earlier draft of the system also rendered a third, right-hand pane that mirrored the six pipeline stages from the in-app trace store; that panel was retired in favor of an external observability backend, so per-stage diagnostics now live in Langfuse rather than in the student-facing interface (Section~\ref{section:5.4}).
-The student-facing surface is therefore deliberately minimal: a conversation and a running profile summary, with no operator instrumentation mixed into it.
+The left pane shows the profile collected so far and the latest recommendation, so the student can see the profile build up.
+An earlier draft also had a third, right-hand pane that mirrored the six pipeline stages from the in-app trace store; I retired that panel in favor of an external observability backend, so per-stage diagnostics now live in Langfuse rather than in the interface (Section~\ref{section:5.3}).
+The student-facing surface is therefore minimal: a conversation and a running profile summary, with no operator instrumentation in it.
 
 \begin{figure}[H]
     \centering
@@ -119,18 +119,18 @@ The student-facing surface is therefore deliberately minimal: a conversation and
 
 \subsection{Layer design}
 
-The interaction between layers is clearest in the two central flows.
+Two central flows show how the layers interact.
 
 \textbf{Advisory dispatch.}
 Figure~\ref{fig:seq-advisory} traces a student message that triggers an advisory run, and Algorithm~\ref{alg:dispatch} gives the same flow as control flow across the request thread and the background worker.
 The message endpoint in the \texttt{chat\_api} route calls the conversation service, which classifies intent, updates the profile, and decides whether to start a run.
-When a run is warranted, \texttt{start\_run} inserts a row into \texttt{chat\_advisory\_runs} in the \textit{queued} state, recording the dispatch arguments and a profile snapshot, and the endpoint returns immediately so the request does not block (NFR-04).
-The work is drained off that queue by a separate \texttt{RunQueueWorker}: it polls for the oldest queued run and claims it atomically with an \texttt{UPDATE \ldots FOR UPDATE SKIP LOCKED} statement, so several worker replicas can run without ever claiming the same row.
-Holding a claim, the worker opens the run's observability trace and hands the run to the \texttt{RunDispatcher}.
+If a run is warranted, \texttt{start\_run} inserts a row into \texttt{chat\_advisory\_runs} in the \textit{queued} state with the dispatch arguments and a profile snapshot, and the endpoint returns at once so the request does not block (NFR-04).
+A separate \texttt{RunQueueWorker} drains that queue: it polls for the oldest queued run and claims it atomically with \texttt{UPDATE \ldots FOR UPDATE SKIP LOCKED}, so several worker replicas never claim the same row.
+The worker then opens the run's observability trace and hands the run to the \texttt{RunDispatcher}.
 The dispatcher marks the run \textit{running} and invokes the LangGraph pipeline through \texttt{advisory\_runner}, where each stage emits a span and each \gls{LLM} call a generation record.
-It then persists the final answer and marks the session \textit{completed}, or, on an exception, appends a recovery message and marks the session \textit{failed}.
-The browser polls the session endpoint until the run completes and then renders the answer.
-Routing the run through a persisted queue rather than an in-process executor is what lets a run survive a restart of the web process and lets the application scale to more than one worker.
+It then saves the final answer and marks the session \textit{completed}, or, on an exception, appends a recovery message and marks the session \textit{failed}.
+The browser polls the session endpoint until the run completes, then renders the answer.
+A persisted queue rather than an in-process executor is what lets a run survive a restart of the web process and lets the application scale past one worker.
 
 \begin{figure}[H]
     \centering
@@ -167,11 +167,12 @@ Routing the run through a persisted queue rather than an in-process executor is 
 \end{algorithm}
 
 \textbf{Knowledge question answering.}
-Figure~\ref{fig:seq-knowledge} traces a factual question, and Algorithm~\ref{alg:retrieval} gives the retrieval control flow that backs it.
-This flow is implemented as a reusable LangGraph subgraph (embed $\to$ retrieve $\to$ augment $\to$ gate $\to$ generate) hidden behind the knowledge service's \texttt{answer} method, so the inline turn path, the hybrid path, and the batch fan-out all share one definition (Section~\ref{section:5.5}); a semantic cache is consulted before the subgraph runs and short-circuits a sufficiently similar earlier question (Section~\ref{section:5.6}).
-The knowledge service embeds the question, runs a vector search over the knowledge chunks scoped to the requested school and topic, and additionally retrieves national (ministry) chunks with their own separate budget, because national regulations apply to every school; the two scopes keep independent top-$k$ limits so national chunks never crowd out the school's own, and the merged set is re-sorted by score.
-If the best match falls below a confidence threshold, the service returns a ``no data'' result rather than calling the model, satisfying the honest-degradation behavior of UC-02.
-Otherwise it asks the model to answer strictly from the retrieved passages, returns no-data again if the model produces no grounded answer, and resolves the cited sources from the passages the model says it used.
+Figure~\ref{fig:seq-knowledge} traces a factual question, and Algorithm~\ref{alg:retrieval} gives the retrieval control flow behind it.
+This flow is a reusable LangGraph subgraph (embed $\to$ retrieve $\to$ augment $\to$ gate $\to$ generate) hidden behind the knowledge service's \texttt{answer} method, so the inline turn path, the hybrid path, and the batch fan-out all share one definition (Section~\ref{section:5.4}); a semantic cache runs before the subgraph and short-circuits a similar earlier question (Section~\ref{section:5.5}).
+The service embeds the question and runs a vector search over the knowledge chunks scoped to the requested school and topic, and also pulls national (ministry) chunks with a separate budget, because national rules apply to every school.
+The two scopes keep independent top-$k$ limits so national chunks never crowd out the school's own, and the merged set is re-sorted by score.
+If the best match falls below a confidence threshold, the service returns a ``no data'' result instead of calling the model, which is the honest-degradation behavior of UC-02.
+Otherwise it asks the model to answer strictly from the retrieved passages, returns no-data again if the model gives no grounded answer, and resolves the cited sources from the passages the model says it used.
 
 \begin{figure}[H]
     \centering
@@ -200,9 +201,9 @@ $d \leftarrow \textsc{Generate}(q,\ C)$ \tcp*[r]{answer strictly from $C$; JSON 
 \Return \textsc{Answer}($d.\textit{answer}$,\ \textsc{ResolveCitations}($C$,\ $d.\textit{usedSourceIds}$),\ \textit{conf})\;
 \end{algorithm}
 
-A design convention shared by every repository supports the testability requirement (NFR-05): each repository takes an injectable connection factory and performs its work over the PostgreSQL driver psycopg~\cite{psycopg} inside a \texttt{\_cursor} context manager that guarantees commit on success, rollback on exception, and connection cleanup in all cases.
-The convention is implemented once in a shared database helper and reused by every repository, shown in Listing~\ref{lst:cursor}: the nested \texttt{try} blocks commit only when the caller asked for it, roll back and re-raise on any exception, and release the connection in a \texttt{finally} that runs on every path.
-This both prevents leaked connections and lets tests substitute a connection factory bound to the isolated test database.
+One convention shared by every repository supports the testability requirement (NFR-05): each repository takes an injectable connection factory and works over the PostgreSQL driver psycopg~\cite{psycopg} inside a \texttt{\_cursor} context manager that commits on success, rolls back on exception, and cleans up the connection in all cases.
+This convention is written once in a shared database helper and reused everywhere, shown in Listing~\ref{lst:cursor}: the nested \texttt{try} blocks commit only when the caller asked, roll back and re-raise on any exception, and release the connection in a \texttt{finally} that runs on every path.
+This prevents leaked connections and lets tests substitute a connection factory bound to the isolated test database.
 
 \begin{lstlisting}[language=Python,caption={The shared \texttt{cursor} context manager guaranteeing commit/rollback/cleanup, reused by every repository's \texttt{\_cursor}},label=lst:cursor,basicstyle=\footnotesize\ttfamily,breaklines=true,breakatwhitespace=false,columns=fullflexible,showstringspaces=false]
 @contextmanager
@@ -226,7 +227,7 @@ def cursor(connection_factory, commit: bool = False):
 \subsection{Database design}
 
 The persistent state is one PostgreSQL schema built by twenty numbered, idempotent migrations (numbered \texttt{001}--\texttt{019}; two files share the \texttt{014} prefix, so the file count is one above the highest number).
-Figure~\ref{fig:erd} shows the entity-relationship structure, grouped into four areas.
+Figure~\ref{fig:erd} shows the entity-relationship structure in four areas.
 
 \begin{figure}[H]
     \centering
@@ -237,12 +238,12 @@ Figure~\ref{fig:erd} shows the entity-relationship structure, grouped into four 
 
 The \textit{ingestion working store} (\texttt{source\_registry}, \texttt{discovered\_resources}, \texttt{raw\_documents}, \texttt{extracted\_facts}) records the provenance chain from a registered source to the raw facts extracted from a fetched document.
 The \textit{canonical store} (\texttt{canonical\_admission\_records}, \texttt{cutoff\_records}) holds the normalized, query-ready admission data.
-A design decision central to conflict awareness lives here: both canonical tables are unique \textit{per source} --- the uniqueness key includes the source \gls{URL} --- so two official publications that disagree about the same program coexist as two rows rather than overwriting each other.
+The key decision for conflict awareness lives here: both canonical tables are unique \textit{per source} - the key includes the source \gls{URL} - so two official publications that disagree about the same program coexist as two rows instead of overwriting each other.
 The \textit{chat} area (\texttt{chat\_sessions}, \texttt{chat\_messages}, \texttt{chat\_advisory\_runs}) stores anonymous sessions keyed by a random token, their transcripts, and the advisory runs.
-The \texttt{advisory\_trace\_events} table from migration \texttt{011} also belongs here but is now dormant: when the in-app trace viewer was retired, its writer was removed and no rows are inserted any longer, with observability moved to the external backend of Section~\ref{section:5.4}.
-Migration \texttt{018\_advisory\_run\_queue} turns \texttt{chat\_advisory\_runs} into a durable claim-based queue by adding claim-metadata columns (\texttt{worker\_id}, \texttt{claimed\_at}, \texttt{dispatch\_args\_json}) and a partial index over queued rows, which is the table behind the run-queue worker of Section~\ref{section:4.2}.
+The \texttt{advisory\_trace\_events} table from migration \texttt{011} also belongs here but is now dormant: when the in-app trace viewer was retired, its writer was removed and no rows are inserted any longer, since observability moved to the external backend of Section~\ref{section:5.3}.
+Migration \texttt{018\_advisory\_run\_queue} turns \texttt{chat\_advisory\_runs} into a durable claim-based queue by adding claim columns (\texttt{worker\_id}, \texttt{claimed\_at}, \texttt{dispatch\_args\_json}) and a partial index over queued rows; this is the table behind the run-queue worker of Section~\ref{section:4.2}.
 The \textit{knowledge corpus} area (\texttt{knowledge\_documents}, \texttt{knowledge\_chunks}, \texttt{program\_catalog\_embeddings}) holds the \gls{RAG} documents and their 768-dimensional embeddings, indexed with \gls{HNSW} for vector search.
-The latest migration (\texttt{019\_knowledge\_qa\_cache}) adds a \texttt{knowledge\_qa\_cache} table --- itself an embedding-indexed store of past answers --- plus a companion version table, which together back the semantic answer cache of Section~\ref{section:5.6}.
+The latest migration (\texttt{019\_knowledge\_qa\_cache}) adds a \texttt{knowledge\_qa\_cache} table - an embedding-indexed store of past answers - plus a companion version table, which together back the semantic answer cache of Section~\ref{section:5.5}.
 
 \section{Application building}
 \label{section:4.3}
@@ -296,12 +297,12 @@ Table~\ref{table:libraries} lists the principal libraries and their versions, ta
 
 \subsection{Data preparation}
 
-The system is only as useful as the official data behind it, so a deliberate data-preparation stage populates two stores before any consultation: the canonical store of structured admission records and the knowledge corpus of embedded document chunks.
-Both are filled by the ingestion pipeline of Section~\ref{section:4.1} from registered official sources rather than by manual entry.
+The system is only as useful as the official data behind it, so a data-preparation stage populates two stores before any consultation: the canonical store of structured admission records and the knowledge corpus of embedded document chunks.
+Both are filled by the ingestion pipeline of Section~\ref{section:4.1} from registered official sources, not by manual entry.
 
 The structured data is crawled from the six sources seeded in \texttt{initial\_sources.json}, listed in Table~\ref{table:sources}.
 Each source carries a \textit{trust level} (1--5) and an \textit{active} flag: the two HUST cutoff sources from an aggregator are registered but inactive, kept as lower-trust fallbacks, so the active set is the four first-party university sources.
-The knowledge corpus draws on the same university pages plus a national scope seeded from eight official \gls{MOET} regulation documents in \texttt{national\_sources.json} (for example, Thông tư 08/2022/TT-BGDĐT, the national admission regulation), because ministry rules apply across every school.
+The knowledge corpus draws on the same university pages plus a national scope seeded from eight official \gls{MOET} regulation documents in \texttt{national\_sources.json} (for example, Thông tư 08/2022/TT-BGDĐT, the national admission regulation), because ministry rules apply to every school.
 
 \begin{table}[H]
     \centering
@@ -328,14 +329,14 @@ The knowledge corpus draws on the same university pages plus a national scope se
     \end{tabular}}
 \end{table}
 
-Each source is fetched over \gls{HTTP}, routed to a document type (by content type, \gls{URL} extension, and file magic bytes, with a text-density test marking a low-text \gls{PDF} as scanned and routing it through \gls{OCR}), parsed by the parser named in its \texttt{parser\_profile}, and extracted into raw facts --- programs, admission methods, subject combinations, quotas, and historical cutoff scores.
+Each source is fetched over \gls{HTTP}, routed to a document type (by content type, \gls{URL} extension, and file magic bytes, with a text-density test marking a low-text \gls{PDF} as scanned and sending it through \gls{OCR}), parsed by the parser named in its \texttt{parser\_profile}, and extracted into raw facts - programs, admission methods, subject combinations, quotas, and historical cutoff scores.
 The raw facts are then normalized against four per-school dictionaries that map the messy surface forms of official documents onto canonical identifiers.
-\texttt{programs.json} holds 25 shared canonical programs plus per-school overrides for HUST, NEU, UET, VNU-UET, and FTU, each entry pairing a canonical name with a list of aliases and a field (for example, \texttt{computer\_science} $\rightarrow$ ``Khoa học Máy tính'' with seven aliases such as ``CNTT'' and ``Công nghệ thông tin'').
-\texttt{subjects.json} enumerates 35 subject-combination codes (A00 $\rightarrow$ Toán, Vật lý, Hóa học), \texttt{methods.json} maps admission-method phrasings onto canonical method codes, and \texttt{combo\_method\_rules.json} carries regular-expression rules that infer a method from a combination code (a K0x code $\rightarrow$ a competency test).
+\texttt{programs.json} holds 25 shared canonical programs plus per-school overrides for HUST, NEU, UET, VNU-UET, and FTU, each pairing a canonical name with a list of aliases and a field (for example, \texttt{computer\_science} $\rightarrow$ ``Khoa học Máy tính'' with seven aliases such as ``CNTT'' and ``Công nghệ thông tin'').
+\texttt{subjects.json} lists 35 subject-combination codes (A00 $\rightarrow$ Toán, Vật lý, Hóa học), \texttt{methods.json} maps admission-method phrasings onto canonical method codes, and \texttt{combo\_method\_rules.json} carries regular-expression rules that infer a method from a combination code (a K0x code $\rightarrow$ a competency test).
 
 Normalized records are written to the canonical store with both their raw and canonical forms and full provenance.
-A \texttt{canonical\_admission\_records} row keeps the school, admission year, canonical and raw program names, admission method, subject combinations, quota, deadline, and tuition, alongside the \texttt{source\_url}, \texttt{source\_trust\_level}, and \texttt{confidence\_score} that the conflict logic of Section~\ref{section:5.1} later weighs; a \texttt{cutoff\_records} row similarly keeps the program, cutoff year, method, score scale, and cutoff score with the same provenance fields.
-The resulting volumes --- 156 canonical admission records, 715 cutoff records, and a 93-document knowledge corpus --- are reported in the next subsection.
+A \texttt{canonical\_admission\_records} row keeps the school, admission year, canonical and raw program names, admission method, subject combinations, quota, deadline, and tuition, plus the \texttt{source\_url}, \texttt{source\_trust\_level}, and \texttt{confidence\_score} that the conflict logic of Section~\ref{section:5.6} later weighs; a \texttt{cutoff\_records} row keeps the program, cutoff year, method, score scale, and cutoff score with the same provenance fields.
+The resulting volumes - 156 canonical admission records, 715 cutoff records, and a 93-document knowledge corpus - are reported in the next subsection.
 
 \subsection{Achievement}
 
@@ -344,8 +345,8 @@ By layer, ingestion is the largest at 6{,}909 lines, followed by the services la
 The database schema is defined by twenty idempotent migration files.
 
 The data layer is populated from real official sources.
-The canonical store holds 136 admission records for HUST and 20 for VNU-UET, together with 715 historical cutoff-score records (699 for HUST, 16 for VNU-UET) and 82 program-catalog embeddings used to resolve free-text major names.
-The knowledge corpus for grounded question answering holds 93 documents and 692 embedded chunks, drawn from HUST, NEU, VNU-UET, and national \gls{MOET} regulation documents; it grew from an initial 18 documents once a program-overview scraper and a section-aware chunking strategy were added.
+The canonical store holds 136 admission records for HUST and 20 for VNU-UET, plus 715 historical cutoff-score records (699 for HUST, 16 for VNU-UET) and 82 program-catalog embeddings used to resolve free-text major names.
+The knowledge corpus for grounded question answering holds 93 documents and 692 embedded chunks, drawn from HUST, NEU, VNU-UET, and national \gls{MOET} regulation documents; it grew from an initial 18 documents once I added a program-overview scraper and a section-aware chunking strategy.
 These figures are summarized in Table~\ref{table:achievement}.
 
 \begin{table}[H]
@@ -380,31 +381,31 @@ These figures are summarized in Table~\ref{table:achievement}.
 \subsection{Illustration of main functions}
 
 The chat interface in Figure~\ref{fig:ui-landing} greets the student and invites a free-form description of their score, intended major, and preferred region.
-As the conversation proceeds, the left pane fills with the collected profile while the background advisory run progresses, and its completion is signaled in the conversation itself.
-A completed consultation presents ranked program recommendations in the conversation pane, each with a fit assessment and, where the underlying sources disagree, an explicit note advising the student to verify against the latest official announcement.
+As the conversation proceeds, the left pane fills with the collected profile while the background advisory run progresses, and the conversation signals when it completes.
+A completed consultation presents ranked program recommendations in the conversation pane, each with a fit assessment and, where the sources disagree, a note advising the student to verify against the latest official announcement.
 
 \section{Evaluation}
 \label{section:4.4}
 
-A system that assembles ingestion, retrieval, generation, advisory reasoning, and an inference gateway cannot be judged by one aggregate number, because each part can fail in a different way and for a different reason.
-The evaluation is therefore organized by subsystem: each subsection states what is being measured, on what data, and with what metric, so the question ``how do you know this part works'' has a concrete answer for every component rather than a single test-pass count.
+A system that assembles ingestion, retrieval, generation, advisory reasoning, and an inference gateway cannot be judged by one aggregate number, since each part can fail in a different way.
+The evaluation is therefore organized by subsystem: each subsection states what is measured, on what data, and with what metric, so ``how do you know this part works'' has a concrete answer for every component rather than a single test-pass count.
 The harnesses live under \texttt{eval/}; the deterministic ones run inside the test suite (\texttt{tests/eval/}), and every run writes a report under \texttt{docs/superpowers/evals/}.
-Three axes report measured numbers (functional correctness, knowledge-QA quality, reliability, and conflict handling); the remaining axes (retrieval, latency, advisory validity) ship as reproducible harnesses whose figures are filled in from a live run, since they require the database and a metered Gemini key.
+Three axes report measured numbers (functional correctness, knowledge-QA quality, reliability, and conflict handling); the rest (retrieval, latency, advisory validity) ship as reproducible harnesses whose figures come from a live run, since they need the database and a metered Gemini key.
 
 \subsection{Functional correctness}
 \label{subsection:4.4.1}
 
-The base layer of evidence is an automated test suite that collects 1{,}123 tests across 194 test files, built with the pytest framework~\cite{pytest} and spanning unit tests of individual services, integration tests that exercise real \gls{SQL} paths, and end-to-end tests of the advisory and ingestion flows.
-The defining feature of the strategy is \textit{database isolation}: an autouse fixture redirects the entire suite to an automatically created \texttt{admission\_test} database, so integration and end-to-end tests can create, mutate, and drop data without ever touching the development database, which satisfies the testability requirement NFR-05.
-The most recent full run on the isolated database completed in approximately 14 seconds with 1{,}122 tests passing, one skipped, and no errors; the single skip is an end-to-end conflict-resolution scenario that requires an external dataset dump not committed to the repository.
-Functional correctness establishes that the code does what its units specify, but it does not establish that the AI-centric behavior is good; the following subsections measure that directly.
+The base layer of evidence is an automated test suite of 1{,}123 tests across 194 test files, built with the pytest framework~\cite{pytest} and spanning unit tests of individual services, integration tests that exercise real \gls{SQL} paths, and end-to-end tests of the advisory and ingestion flows.
+The key feature is \textit{database isolation}: an autouse fixture redirects the whole suite to an auto-created \texttt{admission\_test} database, so integration and end-to-end tests can create, mutate, and drop data without ever touching the development database, which satisfies NFR-05.
+The most recent full run completed in about 14 seconds with 1{,}122 tests passing, one skipped, and no errors; the single skip is an end-to-end conflict-resolution scenario that needs an external dataset dump not committed to the repository.
+These tests show the code does what its units specify, but not that the AI-centric behavior is good; the following subsections measure that directly.
 
 \subsection{Knowledge question-answering quality}
 \label{subsection:4.4.2}
 
-The knowledge \gls{QA} path is evaluated against a golden set of 32 human-verified cases (\texttt{eval/knowledge\_qa/golden\_set.json}), of which 26 are answerable from the supplied passages and 6 are deliberately unanswerable so that abstention can be measured.
-To isolate generation quality from retrieval noise, each case freezes the production-equivalent retrieved chunks and feeds them straight into generation, and a separate \texttt{gemini-2.5-flash} model acts as judge (the LLM-as-judge pattern).
-Four metrics are reported: \textit{faithfulness}, the fraction of answers that use only information present in the passages and invent nothing; \textit{answer correctness}, the fraction that state the expected facts; \textit{citation F1}, the harmonic mean of precision and recall of the cited source chunks against the expected ones; and \textit{abstention accuracy}, the fraction of cases where the decision to answer or to decline matches the label.
+The knowledge \gls{QA} path is evaluated against a golden set of 32 human-verified cases (\texttt{eval/knowledge\_qa/golden\_set.json}), of which 26 are answerable from the supplied passages and 6 are deliberately unanswerable so abstention can be measured.
+To separate generation quality from retrieval noise, each case freezes the production-equivalent retrieved chunks and feeds them straight into generation, and a separate \texttt{gemini-2.5-flash} model acts as judge (the LLM-as-judge pattern).
+Four metrics are reported: \textit{faithfulness}, the fraction of answers that use only information in the passages and invent nothing; \textit{answer correctness}, the fraction that state the expected facts; \textit{citation F1}, the harmonic mean of precision and recall of the cited source chunks against the expected ones; and \textit{abstention accuracy}, the fraction of cases where the decision to answer or decline matches the label.
 Table~\ref{table:eval-qa} reports the result for the production model.
 
 \begin{table}[H]
@@ -426,19 +427,19 @@ Table~\ref{table:eval-qa} reports the result for the production model.
     \end{tabular}
 \end{table}
 
-The high faithfulness and abstention scores are the load-bearing result for an advisory product: the system rarely fabricates and reliably declines when the corpus does not support an answer, so a wrong answer is far more likely to be a missing fact than an invented one.
-The same harness doubles as a model-selection tool: re-running it on the cheaper \texttt{gemini-2.5-flash-lite} dropped correctness from 0.769 to 0.615, which is the measured justification for keeping the stronger model on this task rather than a qualitative preference.
-The harness later guided a second decision: to lift a restrictive per-day request budget, the runtime was moved to the newer lightweight \texttt{gemini-3.1-flash-lite}, and re-running the evaluation confirmed it holds the quality line, scoring 1.000 faithfulness, 0.769 correctness, 0.646 citation F1, and 0.938 abstention accuracy --- on par with \texttt{gemini-2.5-flash} and well clear of the older \texttt{gemini-2.5-flash-lite}.
-This later run judged with the same lightweight model and a larger output-token budget, so it is read as a validation that the cheaper model is adequate rather than as a strictly controlled comparison, and is reported with that limitation stated.
+The high faithfulness and abstention scores are the key result for an advisory product: the system rarely fabricates and reliably declines when the corpus does not support an answer, so a wrong answer is far more likely to be a missing fact than an invented one.
+The same harness doubles as a model-selection tool: re-running it on the cheaper \texttt{gemini-2.5-flash-lite} dropped correctness from 0.769 to 0.615, which is the measured reason for keeping the stronger model on this task.
+The harness later guided a second decision: to lift a tight per-day request budget, I moved the runtime to the newer lightweight \texttt{gemini-3.1-flash-lite}, and re-running the evaluation confirmed it holds the quality line, scoring 1.000 faithfulness, 0.769 correctness, 0.646 citation F1, and 0.938 abstention accuracy - on par with \texttt{gemini-2.5-flash} and well clear of the older \texttt{gemini-2.5-flash-lite}.
+This later run judged with the same lightweight model and a larger output-token budget, so I read it as a validation that the cheaper model is adequate rather than a strictly controlled comparison, and report it with that limitation.
 
 \subsection{Retrieval quality}
 \label{subsection:4.4.3}
 
 Generation can only be faithful if retrieval surfaces the right passage, so the retriever is measured separately.
 The labelled set draws on the 48 questions of \texttt{eval/knowledge\_qa/qna\_corpus\_eval.json}, each tagged with the source document its answer was written from; that document is the retrieval ground truth.
-For every question the harness (\texttt{eval/retrieval/run.py}) runs the production retrieval path --- embed the query, resolve the program filter, search pgvector, and augment with national documents --- and records the rank of the first retrieved chunk that comes from the gold source document.
-Gold is matched at document granularity (source URL) rather than by chunk identifier, because re-ingestion reassigns chunk ids while a document's URL is stable; Recall@$k$ is then the fraction of questions whose gold document appears among the top $k$ retrieved chunks, and \gls{MRR} is the mean of $1/\text{rank}$.
-Three of the 48 questions are excluded because their gold document --- a local file ingested on a different machine --- is absent from the current corpus, leaving 45 scored questions.
+For every question the harness (\texttt{eval/retrieval/run.py}) runs the production retrieval path - embed the query, resolve the program filter, search pgvector, and augment with national documents - and records the rank of the first retrieved chunk from the gold source document.
+Gold is matched by document (source URL) rather than chunk id, because re-ingestion reassigns chunk ids while a document's URL is stable; Recall@$k$ is then the fraction of questions whose gold document appears among the top $k$ chunks, and \gls{MRR} is the mean of $1/\text{rank}$.
+Three of the 48 questions are excluded because their gold document - a local file ingested on a different machine - is absent from the current corpus, leaving 45 scored questions.
 The result is reported in Table~\ref{table:eval-retrieval}.
 \begin{table}[H]
     \centering
@@ -461,14 +462,14 @@ The result is reported in Table~\ref{table:eval-retrieval}.
     \end{tabular}
 \end{table}
 
-The retriever places a chunk from the correct document first for 71\% of questions and within the top five for 78\%, and the gap between Recall@5 and Recall@10 is nil, so when the right document is found at all it is almost always found early; the remaining misses are questions whose answer document the embedding similarity does not rank, which bounds the achievable groundedness of Section~\ref{subsection:4.4.2} from below.
+The retriever places a chunk from the correct document first for 71\% of questions and within the top five for 78\%, and Recall@5 equals Recall@10, so when the right document is found at all it is found early; the remaining misses are questions whose answer document the embedding similarity does not rank, which sets a lower bound on the groundedness of Section~\ref{subsection:4.4.2}.
 
 \subsection{Runtime latency}
 \label{subsection:4.4.4}
 
-For an interactive advisory product, response time is a first-class quality, so the knowledge-QA path is profiled end to end.
-The harness (\texttt{eval/latency/run.py}) times the production \texttt{answer} call --- embed, retrieve, generate --- over a fixed sample of the labelled corpus and reports the median (p50), the 95th percentile (p95), and the mean, separating generation-only latency on the already-retrieved chunks so the model step can be told apart from retrieval.
-Because the numbers depend on network conditions and the Gemini endpoint, the figures below are read from a single paced run rather than presented as a hardware-independent constant.
+For an interactive product, response time matters, so the knowledge-QA path is profiled end to end.
+The harness (\texttt{eval/latency/run.py}) times the production \texttt{answer} call - embed, retrieve, generate - over a fixed sample of the labelled corpus and reports the median (p50), the 95th percentile (p95), and the mean, with generation-only latency on the already-retrieved chunks separated so the model step can be told apart from retrieval.
+Because the numbers depend on network conditions and the Gemini endpoint, the figures below come from a single paced run, not a hardware-independent constant.
 \begin{table}[H]
     \centering
     \caption{Knowledge-QA latency over a six-question sample (\texttt{gemini-3.1-flash-lite})}
@@ -484,16 +485,16 @@ Because the numbers depend on network conditions and the Gemini endpoint, the fi
     \end{tabular}
 \end{table}
 
-A grounded answer returns in under two seconds end to end, of which roughly 1.3 seconds is the model generation and the remainder is embedding and the pgvector search, so the retrieval the system adds over a bare model call costs about half a second.
-The sample is small (six questions, paced to stay within the free-tier rate limit), so the figures characterize the order of magnitude rather than a precise distribution; the qualitative result --- an interactive, sub-two-second knowledge response --- is what the measurement supports.
+A grounded answer returns in under two seconds end to end, of which about 1.3 seconds is model generation and the rest is embedding and the pgvector search, so the retrieval the system adds over a bare model call costs about half a second.
+The sample is small (six questions, paced to stay within the free-tier rate limit), so the figures show the order of magnitude, not a precise distribution; the result the measurement supports is an interactive, sub-two-second knowledge response.
 
 \subsection{Reliability under failure}
 \label{subsection:4.4.5}
 
 Every \gls{LLM} call passes through one gateway, so the gateway's retry and fallback behavior is what keeps a transient Gemini failure from reaching the student.
-The reliability harness (\texttt{eval/reliability/}) injects synthetic failure modes into the \textit{real} \texttt{LLMGateway.run} while mocking only the provider, so the retry loop, the structured-output branch, and the fallback branch all execute as in production with no network and no key.
+The reliability harness (\texttt{eval/reliability/}) injects synthetic failures into the \textit{real} \texttt{LLMGateway.run} while mocking only the provider, so the retry loop, the structured-output branch, and the fallback branch all run as in production with no network and no key.
 Five scenarios cover three families: a hard \gls{API} failure on the primary model (timeout or 5xx) recovering on the fallback model; a malformed-JSON response recovering by retry and by fallback; and a no-fallback configuration whose contract is to surface \texttt{InferenceError} so the call site can degrade deterministically.
-All five scenarios recover as designed, as Table~\ref{table:eval-reliability} reports, and the harness is also asserted in the test suite (\texttt{tests/eval/reliability/}) so a regression in the gateway would break the build.
+All five recover as designed (Table~\ref{table:eval-reliability}), and the harness is also asserted in the test suite (\texttt{tests/eval/reliability/}) so a gateway regression would break the build.
 
 \begin{table}[H]
     \centering
@@ -517,11 +518,11 @@ All five scenarios recover as designed, as Table~\ref{table:eval-reliability} re
 \subsection{Conflict detection and resolution}
 \label{subsection:4.4.6}
 
-Contradictions between official sources are rare in the current corpus, so the conflict subsystem cannot be exercised by the live data alone; it is instead evaluated with controlled synthetic contradictions, which is an accepted approach for an application thesis when the real-world trigger is infrequent.
-The harness (\texttt{eval/conflict/}) injects two sources that publish different quota or cutoff values for the same program, together with agreeing controls, and drives the deterministic conflict service (detection, comparison, resolution --- no \gls{LLM}).
-Across five injected conflicts and three agreeing controls the service achieves perfect detection with no false positives (Table~\ref{table:eval-conflict}).
-The decisive behavioral result is in how it resolves: a clear trust or corroboration advantage resolves to the stronger source, whereas an equal-trust tie and a \textit{decision-changing} cutoff disagreement --- one whose competing values straddle the applicant's score and so would flip the recommendation --- are left unresolved and surfaced to the student rather than silently decided.
-This is the conflict policy of Section~\ref{section:5.1} demonstrated end to end, and the harness is asserted in the suite (\texttt{tests/eval/conflict/}).
+Contradictions between official sources are rare in the current corpus, so the live data alone cannot exercise the conflict subsystem; I evaluate it instead with controlled synthetic contradictions, an accepted approach for an application thesis when the real-world trigger is infrequent.
+The harness (\texttt{eval/conflict/}) injects two sources that publish different quota or cutoff values for the same program, plus agreeing controls, and drives the deterministic conflict service (detection, comparison, resolution - no \gls{LLM}).
+Across five injected conflicts and three agreeing controls the service detects every conflict with no false positives (Table~\ref{table:eval-conflict}).
+The key result is how it resolves: a clear trust or corroboration advantage resolves to the stronger source, whereas an equal-trust tie and a \textit{decision-changing} cutoff disagreement - one whose competing values straddle the applicant's score and would flip the recommendation - are left unresolved and surfaced to the student rather than silently decided.
+This is the conflict policy of Section~\ref{section:5.6} shown end to end, and the harness is asserted in the suite (\texttt{tests/eval/conflict/}).
 
 \begin{table}[H]
     \centering
@@ -541,9 +542,9 @@ This is the conflict policy of Section~\ref{section:5.1} demonstrated end to end
 \subsection{Advisory recommendation validity}
 \label{subsection:4.4.7}
 
-A recommendation has no single ground-truth ``best'' answer, so the advisory pipeline is judged on the two properties that can be checked objectively against the canonical store plus a coverage check.
-The harness (\texttt{eval/advisory/}) seeds 12 synthetic student profiles (\texttt{eval/advisory/profiles.json}) spanning low, medium, high, and edge scores directly into the pipeline, then verifies for every recommendation that the program matches a major the student asked for (\textit{constraint satisfaction}) and that no program is presented as reachable when the applicant's score is below its reference cutoff without an explicit caution (\textit{eligibility consistency}), and per profile that a matchable student receives a recommendation while a deliberately unmatchable one receives none rather than a fabricated answer (\textit{coverage}).
-The 12 profiles produced 108 recommendations in total; their aggregate validity is reported in Table~\ref{table:eval-advisory}.
+A recommendation has no single ground-truth ``best'' answer, so the advisory pipeline is judged on two properties that can be checked objectively against the canonical store, plus a coverage check.
+The harness (\texttt{eval/advisory/}) seeds 12 synthetic student profiles (\texttt{eval/advisory/profiles.json}) spanning low, medium, high, and edge scores into the pipeline, then verifies for every recommendation that the program matches a major the student asked for (\textit{constraint satisfaction}) and that no program is shown as reachable when the applicant's score is below its reference cutoff without a caution (\textit{eligibility consistency}), and per profile that a matchable student gets a recommendation while a deliberately unmatchable one gets none rather than a fabricated answer (\textit{coverage}).
+The 12 profiles produced 108 recommendations in total; their validity is reported in Table~\ref{table:eval-advisory}.
 \begin{table}[H]
     \centering
     \caption{Advisory validity over 12 synthetic profiles (108 recommendations)}
@@ -562,9 +563,9 @@ The 12 profiles produced 108 recommendations in total; their aggregate validity 
 \end{table}
 
 Every recommendation the pipeline surfaced satisfied the student's major constraint and was eligibility-consistent, and the system met the coverage expectation on eleven of the twelve profiles.
-The single coverage miss is the deliberately unmatchable profile --- a student asking for medicine, which the configured schools do not offer --- for which the pipeline still returned two adjacent-program recommendations instead of declining; it is the one case where the system reaches for a near match rather than reporting none, and it is recorded as such rather than smoothed over.
+The single coverage miss is the deliberately unmatchable profile - a student asking for medicine, which the configured schools do not offer - for which the pipeline still returned two adjacent-program recommendations instead of declining; it is the one case where the system reaches for a near match rather than reporting none, recorded as such.
 
-This automated check is complemented by a behavioral evaluation against the catalogue of 25 edge cases documented in the project's requirements (\texttt{docs/edge-case.md}), covering short answers to pending questions, multi-slot messages, profile corrections, ambiguous major terms, conflicting source data, budget filtering, and conversation control.
+This automated check is complemented by a behavioral evaluation against the 25 edge cases in the project's requirements (\texttt{docs/edge-case.md}), covering short answers to pending questions, multi-slot messages, profile corrections, ambiguous major terms, conflicting source data, budget filtering, and conversation control.
 In the most recent evaluation, 17 of the 25 cases were fully satisfied, 4 partially, and 4 not yet, up from 8 of 25 at an earlier baseline (Table~\ref{table:edge-cases}).
 
 \begin{table}[H]
@@ -584,22 +585,22 @@ In the most recent evaluation, 17 of the 25 cases were fully satisfied, 4 partia
     \end{tabular}
 \end{table}
 
-The four unmet cases share a single root cause: the profile model stores location and tuition as flat strings, and the reasoning stage does not yet consume them, so preferences that should soften or expand the search are not acted on.
-This cluster is carried forward as the principal item of future work in Section~\ref{section:6.2}.
+The four unmet cases share one root cause: the profile model stores location and tuition as flat strings, and the reasoning stage does not yet read them, so preferences that should soften or expand the search are not acted on.
+This is carried forward as the main item of future work in Section~\ref{section:6.2}.
 
 \subsection{Limitations of the evaluation}
 \label{subsection:4.4.8}
 
 Two components are deliberately not given a quantitative score because the data to support one does not yet exist.
-The semantic answer cache of Section~\ref{section:5.6} is disabled by default and empty in the development database, so no hit-rate, cost-saving, or latency-reduction figure can be reported honestly; producing one would require an instrumented soak with a replayed query stream, which is recorded as future work in Section~\ref{section:6.2}.
-Likewise, the advisory and edge-case judgments above measure constraint and eligibility consistency rather than subjective recommendation quality, which would need a panel of human counselors; the present evaluation establishes that recommendations are valid and safe, not that they are optimal, and that boundary is stated rather than glossed.
+The semantic answer cache of Section~\ref{section:5.5} is disabled by default and empty in the development database, so no hit-rate, cost-saving, or latency figure can be reported honestly; producing one would need an instrumented soak with a replayed query stream, recorded as future work in Section~\ref{section:6.2}.
+Likewise, the advisory and edge-case judgments above measure constraint and eligibility consistency, not subjective recommendation quality, which would need a panel of human counselors; this evaluation shows recommendations are valid and safe, not that they are optimal, and I state that boundary rather than gloss it.
 
 \section{Deployment}
 \label{section:4.5}
 
 The system is deployed with Docker Compose~\cite{docker}.
 A single service definition runs the database from the \texttt{pgvector/pgvector:pg16} image, which provides PostgreSQL~16 with the pgvector extension preinstalled, exposed on the standard port with a persistent named volume and a health check.
-Bringing up the database and waiting for its health check is a single command, after which a setup script creates the \texttt{admission} database, applies the migrations in order, verifies the expected tables, and seeds the source registry.
+One command brings up the database and waits for its health check, after which a setup script creates the \texttt{admission} database, applies the migrations in order, verifies the expected tables, and seeds the source registry.
 The web application is then served by Uvicorn.
 Ingestion is run separately through the \gls{CLI} to populate the canonical store and the knowledge corpus.
 The whole bring-up is the short sequence of Listing~\ref{lst:deploy}.
@@ -611,10 +612,10 @@ python -m ingestion.main --school vnu_uet       # populate the canonical store (
 uvicorn web.app:build_app --factory --reload    # serve the chat application
 \end{lstlisting}
 
-This separation --- a containerized database, a one-command schema setup, an application server, and an offline ingestion \gls{CLI} --- keeps the runtime dependencies minimal (a Python environment and a Docker engine) while the idempotent migrations and upsert-based ingestion let the operator refresh school data at any time during the admission season, as required by NFR-02.
+This separation - a containerized database, a one-command schema setup, an application server, and an offline ingestion \gls{CLI} - keeps the runtime dependencies minimal (a Python environment and a Docker engine), while the idempotent migrations and upsert-based ingestion let the operator refresh school data at any time during the admission season, as required by NFR-02.
 
-This chapter presented the system's layered architecture, the design of its core packages, the two-pane interface, the layer interactions behind the two central flows, the database schema, and the deployment, then evaluated the result subsystem by subsystem: functional correctness over more than 1{,}000 tests, grounded knowledge-QA quality, retrieval recall, runtime latency, gateway reliability, conflict detection, and advisory recommendation validity, each with its own data and metric.
-The evaluation showed a system that is functionally substantial, grounded and reliable where it has been measured, with the unscored cache and the subjective dimension of recommendation quality stated as explicit limitations rather than left implied.
-Chapter~\ref{chapter:SolutionAndContribution} steps back from the full system to present its principal engineering outcomes in depth.
+This chapter presented the system's layered architecture, its core packages, the two-pane interface, the two central layer flows, the database schema, and the deployment, then evaluated the result subsystem by subsystem: functional correctness over more than 1{,}000 tests, grounded knowledge-QA quality, retrieval recall, runtime latency, gateway reliability, conflict detection, and advisory recommendation validity, each with its own data and metric.
+The evaluation showed a system that is functionally substantial, grounded and reliable where measured, with the unscored cache and the subjective side of recommendation quality stated as explicit limitations.
+Chapter~\ref{chapter:SolutionAndContribution} steps back from the full system to present its main engineering outcomes in depth.
 
 \end{document}

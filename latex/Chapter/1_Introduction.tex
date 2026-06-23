@@ -58,15 +58,13 @@ Training or fine-tuning a language model is out of scope: the work concerns engi
 
 The system is built from three technologies, each matched to one of the gaps identified above.
 Grounded answering is provided by \gls{RAG}~\cite{lewis2020rag} over a vector store, so that factual replies are conditioned on ingested official documents and can cite them.
-The advisory consultation is orchestrated as a fixed LangGraph~\cite{langgraph} state graph whose six stages --- profile, retrieve, conflict, reason, policy, explain --- run in a deterministic and traceable order.
+The advisory consultation is orchestrated as a fixed LangGraph~\cite{langgraph} state graph whose six stages - profile, retrieve, conflict, reason, policy, explain - run in a deterministic and traceable order.
 All model access passes through a single resilient inference gateway, built on a hosted Gemini model~\cite{gemini}, that distinguishes hard \gls{API} failures from malformed-output failures and degrades gracefully through retries, fallbacks, and deterministic alternatives.
 
-The thesis makes three principal engineering contributions, developed in Chapter~\ref{chapter:SolutionAndContribution}.
-The first is conflict-aware data consolidation: when official sources contradict each other on quotas or cutoff scores, the system preserves every value per source and surfaces the disagreement in its recommendations instead of silently picking one, with model judgment confined to the narrow cases where it is safe.
-Such contradictions are infrequent in the current corpus, so this is best understood as a resilience feature for rare but high-impact inconsistencies: preserving per-source provenance keeps recommendations correct when revisions or conflicting publications do occur, and a synthetic evaluation (Section~\ref{section:4.4}) confirms the detection and disclosure behavior on injected conflicts.
-The second is the resilient inference gateway, which keeps the assistant usable through model outages by treating the two failure modes differently and providing a deterministic fallback for intent routing.
-The third is end-to-end ingestion of heterogeneous official sources, including a hybrid text-and-\gls{OCR} extractor with an explicit safeguard against model transcription failures on scanned documents.
-Three further contributions concern the engineering of the application itself: unified observability that makes every advisory run a single queryable trace, the declarative orchestration of the conversation and knowledge flows as reusable graphs, and a version-gated semantic cache that reuses past answers without serving stale ones.
+The thesis delivers six engineering outcomes, developed in Chapter~\ref{chapter:SolutionAndContribution}.
+Five concern building a reliable application around a hosted model: a resilient inference gateway that separates hard \gls{API} failures from malformed-output failures and degrades through retries, fallbacks, and deterministic alternatives; end-to-end ingestion of heterogeneous official sources, including a hybrid text-and-\gls{OCR} extractor with a safeguard against transcription failures on scanned documents; unified observability that makes every advisory run a single queryable trace; the declarative orchestration of the conversation and knowledge flows as reusable graphs; and a version-gated semantic cache that reuses past answers without serving stale ones.
+The sixth is conflict-aware data consolidation: when official sources contradict each other on quotas or cutoff scores, the system preserves every value per source and surfaces the disagreement instead of silently picking one.
+Such contradictions are rare in the current corpus, so this acts as a safeguard for rare but high-impact cases, confirmed on injected conflicts by a synthetic evaluation (Section~\ref{section:4.4}).
 
 The resulting system comprises more than 34{,}000 lines of Python, exercised by a suite of 1{,}123 automated tests, and is backed by a populated canonical store and knowledge corpus drawn from real official sources, as quantified in Chapter~\ref{chapter:Experiment}.
 
@@ -77,7 +75,7 @@ The remainder of this thesis is organized into five chapters.
 Chapter~\ref{chapter:Related_works} surveys the admission-information channels students rely on today, identifies their shared limitations, and from that analysis derives the system's functional and non-functional requirements as a use-case model.
 Chapter~\ref{chapter:Methodology} reviews the theoretical background and the technologies selected to meet those requirements, presenting each technology together with the requirement it serves and the alternative that was rejected.
 Chapter~\ref{chapter:Experiment} presents the design, implementation, and evaluation of the system: its layered architecture, the design of its core packages, the user interface, the database schema, and the results of testing it against an automated suite and a catalogue of conversational edge cases.
-Chapter~\ref{chapter:SolutionAndContribution} steps back from the full system to examine its contributions in depth --- three that close the gaps identified above and three that concern the engineering of the system --- each framed as a problem, a solution, and a result.
+Chapter~\ref{chapter:SolutionAndContribution} steps back from the full system to examine its six contributions in depth, each framed as a problem, a solution, and a result.
 Chapter~\ref{chapter:conclusion} concludes by assessing what was and was not achieved relative to existing products and outlines directions for future work.
 
 \end{document}

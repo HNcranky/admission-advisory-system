@@ -39,7 +39,7 @@ These channels can be compared against two strands of prior work.
 Research on \gls{LLM} reliability shows that, without access to current and authoritative context, models hallucinate factual details and produce fluent but unfaithful text~\cite{ji2023hallucination}.
 This is the failure mode that makes a general-purpose chatbot unsafe for quoting a specific quota or cutoff.
 It is also why the commercial education platforms cited above pair conversation with a grounding knowledge base rather than relying on what the model memorized in training.
-Those platforms --- Element451~\cite{element451} and Mainstay~\cite{mainstay} --- are built on dialogue frameworks such as Rasa's \gls{CALM} architecture~\cite{rasa_calm} and Google Dialogflow CX~\cite{dialogflow}.
+Those platforms - Element451~\cite{element451} and Mainstay~\cite{mainstay} - are built on dialogue frameworks such as Rasa's \gls{CALM} architecture~\cite{rasa_calm} and Google Dialogflow CX~\cite{dialogflow}.
 What none of this prior work targets is a setting in which the grounding sources themselves disagree.
 Those systems assume one institution curates one trusted corpus, whereas a Vietnamese applicant must reconcile several independent official publications that openly disagree.
 
@@ -69,7 +69,7 @@ Those systems assume one institution curates one trusted corpus, whereas a Vietn
 Three gaps recur across every channel.
 
 \begin{enumerate}
-    \item \textbf{No channel reconciles contradictory data.} Even authoritative sources disagree with each other, and every existing tool silently picks one value or presents none. In the Vietnamese context this is not an edge case --- quotas, cutoff scores, and admission methods are revised repeatedly within a single season --- so a tool that commits to one value is frequently wrong without signalling it.
+    \item \textbf{No channel reconciles contradictory data.} Even authoritative sources disagree with each other, and every existing tool silently picks one value or presents none. In the Vietnamese context this is not an edge case - quotas, cutoff scores, and admission methods are revised repeatedly within a single season - so a tool that commits to one value is frequently wrong without signalling it.
     \item \textbf{No channel combines personalization with grounding.} Human counselors personalize but do not scale, while portals scale but treat every student identically. Aggregators and generic chatbots reach any applicant, but neither weighs an individual's score, subject combination, and budget against a specific program's published requirements.
     \item \textbf{No conversational tool collects a student profile incrementally} and gates its recommendations on having sufficient data, the way a careful human counselor does. A student who states only a vague interest such as ``thích lập trình'' cannot be served a reliable recommendation until enough of a profile exists to constrain retrieval to admissible programs.
 \end{enumerate}
@@ -158,7 +158,7 @@ Explicit control actions (resetting the profile, rejecting a suggested value) an
 Only when none of these shortcuts apply is the message classified by the intent router into one of seven routes: advisory flow, knowledge question, hybrid comparison, conversational small talk, clarification, out-of-scope, or profile reset.
 
 An advisory-flow message proceeds only when all critical profile slots are filled; otherwise the system asks the next missing question.
-Once the profile is sufficient, the run is dispatched to a background worker that drives the six-stage advisory pipeline --- profile, retrieve, conflict, reason, policy, explain --- and persists the final answer, while emitting a per-stage trace to the observability backend.
+Once the profile is sufficient, the run is dispatched to a background worker that drives the six-stage advisory pipeline - profile, retrieve, conflict, reason, policy, explain - and persists the final answer, while emitting a per-stage trace to the observability backend.
 The chat interface polls for the result and renders the recommendation.
 
 \subsection{Solution architecture overview}
@@ -167,7 +167,7 @@ The chat interface polls for the result and renders the recommendation.
 Before the detailed requirements that follow, Figure~\ref{fig:system-architecture} summarizes how the system is designed and how it turns a student message into a grounded answer; the chosen technologies and their rationale are the subject of Chapter~\ref{chapter:Methodology}, and the package-level design of Chapter~\ref{chapter:Experiment}.
 
 The design separates an \textit{offline ingestion} path from an \textit{online runtime}, joined by one shared datastore.
-Ingestion fetches, routes, parses, extracts, and normalizes official sources --- school admission pages, proposal \gls{PDF}s, and \gls{MOET} regulations --- into a single PostgreSQL instance with the pgvector extension, which holds both the canonical store (admission and cutoff records, one row per source) and the knowledge corpus (document chunks and their embeddings).
+Ingestion fetches, routes, parses, extracts, and normalizes official sources - school admission pages, proposal \gls{PDF}s, and \gls{MOET} regulations - into a single PostgreSQL instance with the pgvector extension, which holds both the canonical store (admission and cutoff records, one row per source) and the knowledge corpus (document chunks and their embeddings).
 Scanned documents pass through a hybrid text-and-\gls{OCR} extractor so that image-only pages still reach the store.
 
 At runtime, every student message is first parsed for profile values and deterministic control actions, then classified by an intent router into one of the conversation routes.
@@ -176,7 +176,7 @@ An \textit{advisory} message runs the six-stage pipeline, which retrieves candid
 A \textit{knowledge} question runs retrieval-augmented generation: the question is embedded, the most similar corpus chunks are retrieved, a confidence gate decides whether the evidence is sufficient, and an answer is generated strictly from the retrieved passages with citations.
 A \textit{hybrid} question combines both and synthesizes one comparison.
 Similarity in the knowledge path is measured as cosine similarity between the question embedding and the chunk embeddings, computed by pgvector over a \gls{HNSW} index, so the nearest passages are found without scanning the whole corpus.
-All model calls --- routing, reasoning, embedding, and \gls{OCR} --- pass through a single Gemini gateway, and every stage emits a span to the observability backend, so the same fixed flow that produces the answer also produces its trace.
+All model calls - routing, reasoning, embedding, and \gls{OCR} - pass through a single Gemini gateway, and every stage emits a span to the observability backend, so the same fixed flow that produces the answer also produces its trace.
 
 \begin{figure}[H]
     \centering
@@ -195,7 +195,7 @@ Extended specifications, including the full slot-by-slot dialogue obligations de
 
 \begin{table}[H]
     \centering
-    \caption{Specification of UC-01 --- Advisory consultation}
+    \caption{Specification of UC-01 - Advisory consultation}
     \label{table:uc01}
     \begin{tabular}{|p{3.2cm}|p{10.3cm}|}
         \hline
@@ -226,13 +226,13 @@ Extended specifications, including the full slot-by-slot dialogue obligations de
 
 Two of the critical slots deserve comment.
 The system distinguishes \textit{explicitly chosen majors} from \textit{interest tags inferred} from phrases such as ``thích lập trình'': inferred interests satisfy the major slot for retrieval purposes but are never treated as a confirmed program choice.
-The optional slots --- location preference and tuition budget --- are collected when volunteered but do not block the consultation.
+The optional slots - location preference and tuition budget - are collected when volunteered but do not block the consultation.
 
 \subsection{UC-02: Knowledge question answering}
 
 \begin{table}[H]
     \centering
-    \caption{Specification of UC-02 --- Knowledge question answering}
+    \caption{Specification of UC-02 - Knowledge question answering}
     \label{table:uc02}
     \begin{tabular}{|p{3.2cm}|p{10.3cm}|}
         \hline
@@ -266,7 +266,7 @@ National-regulation passages are retrieved under their own \texttt{KNOWLEDGE\_QA
 
 \begin{table}[H]
     \centering
-    \caption{Specification of UC-03 --- Hybrid comparison}
+    \caption{Specification of UC-03 - Hybrid comparison}
     \label{table:uc03}
     \begin{tabular}{|p{3.2cm}|p{10.3cm}|}
         \hline
@@ -296,7 +296,7 @@ Skipping the advisory path when only factual topics are requested (A1) keeps a p
 
 \begin{table}[H]
     \centering
-    \caption{Specification of UC-04 --- Profile reset and correction}
+    \caption{Specification of UC-04 - Profile reset and correction}
     \label{table:uc04}
     \begin{tabular}{|p{3.2cm}|p{10.3cm}|}
         \hline
@@ -325,7 +325,7 @@ Re-running the full pipeline after a correction, rather than patching the previo
 
 \begin{table}[H]
     \centering
-    \caption{Specification of UC-05 --- Data ingestion run}
+    \caption{Specification of UC-05 - Data ingestion run}
     \label{table:uc05}
     \begin{tabular}{|p{3.2cm}|p{10.3cm}|}
         \hline
@@ -359,33 +359,33 @@ Writing one row per source in step~5, instead of overwriting a shared key, is th
 The functional behavior above is constrained by six non-functional requirements.
 
 \begin{description}
-    \item[NFR-01 --- Graceful degradation under \gls{LLM} outage.]
+    \item[NFR-01 - Graceful degradation under \gls{LLM} outage.]
     Every \gls{LLM}-backed step must have a deterministic fallback, because the assistant depends on an external inference service with quotas and transient failures.
     Intent classification falls back to keyword rules, knowledge answering degrades to an honest ``no data'' reply, and structured-output failures are retried or routed to fallback models rather than surfaced as crashes.
     An advisory consultation must never silently stall because one classification call failed.
     Concretely, every model call routes through a single inference gateway, and when that gateway is unavailable intent classification falls back to a deterministic keyword router.
 
-    \item[NFR-02 --- Conflict tolerance and data freshness.]
+    \item[NFR-02 - Conflict tolerance and data freshness.]
     The store must preserve disagreeing values rather than overwrite them: canonical records are unique per source, so two official publications quoting different quotas coexist as two rows with provenance.
     Recommendations built on conflicting data must disclose the conflict and recommend checking the latest official announcement.
     Ingestion must be re-runnable at any time, with idempotent migrations and upsert semantics, so the operator can refresh a school during the admission season.
     Per-source coexistence is enforced by a \texttt{UNIQUE (school\_id, admission\_year, program\_id, admission\_method, source\_url)} constraint introduced in the per-source canonical-records migration, and every migration script is numbered and idempotent so it can be replayed without error.
 
-    \item[NFR-03 --- Anonymity.]
+    \item[NFR-03 - Anonymity.]
     Students must be able to use the assistant without registering: sessions are identified only by a random token, and the collected profile contains academic attributes (scores, preferred majors) rather than personal identifiers.
     The token is minted as a random URL-safe string by the chat session service, so no email, name, or device identifier is ever requested.
 
-    \item[NFR-04 --- Responsiveness.]
+    \item[NFR-04 - Responsiveness.]
     A full advisory run involves several \gls{LLM} calls and database queries and may take tens of seconds.
     The message endpoint must therefore acknowledge immediately and execute the run on a background executor, while the interface polls for completion and shows per-stage progress instead of a frozen screen.
     In practice the endpoint persists a queued row in \texttt{chat\_advisory\_runs} and returns at once, and a background \texttt{RunQueueWorker} claims pending runs with \texttt{SKIP LOCKED} before driving the pipeline, so multiple workers never execute the same run.
 
-    \item[NFR-05 --- Testability.]
+    \item[NFR-05 - Testability.]
     The test suite must run against an isolated database that is created automatically and never touches development data, so that integration tests can exercise real \gls{SQL} paths safely.
     This isolation is provided by an autouse fixture in the test configuration, which redirects the shared database name to \texttt{admission\_test} before any test opens a connection.
     Repositories must accept injectable connection factories so tests can substitute fixtures.
 
-    \item[NFR-06 --- Crawling resilience.]
+    \item[NFR-06 - Crawling resilience.]
     Several official Vietnamese sources, including government domains, serve broken \gls{TLS} certificate chains.
     The fetcher must be able to proceed with verification disabled by explicit configuration, and every such fetch must be logged so the relaxation is visible rather than silent.
     This is the \texttt{ADVISORY\_FETCH\_VERIFY\_SSL} flag honored by the HTTP fetcher, which emits a warning on every request made with certificate verification turned off.

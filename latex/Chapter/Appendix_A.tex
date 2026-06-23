@@ -7,88 +7,88 @@ Each scenario is given as a precondition, a user action, and the required system
 
 \section*{A.1 Profile collection scenarios}
 
-\textbf{UC-01.1 --- Short answer to the pending question.}
+\textbf{UC-01.1 - Short answer to the pending question.}
 \textit{Precondition:} the system has asked for one specific slot, for example the admission year.
 \textit{User action:} the student replies with a bare value such as ``2026''.
 \textit{Required behavior:} the value is parsed deterministically and written to the pending slot without invoking the general intent router or re-extracting the whole profile; the system then asks for the next missing critical slot.
 
-\textbf{UC-01.2 --- Off-slot but valid information.}
+\textbf{UC-01.2 - Off-slot but valid information.}
 \textit{Precondition:} the system has asked for the subject combination.
 \textit{User action:} the student answers a different but valid slot, for example naming a preferred major.
 \textit{Required behavior:} the provided value is stored, and the still-unanswered pending slot is asked again rather than treated as answered.
 
-\textbf{UC-01.3 --- Multiple slots in one message.}
+\textbf{UC-01.3 - Multiple slots in one message.}
 \textit{Precondition:} the system has asked for the subject combination.
 \textit{User action:} the student replies ``Em thi A01, với muốn học ở Hà Nội thôi''.
 \textit{Required behavior:} both the subject combination and the location preference are extracted and written in the same turn, regardless of which slot was pending.
 
-\textbf{UC-01.4 --- Invalid data.}
+\textbf{UC-01.4 - Invalid data.}
 \textit{Precondition:} the system has asked for the total score.
 \textit{User action:} the student supplies a value outside the valid range for the admission method.
 \textit{Required behavior:} the value is rejected with an explanation of the valid range, and the slot remains unfilled.
 
 \section*{A.2 Profile modification scenarios}
 
-\textbf{UC-01.5 --- Score correction after a recommendation.}
+\textbf{UC-01.5 - Score correction after a recommendation.}
 \textit{Precondition:} the system has produced a ranked recommendation using a score of 27.0.
 \textit{User action:} the student corrects the score to 25.75.
 \textit{Required behavior:} the old value is replaced, the previous ranking is not treated as still valid, the advisory pipeline is re-run on the new score, and the reply explains that the ordering changed because the input changed.
 
-\textbf{UC-01.6 --- Adding a major without replacing existing ones.}
+\textbf{UC-01.6 - Adding a major without replacing existing ones.}
 \textit{Precondition:} the profile already lists one preferred major.
 \textit{User action:} the student names an additional major.
 \textit{Required behavior:} the new major is appended to the preferred-majors list; the existing major is retained.
 
-\textbf{UC-01.7 --- Relaxing a constraint.}
+\textbf{UC-01.7 - Relaxing a constraint.}
 \textit{Precondition:} the location preference is set to a single city.
 \textit{User action:} the student widens it, for example ``miền Bắc cũng được''.
 \textit{Required behavior:} the location preference is updated and the candidate search space is widened accordingly.
 
 \section*{A.3 Intent, grounding, and comparison scenarios}
 
-\textbf{UC-01.8 --- Inferred interest versus chosen major.}
+\textbf{UC-01.8 - Inferred interest versus chosen major.}
 \textit{Precondition:} none.
 \textit{User action:} the student says ``thích lập trình với AI''.
 \textit{Required behavior:} only inferred interest tags are recorded; no major is treated as confirmed until the student names one explicitly, at which point it is recorded as an explicit preferred major.
 
-\textbf{UC-02.1 --- Grounded factual answer.}
+\textbf{UC-02.1 - Grounded factual answer.}
 \textit{Precondition:} the knowledge corpus contains documents for the queried school and topic.
 \textit{User action:} the student asks a factual question such as ``Học phí UET bao nhiêu?''.
 \textit{Required behavior:} the answer is generated only from retrieved passages and is accompanied by citations to their source documents.
 
-\textbf{UC-02.2 --- Insufficient evidence.}
+\textbf{UC-02.2 - Insufficient evidence.}
 \textit{Precondition:} no sufficiently relevant passage exists for the question.
 \textit{User action:} the student asks a factual question outside the corpus.
 \textit{Required behavior:} the system replies that it has no data for the question instead of fabricating an answer.
 
-\textbf{UC-02.3 --- Scoped retrieval with a national-regulation budget.}
+\textbf{UC-02.3 - Scoped retrieval with a national-regulation budget.}
 \textit{Precondition:} the question is scoped to one school, and the corpus holds both that school's documents and national-scope regulations published by the Ministry of Education and Training (stored under the \texttt{MOET} scope sentinel).
 \textit{User action:} the student asks a topic question, for example about the admission methods a school accepts.
 \textit{Required behavior:} the school-scoped vector search runs first, and a separate national-scope search runs with its own retrieval budget; the two result sets are merged and re-ranked by score, so ministry passages can contribute to the answer without crowding out the school's own passages, and the answer remains grounded only in the retrieved text.
 
-\textbf{UC-02.4 --- Pronoun-scoped question resolved from the profile.}
+\textbf{UC-02.4 - Pronoun-scoped question resolved from the profile.}
 \textit{Precondition:} the conversation has collected a preferred school into the profile.
 \textit{User action:} the student asks an elided question such as ``Học phí trường này?'' (``How much is tuition at this school?'').
 \textit{Required behavior:} the pronoun ``trường này'' is resolved to the school recorded in the profile, and the factual lookup is scoped to it; when no preferred school is present, the system does not guess but routes to a clarifying question naming the missing field rather than answering for an arbitrary school.
 
-\textbf{UC-03.1 --- Hybrid comparison fan-out across schools and topics.}
+\textbf{UC-03.1 - Hybrid comparison fan-out across schools and topics.}
 \textit{Precondition:} the question compares two schools and needs both admission-chance data and factual school information.
 \textit{User action:} the student asks, for example, to compare two named schools on both cutoff competitiveness and tuition.
 \textit{Required behavior:} the advisory branch and the knowledge branch run concurrently; the knowledge branch fans out one grounded lookup per (school, topic) pair, each lookup failing independently into a no-data block so that one missing school does not sink the others; a synthesis step then merges the advisory evidence and the factual evidence into a single answer that presents the two clearly separated sections and lists de-duplicated sources.
 
-\textbf{UC-03.2 --- Factual-only hybrid with the advisory path skipped.}
+\textbf{UC-03.2 - Factual-only hybrid with the advisory path skipped.}
 \textit{Precondition:} the question compares schools but raises no admission-chance sub-question.
 \textit{User action:} the student asks only to compare a factual attribute, for example tuition, across two schools.
 \textit{Required behavior:} the advisory branch is not started, only the per-school knowledge lookups run, and the synthesis reports that the admission-data section has no content rather than inventing an admission-chance assessment for a question that did not ask for one.
 
 \section*{A.4 Conflict and safety scenarios}
 
-\textbf{UC-01.9 --- Conflicting source data.}
+\textbf{UC-01.9 - Conflicting source data.}
 \textit{Precondition:} two sources record different quotas (or cutoff scores) for the same recommended program.
 \textit{User action:} the program is included in a recommendation.
 \textit{Required behavior:} the recommendation discloses the conflict, names the differing values, and advises the student to verify against the latest official announcement.
 
-\textbf{UC-01.10 --- No fully matching program.}
+\textbf{UC-01.10 - No fully matching program.}
 \textit{Precondition:} no candidate satisfies all of the student's constraints.
 \textit{User action:} the student requests recommendations.
 \textit{Required behavior:} the system states which criteria could not be satisfied and suggests which constraint to relax, rather than returning an empty or misleadingly confident result.
@@ -97,17 +97,17 @@ Each scenario is given as a precondition, a user action, and the required system
 
 These scenarios describe the offline pipeline that populates the canonical store, rather than a turn of the advisory conversation. Each source is fetched, routed, parsed, extracted, normalized, and persisted with provenance.
 
-\textbf{UC-05.1 --- Ingest all sources of one school.}
+\textbf{UC-05.1 - Ingest all sources of one school.}
 \textit{Precondition:} a school is registered with several active sources.
 \textit{User action:} an operator runs the pipeline for that school.
 \textit{Required behavior:} every active source is processed through the full fetch-to-normalize chain, and the resulting records are persisted with their provenance (source identifier, source URL, school, and trust level) using an idempotent upsert keyed per source, so a re-run updates rather than duplicates; a source that fails is logged and skipped while the remaining sources continue, rather than aborting the whole school.
 
-\textbf{UC-05.2 --- Scanned-PDF source needing OCR.}
+\textbf{UC-05.2 - Scanned-PDF source needing OCR.}
 \textit{Precondition:} a source is a PDF whose pages have no usable text layer.
 \textit{User action:} the source is ingested.
-\textit{Required behavior:} pages with a sufficiently long text layer are taken as-is, while image-only pages are rendered to an image and transcribed through the inference gateway; an output that is the product of a repetition loop --- detected by an excessive length or a single dominant character --- is rejected and retried once at a higher temperature, and if it is still degenerate that one page is isolated as failed while the other pages proceed; if the document yields no text at all, the run raises rather than silently marking the document ingested, so the failure is not hidden by a later content-hash skip.
+\textit{Required behavior:} pages with a sufficiently long text layer are taken as-is, while image-only pages are rendered to an image and transcribed through the inference gateway; an output that is the product of a repetition loop - detected by an excessive length or a single dominant character - is rejected and retried once at a higher temperature, and if it is still degenerate that one page is isolated as failed while the other pages proceed; if the document yields no text at all, the run raises rather than silently marking the document ingested, so the failure is not hidden by a later content-hash skip.
 
-\textbf{UC-05.3 --- Source with no extractable facts.}
+\textbf{UC-05.3 - Source with no extractable facts.}
 \textit{Precondition:} a source is reachable and parses, but contains no admission facts the extractor recognizes.
 \textit{User action:} the source is ingested.
 \textit{Required behavior:} the run completes with a warning and writes nothing to the canonical store, rather than persisting empty or fabricated records.
@@ -126,13 +126,13 @@ EC-03 & Multiple slots filled in one message & UC-01.3 & Satisfied \\
 EC-04 & Out-of-range value rejected & UC-01.4 & Satisfied \\
 EC-05 & Score correction replaces value and re-ranks & UC-01.5 & Satisfied \\
 EC-06 & Added major appended, not replacing existing & UC-01.6 & Satisfied \\
-EC-07 & Removing a major from the list & --- & Not yet \\
+EC-07 & Removing a major from the list & - & Not yet \\
 EC-08 & Relaxing a location constraint to a soft preference & UC-01.7 & Not yet \\
 EC-09 & Inferred interest not treated as a chosen major & UC-01.8 & Satisfied \\
-EC-10 & Short token not mis-matched to a wrong major & --- & Satisfied \\
-EC-11 & Out-of-taxonomy major kept as an unresolved mention & --- & Not yet \\
-EC-12 & High score but unsupported subject combination & --- & Satisfied \\
-EC-13 & Score present but admission method unknown & --- & Satisfied \\
+EC-10 & Short token not mis-matched to a wrong major & - & Satisfied \\
+EC-11 & Out-of-taxonomy major kept as an unresolved mention & - & Not yet \\
+EC-12 & High score but unsupported subject combination & - & Satisfied \\
+EC-13 & Score present but admission method unknown & - & Satisfied \\
 \hline
 \end{tabular}
 
@@ -140,18 +140,18 @@ EC-13 & Score present but admission method unknown & --- & Satisfied \\
 \hline
 \textbf{Case} & \textbf{Requirement} & \textbf{Scenario} & \textbf{Status} \\
 \hline
-EC-14 & Score on the cutoff border, no over-confident claim & --- & Satisfied \\
-EC-15 & Volatile historical cutoffs lower the certainty & --- & Satisfied \\
+EC-14 & Score on the cutoff border, no over-confident claim & - & Satisfied \\
+EC-15 & Volatile historical cutoffs lower the certainty & - & Satisfied \\
 EC-16 & Two sources disagree on the cutoff & UC-01.9 & Satisfied \\
 EC-17 & Quota conflict not affecting eligibility & UC-01.9 & Satisfied \\
-EC-18 & No data for the requested admission year & --- & Satisfied \\
-EC-19 & Good academic fit but over budget & --- & Partial \\
-EC-20 & Budget stated as a soft, non-strict preference & --- & Not yet \\
-EC-21 & User stops the advisory flow mid-collection & --- & Satisfied \\
-EC-22 & User asks to restart the profile & --- & Satisfied \\
+EC-18 & No data for the requested admission year & - & Satisfied \\
+EC-19 & Good academic fit but over budget & - & Partial \\
+EC-20 & Budget stated as a soft, non-strict preference & - & Not yet \\
+EC-21 & User stops the advisory flow mid-collection & - & Satisfied \\
+EC-22 & User asks to restart the profile & - & Satisfied \\
 EC-23 & User asks why a recommendation changed & UC-01.5 & Partial \\
 EC-24 & No program satisfies all constraints & UC-01.10 & Satisfied \\
-EC-25 & Missing tuition data ranked as unknown, not satisfied & --- & Partial \\
+EC-25 & Missing tuition data ranked as unknown, not satisfied & - & Partial \\
 \hline
 \end{tabular}
 

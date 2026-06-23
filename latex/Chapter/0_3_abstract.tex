@@ -8,7 +8,7 @@
 
 Information about university admission in Vietnam is fragmented across each university's own pages, proposal documents published as \gls{PDF} files, and separate ministry regulations.
 It is also unstable and internally inconsistent: documents are revised through the admission season, and independent sources state different quotas and cutoff scores for the same program.
-Existing channels handle this poorly --- official pages are authoritative but unreconciled, aggregator portals strip provenance, and general-purpose chatbots fabricate specific figures --- and none reconciles contradictory data or combines grounded answers with gradual personalization.
+Existing channels handle this poorly - official pages are authoritative but unreconciled, aggregator portals strip provenance, and general-purpose chatbots fabricate specific figures - and none reconciles contradictory data or combines grounded answers with gradual personalization.
 
 This thesis presents an end-to-end system that addresses these problems for the Vietnamese admission context.
 The system ingests official sources through a configurable pipeline, normalizes them into a canonical store that preserves contradictory values per source rather than overwriting them, and serves a Vietnamese-language advisory chat over that store.
@@ -18,11 +18,9 @@ A hosted large language model was chosen so the work could focus on engineering 
 Every model call passes through a single gateway.
 The gateway separates hard \gls{API} failures from malformed-output failures and degrades gracefully through retries, fallbacks, and deterministic alternatives.
 
-The thesis makes three main contributions to the admission domain.
-The first is conflict-aware consolidation, which surfaces contradictory source data instead of hiding it.
-The second is a resilient inference gateway that keeps the assistant available when the model fails.
-The third is end-to-end ingestion of heterogeneous and scanned sources, with a safeguard against model transcription failures.
-Three engineering contributions support these: unified observability over every advisory run, the declarative orchestration of the conversation and knowledge flows as reusable graphs, and a version-gated semantic answer cache.
+The thesis delivers six engineering outcomes.
+Five make the application reliable and maintainable: a resilient inference gateway that keeps the assistant available when the model fails, end-to-end ingestion of heterogeneous and scanned sources with a safeguard against transcription failures, unified observability over every advisory run, the declarative orchestration of the conversation and knowledge flows as reusable graphs, and a version-gated semantic answer cache.
+The sixth, conflict-aware consolidation, surfaces contradictory source data instead of hiding it.
 The implemented system comprises about 34{,}000 lines of Python verified by 1{,}123 automated tests, over a canonical store and knowledge corpus built from real official sources of HUST, NEU, VNU-UET, and the Ministry of Education and Training.
 
 \begin{flushright}

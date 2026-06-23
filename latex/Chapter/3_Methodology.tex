@@ -11,7 +11,7 @@ Section~\ref{section:3.1} covers large language models and structured output, Se
 \section{Large language models and structured output}
 \label{section:3.1}
 
-The system needs natural-language reasoning at several points --- intent classification, conflict tie-breaking, knowledge answering, and \gls{OCR} --- without the budget to train a model for each.
+The system needs natural-language reasoning at several points - intent classification, conflict tie-breaking, knowledge answering, and \gls{OCR} - without the budget to train a model for each.
 A \gls{LLM} makes this feasible through two post-training properties.
 \textit{Instruction tuning} fine-tunes a base model on instruction--response pairs so it follows natural-language directions~\cite{ouyang2022instruct}, and \textit{in-context learning} lets a sufficiently large model perform a new task from instructions and a few examples in its prompt, with no parameter update~\cite{brown2020fewshot}.
 The underlying Transformer architecture lets every token attend to every other token~\cite{vaswani2017attention}, so a whole retrieved passage or a full profile can be reasoned over in one prompt.
@@ -24,7 +24,7 @@ Three prompting techniques recur.
     \item \textit{Few-shot} prompting adds worked exemplars where the output is easier to show than to specify.
     \item \textit{Chain-of-thought} prompting asks for intermediate reasoning before the answer~\cite{wei2022cot}, which helps the conflict tie-breaking and final-explanation steps, because both must justify a decision rather than only state it.
 \end{itemize}
-Decoding is left at the provider's defaults, except that a degenerate transcription is retried at a higher \textit{temperature} to break a repetition loop, a mechanism returned to in Section~\ref{section:3.4} and Section~\ref{section:5.3}.
+Decoding is left at the provider's defaults, except that a degenerate transcription is retried at a higher \textit{temperature} to break a repetition loop, a mechanism returned to in Section~\ref{section:3.4} and Section~\ref{section:5.2}.
 
 A bare \gls{LLM} remains prone to \textit{hallucination}: fluent but unsupported statements never present in its input~\cite{ji2023hallucination}.
 For an advisory system whose output must reflect official data this is the central risk, and two decisions in this chapter contain it: grounding the model on retrieved passages (Section~\ref{section:3.2}) and validating its output against an expected schema.
@@ -33,17 +33,17 @@ The multimodal capability is what lets the same interface serve both text reason
 A hosted model was preferred over a self-hosted open-weight one because the project's goal is engineering a reliable system around an external model, not training one.
 The cost is a dependency on a quota-limited service that can fail at times, which directly motivates the graceful-degradation requirement NFR-01.
 
-Where a step's result feeds downstream code, the prompt requests \textit{structured output} --- strict \gls{JSON} parsed into a typed object.
+Where a step's result feeds downstream code, the prompt requests \textit{structured output} - strict \gls{JSON} parsed into a typed object.
 Such a response can pass the network layer cleanly yet be unusable: prose around the \gls{JSON}, malformed syntax, or an out-of-range value.
 The system therefore distinguishes a \textit{hard \gls{API} failure} (network, authentication, rate limit) from a \textit{structure failure} (a successful call whose body cannot be parsed), recorded as the \texttt{failure\_type} field on the gateway's result.
-A \texttt{STRUCTURE\_FAILURE} is retried and then escalated to a fallback model, whereas a hard failure stops retrying immediately; the full policy is treated as a contribution in Section~\ref{section:5.2}.
+A \texttt{STRUCTURE\_FAILURE} is retried and then escalated to a fallback model, whereas a hard failure stops retrying immediately; the full policy is treated as a contribution in Section~\ref{section:5.1}.
 
 \section{Retrieval-augmented generation and vector search}
 \label{section:3.2}
 
 A bare \gls{LLM} cannot answer questions about current admission documents: the information postdates or never entered its training data, and asking directly invites fabrication.
 Retrieval-augmented generation (\gls{RAG}) retrieves relevant passages from an external corpus and conditions the answer on them~\cite{lewis2020rag}.
-A survey frames \gls{RAG} as a design space rather than one recipe~\cite{gao2023ragsurvey}; this system adopts the simplest effective point in it --- retrieve-then-read over a frozen retriever and generator --- because the corpus is small and the goal is grounding, not retrieval training.
+A survey frames \gls{RAG} as a design space rather than one recipe~\cite{gao2023ragsurvey}; this system adopts the simplest effective point in it - retrieve-then-read over a frozen retriever and generator - because the corpus is small and the goal is grounding, not retrieval training.
 This serves UC-02: the knowledge step retrieves passages from ingested official documents, answers only from them with citations, and returns nothing when they are insufficient.
 
 Retrieval uses \textit{semantic vector search} over \textit{embeddings}: dense vectors in which semantic similarity becomes geometric proximity~\cite{reimers2019sbert}, the basis of dense passage retrieval for question answering~\cite{karpukhin2020dpr}.
@@ -61,7 +61,7 @@ Integrating vectors into the one PostgreSQL instance keeps the knowledge corpus,
 \section{Agentic pipelines}
 \label{section:3.3}
 
-The advisory consultation is not one \gls{LLM} call but a sequence of stages --- profile completion, candidate retrieval, conflict checking, eligibility ranking, policy application, and explanation --- and coordinating them is the role of an \textit{agentic pipeline}.
+The advisory consultation is not one \gls{LLM} call but a sequence of stages - profile completion, candidate retrieval, conflict checking, eligibility ranking, policy application, and explanation - and coordinating them is the role of an \textit{agentic pipeline}.
 Such designs span a spectrum: at one end an autonomous tool-use loop where the model decides each next action, at the other a fixed workflow whose stage order is set in advance~\cite{wang2024agentsurvey}.
 The concrete autonomous alternative is a \textit{ReAct}-style loop that interleaves reasoning with tool calls~\cite{yao2023react}; it is flexible but decides its control flow at run time, so two runs on the same input can diverge.
 That non-determinism is a poor fit here: a consultation must be reproducible so a profile correction's effect is attributable (UC-04, NFR-02), and it must expose a fixed per-stage trace to operators.
@@ -71,21 +71,26 @@ The advisory pipeline is a fixed linear graph over the six stages, threaded by o
 A fixed graph is chosen for three reasons that map onto Chapter~\ref{chapter:Related_works}:
 
 \begin{itemize}
-    \item \textit{determinism} --- the same profile yields the same stage sequence, so a correction's effect is attributable (UC-04, NFR-02);
-    \item \textit{traceability} --- named static stages can each emit a span to the observability backend (Section~\ref{section:5.4});
-    \item \textit{separation of concerns} --- each stage is an independently testable single-responsibility function (NFR-05).
+    \item \textit{determinism} - the same profile yields the same stage sequence, so a correction's effect is attributable (UC-04, NFR-02);
+    \item \textit{traceability} - named static stages can each emit a span to the observability backend (Section~\ref{section:5.3});
+    \item \textit{separation of concerns} - each stage is an independently testable single-responsibility function (NFR-05).
 \end{itemize}
 
-The cost is reduced flexibility --- the graph cannot improvise a new stage order --- but the advisory task has a stable shape, so the system sits deliberately at the structured end of the spectrum.
+A fixed stage order could equally be written as a bare sequence of Python calls, so the framework earns its place only if it supplies something that sequence does not.
+Three things do.
+First, the graph carries one typed state object along its edges, so stages exchange data through a single validated structure rather than ad-hoc arguments threaded by hand.
+Second, every node is wrapped by one decorator, so the per-stage observability of Section~\ref{section:5.3} is obtained uniformly rather than re-instrumented at each call site.
+Third, the same state-graph abstraction is reused beyond this linear pipeline: the conversation turn is a second graph whose intent router needs conditional edges a straight sequence cannot express, and the knowledge flow is a reusable subgraph shared by three call sites (Section~\ref{section:5.4}).
+The cost is reduced flexibility - the graph cannot improvise a new stage order - but the advisory task has a stable shape, so the system sits deliberately at the structured end of the spectrum.
 
 \section{Document processing and the OCR model choice}
 \label{section:3.4}
 
-The ingestion pipeline must turn heterogeneous official sources --- \gls{HTML} pages and \gls{PDF} proposals, some scanned --- into parseable text.
+The ingestion pipeline must turn heterogeneous official sources - \gls{HTML} pages and \gls{PDF} proposals, some scanned - into parseable text.
 Born-digital \gls{PDF}s yield their embedded text layer and table structure through pdfplumber~\cite{pdfplumber}, with PyMuPDF~\cite{pymupdf} rendering pages to images where needed.
 Scanned pages have no text layer and require \textit{optical character recognition} (\gls{OCR}).
 Rather than add and operate a dedicated recognition engine, the system performs \gls{OCR} as image-to-text transcription by a multimodal \gls{LLM}: the same model that reasons over text also reads a rendered page, so an image-only page is rasterized to PNG and sent to the inference gateway with a transcription prompt.
-Extraction is hybrid and per page --- a page with a usable text layer is read directly, and only image-only pages incur a transcription call --- so cost stays proportional to the number of scanned pages.
+Extraction is hybrid and per page - a page with a usable text layer is read directly, and only image-only pages incur a transcription call - so cost stays proportional to the number of scanned pages.
 
 The remaining decision is which multimodal model to use.
 The requirement is modest: read mostly tabular Vietnamese admission pages accurately, at the lowest cost, without introducing a second model dependency.
@@ -116,7 +121,7 @@ An external model of the GPT-4o or Claude class would meet the capability requir
 \end{table}
 
 Model-based \gls{OCR} brings a failure mode of its own: on pages with merged table cells the model can fall into a repetition loop and emit one character indefinitely.
-The system detects this \textit{degenerate output} and retries at a higher temperature, a safeguard examined in detail as a contribution in Section~\ref{section:5.3}.
+The system detects this \textit{degenerate output} and retries at a higher temperature, a safeguard examined in detail as a contribution in Section~\ref{section:5.2}.
 
 \section{Web stack}
 \label{section:3.5}
@@ -132,14 +137,14 @@ Every boundary in the application is a Pydantic~\cite{pydantic} typed model, giv
 \label{section:3.6}
 
 A multi-stage \gls{LLM} application is hard to debug from logs: one consultation fans out into six stages and several model calls, each with its own prompt, tokens, latency, and retry behavior.
-\textit{\gls{LLM} observability} captures this as a structured \textit{trace} --- a tree of \textit{spans}, with model calls recorded as \textit{generation} observations carrying prompt, output, and token counts~\cite{langfuse} --- following the span-tree convention of distributed tracing~\cite{opentelemetry}.
+\textit{\gls{LLM} observability} captures this as a structured \textit{trace} - a tree of \textit{spans}, with model calls recorded as \textit{generation} observations carrying prompt, output, and token counts~\cite{langfuse} - following the span-tree convention of distributed tracing~\cite{opentelemetry}.
 Because the advisory graph is fixed, its trace tree has the same shape on every run, so a slow stage or a malformed response can be located precisely.
 An earlier iteration captured stage events in its own table and an in-app panel, which showed stage timings but no prompt, token, or retry detail; the system therefore adopts Langfuse as a single self-hosted trace sink, rejecting the custom panel as a higher-maintenance duplicate of an existing tool, and keeping captured prompts and student messages on the same machine (NFR-03).
-The realization is presented as a contribution in Section~\ref{section:5.4}.
+The realization is presented as a contribution in Section~\ref{section:5.3}.
 
 A second concern is the cost and latency of repeated calls.
 Because many students ask near-identical factual questions, a \textit{semantic cache} can reuse a previous answer when a new question is close enough in embedding space, generalizing an exact-match cache by accepting a stored answer within a similarity threshold~\cite{bang2023gptcache}.
-The risk is staleness --- a cached answer can outlive the document it summarizes --- so the cache is invalidated when the corpus changes; the version-gated design is detailed in Section~\ref{section:5.6}.
+The risk is staleness - a cached answer can outlive the document it summarizes - so the cache is invalidated when the corpus changes; the version-gated design is detailed in Section~\ref{section:5.5}.
 
 This chapter selected the system's technologies against its requirements, and in each case named the alternative that was rejected.
 Hallucination is contained with instruction-tuned hosted multimodal \gls{LLM}s and validated structured output, rather than a self-hosted or unconstrained model.

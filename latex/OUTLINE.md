@@ -115,27 +115,31 @@ Condensed 2026-06-22 to a decision-driven form (need → alternatives → choice
 
 ## Chapter 5 — Solution and contribution (≥ 5 pages)
 Each: problem → solution → results. Cross-referenced from Chapters 2/4.
-Three domain-gap contributions (5.1-5.3) + three engineering contributions (5.4-5.6).
+Reordered 2026-06-23 (reviewer): conflict-aware demoted to last (5.6) so the
+chapter leads with the five engineering outcomes; prose shortened, simpler
+wording, em-dashes → hyphens. Section labels renumbered positionally and all
+external `\ref{section:5.x}` in Ch3/Ch4/Ch6 remapped to match.
 Opens with a consolidated "Problems addressed" table (problem → why it matters →
 solving section) before the per-problem sections (added 2026-06-22).
-- [~] 5.1 Conflict-aware data consolidation: contradictory quota/cutoff data
-      across sources; `services/conflict/` deterministic detection + resolution;
-      conflict surfacing in advisory answers.
-- [~] 5.2 Resilient LLM inference gateway: API failures vs STRUCTURE_FAILURE,
+- [~] 5.1 Resilient LLM inference gateway: API failures vs STRUCTURE_FAILURE,
       retry/fallback in `services/inference/gateway.py`, deterministic keyword
       fallback for intent classification (commit c2ef582).
-- [~] 5.3 End-to-end heterogeneous ingestion: per-school configs, OCR with
+- [~] 5.2 End-to-end heterogeneous ingestion: per-school configs, OCR with
       degenerate-output detection and retry (commit b41dd9f), normalization
       into the canonical store.
-- [~] 5.4 Unified observability: single Langfuse sink (`observability/`),
+- [~] 5.3 Unified observability: single Langfuse sink (`observability/`),
       root span per run + stage spans + per-call generations with token usage;
       InferenceResult.usage from Gemini usage_metadata; retired in-app panel.
-- [~] 5.5 Declarative orchestration: turn-graph (`services/chat/turn_graph.py`)
+- [~] 5.4 Declarative orchestration: turn-graph (`services/chat/turn_graph.py`)
       + reusable knowledge_qa subgraph (`services/knowledge/qa_graph.py`) behind
       `answer()` facade + hybrid-graph; determinism preserved, characterization tests.
-- [~] 5.6 Version-gated semantic cache: `knowledge_qa_cache` (migration 019),
+- [~] 5.5 Version-gated semantic cache: `knowledge_qa_cache` (migration 019),
       embedding-similarity reuse gated on per-scope version stamp; ingest bumps
       version → invalidation; disabled by default. No measured hit-rate (cache empty in dev).
+- [~] 5.6 Conflict-aware data consolidation (now last, framed as rare/high-impact
+      safeguard): contradictory quota/cutoff data across sources;
+      `services/conflict/` deterministic detection + resolution; conflict surfacing
+      in advisory answers; synthetic eval 5/5 + 0 FP (§4.4.6).
 
 ## Chapter 6 — Conclusion and future work
 - [~] 6.1 Conclusion: achieved vs not; comparison with existing products.

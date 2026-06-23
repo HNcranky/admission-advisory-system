@@ -3,7 +3,7 @@
 
 This appendix reproduces, verbatim, the system prompts that drive the \gls{LLM}-backed steps described in Chapters~\ref{chapter:Experiment} and~\ref{chapter:SolutionAndContribution}.
 The prompts are written in Vietnamese because the assistant converses with Vietnamese students, and they are reproduced here exactly as they appear in the source so that the structured-output contracts and the grounding constraints discussed in the main text can be inspected directly.
-Three of them --- the intent router (Prompt~\ref{lst:prompt-intent}), the knowledge answerer (Prompt~\ref{lst:prompt-knowledge}), and the hybrid synthesizer (Prompt~\ref{lst:prompt-synthesis}) --- are resolved at run time through the Langfuse \texttt{PromptService} (\texttt{observability/prompts.py}), with the text below serving as the local fallback when prompt management is disabled; the remaining four are embedded directly at their call sites.
+Three of them - the intent router (Prompt~\ref{lst:prompt-intent}), the knowledge answerer (Prompt~\ref{lst:prompt-knowledge}), and the hybrid synthesizer (Prompt~\ref{lst:prompt-synthesis}) - are resolved at run time through the Langfuse \texttt{PromptService} (\texttt{observability/prompts.py}), with the text below serving as the local fallback when prompt management is disabled; the remaining four are embedded directly at their call sites.
 The deterministic services (notably conflict detection and resolution) use no prompt and are therefore absent.
 
 \section*{B.1 Intent router}
