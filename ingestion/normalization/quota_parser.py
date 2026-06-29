@@ -8,16 +8,6 @@ logger = logging.getLogger(__name__)
 
 
 def parse_quota(raw: Optional[str]) -> Optional[QuotaInfo]:
-    """
-    Parse a raw quota string into structured QuotaInfo.
-
-    Examples:
-        "300" → QuotaInfo(value=300, quota_type="exact")
-        "300 chỉ tiêu" → QuotaInfo(value=300, quota_type="exact")
-        "khoảng 200-300" → QuotaInfo(min_value=200, max_value=300, quota_type="range")
-        "chưa công bố" → QuotaInfo(quota_type="unknown")
-        None → None
-    """
     if not raw:
         return None
 

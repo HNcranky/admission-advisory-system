@@ -1,12 +1,3 @@
-                              
-"""
-Selects and runs the appropriate parser based on DocumentType
-and parser_profile from the source registry.
-
-Uses the ParserRegistry to look up specialized parsers,
-falling back to generic parsers for standard document types.
-"""
-
 import logging
 from typing import Optional, List, Union
 

@@ -1,13 +1,3 @@
-
-"""
-HUST-specific parser for the program listing page:
-https://ts.hust.edu.vn/training-cate/nganh-dao-tao-dai-hoc
-
-Extracts structured program information directly from the HTML
-rather than from plain text, because the listing page has
-a consistent structure we can exploit.
-"""
-
 import re
 import json
 import logging

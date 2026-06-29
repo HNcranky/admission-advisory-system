@@ -1,32 +1,15 @@
-
-"""
-Main ingestion pipeline orchestrator.
-
-Flow:
-  Source Registry → Fetch → Document Router → Parser → Extractor → Normalizer
-
-All stages are school-agnostic; school-specific behavior is driven by:
-1. source.parser_profile → ParserRegistry plugin lookup
-2. source.school_id → school-aware normalization dictionaries
-3. combo_method_rules.json → data-driven method inference
-"""
-
-import json
 import logging
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional
 
 from ingestion.registry.models import SourceEntry
 from ingestion.registry.source_registry import SourceRegistry
-from ingestion.fetchers.http_fetcher import http_fetch
 from ingestion.fetchers.fetch_dispatcher import dispatch_fetch
 from ingestion.router.document_router import route_document
 from ingestion.parsers.parser_dispatcher import dispatch_parser
 from ingestion.extractors.admission_extractor import extract_admission_facts
 from ingestion.normalization.normalizer import normalize_facts
 from ingestion.models.pipeline_models import (
-    FetchResult,
-    DocumentType,
     ParsedContent,
     ExtractedAdmissionFact,
     NormalizedAdmissionRecord,

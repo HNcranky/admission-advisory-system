@@ -8,14 +8,6 @@ logger = logging.getLogger(__name__)
 
 
 class BaseSpecializedParser(ABC):
-    """
-    Abstract base class for school-specific parsers.
-
-    Subclasses should:
-    1. Set `parser_profile` to match the profile string in source registry
-    2. Implement `parse()` to extract admission facts from raw content
-    """
-
     parser_profile: str = ""
 
     @abstractmethod
