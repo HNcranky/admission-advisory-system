@@ -1,14 +1,3 @@
-"""Tuyensinh247 cutoff (điểm chuẩn) HTML parser — Giai đoạn 2.
-
-Trang https://diemthi.tuyensinh247.com/diem-chuan/<slug>.html: mỗi phương thức một bảng
-`Tên ngành | Tổ hợp môn | Điểm chuẩn | Ghi chú` đứng sau heading h3
-"Điểm chuẩn theo phương thức {X} năm {Y}". Layout chung mọi trường → parser generic;
-thêm trường mới chỉ cần thêm entry initial_sources.json.
-
-Aggregator (trust 3) — nguồn phụ bên cạnh seed chính thức (trust 5).
-Trả ExtractedCutoffFact (KHÔNG phải ExtractedAdmissionFact) — vì vậy parser này chạy
-qua runner `ingestion.ingest_cutoffs --source-url`, KHÔNG qua IngestionPipeline.
-"""
 from __future__ import annotations
 
 import logging

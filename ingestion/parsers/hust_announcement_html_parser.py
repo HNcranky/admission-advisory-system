@@ -1,20 +1,3 @@
-"""
-HUST 2026 admission announcement HTML parser.
-
-Source: https://ts.hust.edu.vn/tin-tuc/thong-tin-tuyen-sinh-dai-hoc-chinh-quy-nam-2026
-
-The article body contains a single quota table with 78 rows. The header is
-2 rows tall: row 0 spans the top columns
-  TT | Chương trình/ngành đào tạo | Chỉ tiêu dự kiến | Mã xét tuyển | Phương thức tuyển sinh (colspan=3)
-and row 1 contains the method sub-headers
-  XTTN | ĐGTD | THPT
-Data rows therefore have 7 cells: [TT, name, quota, code, XTTN_flag, ĐGTD_flag, THPT_flag].
-Method columns contain the glyph 'Ö' to flag eligibility; they are NOT
-numeric quotas. We emit one fact per program-row with the program-total
-quota (column "Chỉ tiêu dự kiến"). Section divider rows
-(e.g. "A. CHƯƠNG TRÌNH CHUẨN") have a single cell and are skipped, as is
-the final "Tổng chỉ tiêu: 9.880" totals row whose first cell is non-numeric.
-"""
 from __future__ import annotations
 
 import logging

@@ -1,18 +1,3 @@
-"""
-VNU-UET proposal PDF parser.
-
-The proposal PDF's main quota table (section "4. Tổng số lượng tuyển sinh")
-contains one row per program, formatted by pdfplumber as a single line:
-
-    <row_num>. <code> <name> <mã ngành> <nhóm ngành> <quota>
-
-The mã ngành is a 7-character alphanumeric token (e.g. 7480201, 75290A1) and
-the quota is the first 2-4 digit number that follows it. Anchoring on this
-shape lets us assign each quota to its own row without depending on the order
-in which pdfminer would emit column cells (the previous parser had to
-hard-code a swap for CN12/CN13 because of that fragility).
-"""
-
 import io
 import logging
 import re

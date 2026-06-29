@@ -1,16 +1,3 @@
-"""Tuyensinh247 cutoff API parser (JSON) — Giai đoạn 2, plan 7.
-
-Endpoint nội bộ trang (nút "Xem thêm" gọi):
-GET /api/common/cutoff-score?school_id={id}&method_id={m}&year={y}
-→ {"success": true, "data": [{code, name, block, mark, year, admission_name, ...}]}
-
-Ưu thế so với bảng HTML: có MÃ tuyển sinh (code) → map_program stage-code chính xác
-tuyệt đối; có tổ hợp (block) cho mọi phương thức. API không phải public contract —
-fixture snapshot + source active:false; đổi schema thì trả [] + warning, runner exit 1.
-
-Aggregator (trust 3). Trả ExtractedCutoffFact → chạy qua runner
-`ingestion.ingest_cutoffs --source-url`, KHÔNG qua IngestionPipeline.
-"""
 from __future__ import annotations
 
 import json

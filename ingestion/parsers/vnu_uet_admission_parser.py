@@ -1,11 +1,3 @@
-"""
-VNU-UET admission homepage parser.
-
-The live homepage is an Elementor page with admission data embedded in
-HTML tables. The program rows currently live in a table headed:
-STT | Ten nganh/chuong trinh | Ma xet tuyen | So luong tuyen sinh.
-"""
-
 import logging
 import re
 from typing import Iterable, List, Optional
