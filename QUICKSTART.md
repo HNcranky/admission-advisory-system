@@ -349,7 +349,3 @@ default. To enable:
 
 ---
 
-## Design references
-
-- Docker Postgres DB:
-  [`docs/superpowers/specs/2026-05-19-docker-postgres-db-design.md`](./docs/superpowers/specs/2026-05-19-docker-postgres-db-design.md)
