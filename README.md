@@ -5,8 +5,6 @@ Conflict-aware admission advisory assistant for Vietnamese universities. Crawls 
 ## Quick links
 
 - **Local setup:** [`QUICKSTART.md`](./QUICKSTART.md)
-- **DB on Docker design:** [`docs/superpowers/specs/2026-05-19-docker-postgres-db-design.md`](./docs/superpowers/specs/2026-05-19-docker-postgres-db-design.md)
-- **Implementation plans:** [`docs/superpowers/plans/`](./docs/superpowers/plans/)
 - **Crawl pipeline:** `python -m ingestion.main --list-schools`
 
 ## TL;DR — get the stack running
