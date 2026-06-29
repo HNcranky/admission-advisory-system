@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "note": "Synthetic student profiles for advisory eligibility/constraint eval. Scores are on the 30-point scale; methods/majors/combos match HUST and VNU-UET canonical data. `expect_match` is true when at least one eligible program should be recommendable.",
+  "profiles": [
+    {
+      "id": "high-cs-a00",
+      "band": "high",
+      "total_score": 28.5,
+      "admission_method": "thpt_score",
+      "subject_combination": "A00",
+      "preferred_majors": ["Khoa học máy tính"],
+      "preferred_schools": ["hust"],
+      "expect_match": true
+    },
+    {
+      "id": "high-it-broad",
+      "band": "high",
+      "total_score": 27.8,
+      "admission_method": "thpt_score",
+      "subject_combination": "A00",
+      "preferred_majors": ["Công nghệ thông tin", "Khoa học máy tính"],
+      "preferred_schools": ["hust"],
+      "expect_match": true
+    },
+    {
+      "id": "medium-it-a01",
+      "band": "medium",
+      "total_score": 25.0,
+      "admission_method": "thpt_score",
+      "subject_combination": "A01",
+      "preferred_majors": ["Công nghệ thông tin"],
+      "preferred_schools": ["hust"],
+      "expect_match": true
+    },
+    {
+      "id": "medium-ee",
+      "band": "medium",
+      "total_score": 24.5,
+      "admission_method": "thpt_score",
+      "subject_combination": "A00",
+      "preferred_majors": ["Kỹ thuật điện tử"],
+      "preferred_schools": ["hust"],
+      "expect_match": true
+    },
+    {
+      "id": "borderline-cs",
+      "band": "borderline",
+      "total_score": 26.5,
+      "admission_method": "thpt_score",
+      "subject_combination": "A00",
+      "preferred_majors": ["Khoa học máy tính"],
+      "preferred_schools": ["hust"],
+      "expect_match": true
+    },
+    {
+      "id": "low-it",
+      "band": "low",
+      "total_score": 20.0,
+      "admission_method": "thpt_score",
+      "subject_combination": "A00",
+      "preferred_majors": ["Công nghệ thông tin"],
+      "preferred_schools": ["hust"],
+      "expect_match": true
+    },
+    {
+      "id": "low-broad",
+      "band": "low",
+      "total_score": 18.0,
+      "admission_method": "thpt_score",
+      "subject_combination": "A01",
+      "preferred_majors": ["Kỹ thuật"],
+      "preferred_schools": ["hust"],
+      "expect_match": true
+    },
+    {
+      "id": "uet-cs",
+      "band": "high",
+      "total_score": 27.0,
+      "admission_method": "thpt_score",
+      "subject_combination": "A00",
+      "preferred_majors": ["Khoa học máy tính"],
+      "preferred_schools": ["vnu_uet"],
+      "expect_match": true
+    },
+    {
+      "id": "medium-no-school",
+      "band": "medium",
+      "total_score": 25.5,
+      "admission_method": "thpt_score",
+      "subject_combination": "A00",
+      "preferred_majors": ["Công nghệ thông tin"],
+      "preferred_schools": [],
+      "expect_match": true
+    },
+    {
+      "id": "edge-very-high",
+      "band": "high",
+      "total_score": 29.5,
+      "admission_method": "thpt_score",
+      "subject_combination": "A00",
+      "preferred_majors": ["Khoa học máy tính"],
+      "preferred_schools": ["hust"],
+      "expect_match": true
+    },
+    {
+      "id": "edge-tdt-method",
+      "band": "medium",
+      "total_score": 80.0,
+      "admission_method": "danh_gia_tu_duy",
+      "subject_combination": "K00",
+      "preferred_majors": ["Công nghệ thông tin"],
+      "preferred_schools": ["hust"],
+      "expect_match": true
+    },
+    {
+      "id": "edge-unmatched-major",
+      "band": "medium",
+      "total_score": 25.0,
+      "admission_method": "thpt_score",
+      "subject_combination": "A00",
+      "preferred_majors": ["Y khoa"],
+      "preferred_schools": ["hust"],
+      "expect_match": false
+    }
+  ]
+}
