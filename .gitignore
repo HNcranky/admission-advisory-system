@@ -249,3 +249,5 @@ tools/plantuml.jar
 eval/knowledge_qa/golden_set.candidate.json
 
 docs/
+
+data/
