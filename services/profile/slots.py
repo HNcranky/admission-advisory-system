@@ -53,7 +53,6 @@ def _major_present(state) -> bool:
 # chạy advisory. subject_combination là critical (retrieval_agent lọc theo nó).
 # location_preference KHÔNG bắt buộc (spec mục 8) — chỉ dùng để xếp hạng/lọc.
 SLOTS: List[Slot] = [
-    Slot("admission_year", True, 0, "Bạn đang xét tuyển cho năm nào?", parse_admission_year),
     Slot("admission_method", True, 1,
          "Bạn dự định xét tuyển bằng phương thức nào nhỉ? Ví dụ: điểm thi tốt nghiệp THPT, "
          "xét học bạ, đánh giá năng lực, hoặc xét tuyển kết hợp.",
@@ -105,7 +104,6 @@ def follow_up_for(slot_name: str):
 # Nhãn slot hiển thị cho ack/recap (3c). Nguồn nhãn dùng chung với
 # explanation_service (_SLOT_LABELS) nhưng dạng ngắn cho câu xác nhận.
 SLOT_LABELS = {
-    "admission_year": "năm xét tuyển",
     "total_score": "mức điểm",
     "admission_method": "phương thức xét tuyển",
     "preferred_majors": "ngành quan tâm",

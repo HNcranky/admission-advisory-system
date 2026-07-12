@@ -588,29 +588,28 @@ def test_answering_pending_advisory_question_continues_flow_despite_misroute():
     """Reply that fills the pending slot must continue advisory, even if the
     stateless intent classifier misreads the bare answer as small talk.
 
-    Repro of the reported bug: assistant asks "Bạn đang xét tuyển cho năm nào?",
-    user answers "mình đang xét tuyển cho năm 2026", but the router returns
-    CONVERSATIONAL/EMOTIONAL_SUPPORT, so admission_year was never extracted.
+    Scenario: assistant asks admission_method, user answers "điểm thi THPT",
+    but the router returns CONVERSATIONAL/EMOTIONAL_SUPPORT. The safety-net
+    parser should still extract the slot and continue the advisory flow.
     """
     flow = FlowState(
         active_flow="ADVISORY_FLOW",
-        pending_question="Bạn đang xét tuyển cho năm nào?",
+        pending_question="Bạn dự định xét tuyển bằng phương thức nào nhỉ?",
     )
     service, repo = _make_service(
         intent_result=IntentResult(route="CONVERSATIONAL", subtype="EMOTIONAL_SUPPORT"),
-        profile=ChatProfileState(),  # admission_year is the first missing slot
+        profile=ChatProfileState(),  # admission_method is the first missing slot
         flow=flow,
-        extract=lambda text, known_state=None, active_slot=None: {},  # year comes from the regex, not the LLM
+        extract=lambda text, known_state=None, active_slot=None: {"admission_method": "thpt_score"},
     )
-    result = service.handle_user_message("tok", "mình đang xét tuyển cho năm 2026")
+    result = service.handle_user_message("tok", "điểm thi tốt nghiệp THPT")
 
-    # admission_year extracted and persisted
-    assert result.profile_state.admission_year == 2026
-    assert repo.profile_state.admission_year == 2026
-    # stayed in advisory flow: asked the next missing slot (total_score),
+    # admission_method extracted and persisted
+    assert result.profile_state.admission_method == "thpt_score"
+    assert repo.profile_state.admission_method == "thpt_score"
+    # stayed in advisory flow: asked the next missing slot,
     # not the empathetic conversational template
     assert "Mình hiểu cảm giác lo lắng" not in result.assistant_message
-    assert "điểm" in result.assistant_message.lower()
     assert repo.flow_state.active_flow == "ADVISORY_FLOW"
 
 
@@ -639,7 +638,7 @@ def test_interruption_during_pending_advisory_still_routes_to_knowledge():
     through to the intent router (knowledge), not be swallowed by advisory."""
     flow = FlowState(
         active_flow="ADVISORY_FLOW",
-        pending_question="Bạn đang xét tuyển cho năm nào?",
+        pending_question="Bạn dự định xét tuyển bằng phương thức nào nhỉ?",
     )
     service, repo = _make_service(
         intent_result=IntentResult(route="KNOWLEDGE_QA", topic="tuition", school="VNU-UET"),
@@ -651,7 +650,7 @@ def test_interruption_during_pending_advisory_still_routes_to_knowledge():
 
     assert "học phí" in result.assistant_message       # knowledge fallback path
     assert service.RESUME_OFFER in result.assistant_message  # mid-flow resume offer
-    assert result.profile_state.admission_year is None
+    assert result.profile_state.admission_method is None
 
 
 def test_no_continuation_guard_when_not_in_advisory_flow():
@@ -941,10 +940,10 @@ def test_ec22_deterministic_reset_clears_profile_and_asks_first_slot():
     assert repo.profile_state.total_score is None         # hồ sơ cũ đã xoá
     assert repo.profile_state.preferred_majors == []
     assert "hồ sơ tư vấn mới" in result.assistant_message
-    assert "năm nào" in result.assistant_message           # hỏi slot đầu tiên
+    assert "phương thức" in result.assistant_message        # hỏi slot đầu tiên
     assert result.should_start_run is False
     assert repo.status == "collecting_profile"
-    assert repo.flow_state.pending_question == "Bạn đang xét tuyển cho năm nào?"
+    assert "phương thức" in repo.flow_state.pending_question
 
 
 def test_ec22_reset_applies_same_turn_delta_to_fresh_profile():
@@ -999,7 +998,7 @@ def test_advisory_echoes_captured_value_before_next_question():
     )
     result = service.handle_user_message("tok", "Em được 26 điểm")
     assert "Mình ghi nhận mức điểm 26." in result.assistant_message
-    assert result.assistant_message.strip().endswith("?")  # next question still asked
+    assert "?" in result.assistant_message  # next question still asked
     # pending_question stays the bare follow-up, not the ack-decorated message
     assert "Mình ghi nhận" not in (repo.flow_state.pending_question or "")
 

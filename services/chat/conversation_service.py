@@ -11,7 +11,7 @@ from services.knowledge.qa_service import KnowledgeQAService
 from services.knowledge.retrieval_query import build_retrieval_query
 from services.profile.slots import (
     SLOTS, build_slot_acknowledgement, follow_up_for, missing_critical_slots,
-    next_follow_up_question, parse_slot,
+    next_follow_up_question, parse_admission_year, parse_slot,
 )
 from services.profile.extractor import apply_profile_delta, extract_profile_update
 from services.profile.validation import validate_profile_delta
@@ -27,9 +27,8 @@ CLARIFICATION_PROMPTS = {
     "school": "Bạn đang muốn tìm hiểu thông tin của trường nào?",
     "programs": "Bạn muốn so sánh hoặc tìm hiểu (những) ngành nào?",
     "subject_combination": "Bạn xét theo tổ hợp nào, ví dụ A00, A01 hay D01?",
-    "admission_year": "Bạn đang xét tuyển cho năm nào?",
 }
-CLARIFICATION_FIELD_ORDER = ["school", "programs", "subject_combination", "admission_year"]
+CLARIFICATION_FIELD_ORDER = ["school", "programs", "subject_combination"]
 GENERIC_CLARIFICATION = (
     "Bạn có thể nói rõ hơn câu hỏi của mình không? Mình muốn hiểu đúng để hỗ trợ tốt hơn."
 )
@@ -151,7 +150,7 @@ class ConversationService:
         cho slot đang chờ (vd "29" -> total_score) vẫn được điền."""
         delta = dict(delta)
         if "admission_year" not in delta:
-            year = parse_slot("admission_year", content)
+            year = parse_admission_year(content)
             if year is not None:
                 delta["admission_year"] = year
         if active_slot and active_slot != "admission_year" and active_slot not in delta:

@@ -33,11 +33,12 @@ def test_reset_phrase_starts_fresh_profile_before_routing():
 def test_continue_advisory_fills_pending_slot():
     profile = ChatProfileState(total_score=25, subject_combination="A00",
                                preferred_majors=["CNTT"], preferred_schools=["UET"])
-    flow = FlowState(active_flow="ADVISORY_FLOW", pending_question="Bạn xét tuyển năm nào?")
-    svc, repo = _svc(profile=profile, flow=flow, delta={"admission_year": 2026})
-    result = svc.handle_user_message("tok", "năm 2026")
+    flow = FlowState(active_flow="ADVISORY_FLOW",
+                     pending_question="Bạn dự định xét tuyển bằng phương thức nào nhỉ?")
+    svc, repo = _svc(profile=profile, flow=flow, delta={"admission_method": "thpt_score"})
+    result = svc.handle_user_message("tok", "điểm thi tốt nghiệp THPT")
     # the bare answer advances the advisory flow rather than being misrouted
-    assert result.profile_state.admission_year == 2026
+    assert result.profile_state.admission_method == "thpt_score"
 
 
 def test_correction_rerun_after_prior_run():

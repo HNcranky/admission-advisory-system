@@ -80,7 +80,7 @@ def test_build_profile_with_gateway_falls_back_when_gateway_is_unavailable():
     assert profile.preferred_schools == ["hust"]
     # missing_slots now comes from the registry critical set; admission_method
     # is a new critical slot (location_preference is no longer critical — spec mục 8).
-    assert profile.missing_slots == ["admission_year", "admission_method"]
+    assert profile.missing_slots == ["admission_method"]
 
 
 def test_natural_interest_query_resolves_majors_via_resolver():

@@ -69,14 +69,11 @@ def test_profile_agent_uses_injected_gateway():
 
     output = profile_agent_module.profile_agent(state, gateway=FakeGateway())
 
-    # missing_slots is now recomputed from the slot registry critical set, so it
-    # reflects every unfilled critical slot (admission_year lives on AgentState,
-    # not StudentProfile, so it always reads as missing here).
     assert output.student_profile == StudentProfile(
         preferred_majors=["economics"],
-        missing_slots=["admission_year", "total_score", "admission_method", "subject_combination"],
+        missing_slots=["admission_method", "subject_combination", "total_score"],
     )
-    assert output.retrieval_missing_data == ["admission_year", "total_score", "admission_method", "subject_combination"]
+    assert output.retrieval_missing_data == ["admission_method", "subject_combination", "total_score"]
 
 def test_profile_agent_reuses_seeded_student_profile(monkeypatch):
     seeded = StudentProfile(

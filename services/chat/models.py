@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Any, Dict, Optional, List
 
 from pydantic import BaseModel, Field
@@ -29,7 +30,7 @@ def union_majors(explicit: List[str], inferred: List[str]) -> List[str]:
 
 
 class ChatProfileState(BaseModel):
-    admission_year: Optional[int] = None
+    admission_year: Optional[int] = Field(default_factory=lambda: date.today().year)
     total_score: Optional[float] = None
     # Mã phương thức xét tuyển canonical (thpt_score/school_record/competency_test/
     # combined/talent_admission) — quyết định thang điểm hợp lệ và score-fit (EC-04/13).

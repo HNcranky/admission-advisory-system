@@ -113,9 +113,9 @@ def test_llm_fills_other_slots_as_delta():
 
 def test_llm_failure_degrades_to_deterministic_delta():
     delta = extract_profile_update(
-        "năm 2026", known_state=_state(), active_slot="admission_year",
+        "29 điểm", known_state=_state(), active_slot="total_score",
         gateway=FailingGateway(), resolver=_no_majors)
-    assert delta == {"admission_year": 2026}  # Tier-0 vẫn có, LLM lỗi bị nuốt
+    assert delta == {"total_score": 29.0}  # Tier-0 vẫn có, LLM lỗi bị nuốt
 
 
 def test_llm_output_strips_majors_and_unknown_keys():

@@ -58,7 +58,7 @@ def _state(**kwargs):
 def test_missing_critical_slots_empty_state_returns_current_critical_set():
     missing = missing_critical_slots(_state())
     assert missing == [
-        "admission_year", "admission_method", "preferred_majors",
+        "admission_method", "preferred_majors",
         "subject_combination", "total_score",
     ]
 
@@ -98,7 +98,10 @@ def test_location_preference_is_not_critical():
 
 
 def test_next_follow_up_question_returns_first_missing_prompt():
-    assert next_follow_up_question(_state()) == "Bạn đang xét tuyển cho năm nào?"
+    assert next_follow_up_question(_state()) == (
+        "Bạn dự định xét tuyển bằng phương thức nào nhỉ? Ví dụ: điểm thi tốt nghiệp THPT, "
+        "xét học bạ, đánh giá năng lực, hoặc xét tuyển kết hợp."
+    )
     assert next_follow_up_question(_state(
         admission_year=2026, total_score=25.0, admission_method="thpt_score",
         preferred_majors=["x"], subject_combination="A00", location_preference="Ha Noi",
@@ -107,7 +110,7 @@ def test_next_follow_up_question_returns_first_missing_prompt():
 
 def test_parse_slot_dispatches_to_named_parser():
     assert parse_slot("total_score", "29") == 29.0
-    assert parse_slot("admission_year", "năm 2026") == 2026
+    assert parse_slot("admission_year", "năm 2026") is None  # không còn trong SLOTS
     assert parse_slot("preferred_majors", "bất kỳ") is None  # không có parser
 
 
@@ -135,7 +138,6 @@ def test_ack_recaps_filled_and_missing_when_two_or_more_filled():
     state = ChatProfileState(admission_year=2026, total_score=26.0, admission_method="thpt_score")
     ack = build_slot_acknowledgement({"admission_method": "thpt_score"}, state)
     assert ack.startswith("Mình đã nắm:")
-    assert "năm xét tuyển 2026" in ack
     assert "mức điểm 26" in ack
     assert "phương thức xét tuyển điểm thi tốt nghiệp THPT" in ack
     assert "Còn thiếu:" in ack
